@@ -1,0 +1,345 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "PDFInspectionResult",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "document",
+    "semanticTree",
+    "content",
+    "chunks",
+    "assets",
+    "diagnostics"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "enum": ["1.0.0"]
+    },
+    "document": {
+      "$ref": "#/definitions/DocumentMetadata"
+    },
+    "semanticTree": {
+      "$ref": "#/definitions/SemanticTree"
+    },
+    "content": {
+      "$ref": "#/definitions/DocumentContent"
+    },
+    "chunks": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/KnowledgeChunk"
+      }
+    },
+    "assets": {
+      "$ref": "#/definitions/Assets"
+    },
+    "diagnostics": {
+      "$ref": "#/definitions/Diagnostics"
+    }
+  },
+  "definitions": {
+    "DocumentMetadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pageCount",
+        "encrypted",
+        "searchable"
+      ],
+      "properties": {
+        "title": { "type": "string" },
+        "author": { "type": "string" },
+        "creator": { "type": "string" },
+        "producer": { "type": "string" },
+        "creationDate": { "type": "string", "format": "date-time" },
+        "modificationDate": { "type": "string", "format": "date-time" },
+        "pageCount": { "type": "integer", "minimum": 0 },
+        "pageDimensions": { "type": "string" },
+        "fonts": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "encrypted": { "type": "boolean" },
+        "searchable": { "type": "boolean" }
+      }
+    },
+    "SemanticNode": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "heading",
+        "level",
+        "pageNumbers"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "heading": { "type": "string" },
+        "level": { "type": "integer", "minimum": 1 },
+        "pageNumbers": {
+          "type": "array",
+          "items": { "type": "integer", "minimum": 1 }
+        },
+        "children": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/SemanticNode" }
+        }
+      }
+    },
+    "SemanticTree": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rootNodes"
+      ],
+      "properties": {
+        "rootNodes": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/SemanticNode" }
+        }
+      }
+    },
+    "PageMap": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pageNumber",
+        "markdown"
+      ],
+      "properties": {
+        "pageNumber": { "type": "integer", "minimum": 1 },
+        "markdown": { "type": "string" }
+      }
+    },
+    "DocumentContent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "markdown",
+        "pageMap"
+      ],
+      "properties": {
+        "markdown": { "type": "string" },
+        "pageMap": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/PageMap" }
+        }
+      }
+    },
+    "SourceOffset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "start_char",
+        "end_char"
+      ],
+      "properties": {
+        "start_char": { "type": "integer", "minimum": 0 },
+        "end_char": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "Citation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "rawText",
+        "pageNumber"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "rawText": { "type": "string" },
+        "pageNumber": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "KnowledgeChunk": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "chunk_id",
+        "child_chunk_ids",
+        "document_id",
+        "section_path",
+        "heading_level",
+        "page_numbers",
+        "content_markdown",
+        "token_estimate",
+        "character_count",
+        "source_offsets",
+        "content_type"
+      ],
+      "properties": {
+        "chunk_id": { "type": "string" },
+        "parent_chunk_id": {
+          "type": ["string", "null"]
+        },
+        "child_chunk_ids": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "document_id": { "type": "string" },
+        "section_path": { "type": "string" },
+        "heading_level": { "type": "integer", "minimum": 0 },
+        "page_numbers": {
+          "type": "array",
+          "items": { "type": "integer", "minimum": 1 }
+        },
+        "content_markdown": { "type": "string" },
+        "token_estimate": { "type": "integer", "minimum": 0 },
+        "character_count": { "type": "integer", "minimum": 0 },
+        "citations": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/Citation" }
+        },
+        "source_offsets": {
+          "$ref": "#/definitions/SourceOffset"
+        },
+        "content_type": {
+          "type": "string",
+          "enum": ["paragraph", "table", "code", "list", "equation", "figure"]
+        },
+        "previous_chunk_id": {
+          "type": ["string", "null"]
+        },
+        "next_chunk_id": {
+          "type": ["string", "null"]
+        },
+        "chunk_order": { "type": "integer", "minimum": 0 },
+        "semantic_category": { "type": "string" },
+        "content_hash": { "type": "string" },
+        "fingerprint": { "type": "string" },
+        "is_oversized": { "type": "boolean" }
+      }
+    },
+    "Table": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "pageNumber",
+        "content"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "pageNumber": { "type": "integer", "minimum": 1 },
+        "caption": { "type": "string" },
+        "content": { "type": "string" },
+        "headers": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "Figure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "pageNumber"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "pageNumber": { "type": "integer", "minimum": 1 },
+        "caption": { "type": "string" },
+        "uri": { "type": "string" }
+      }
+    },
+    "CodeBlock": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "content",
+        "pageNumber"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "language": { "type": "string" },
+        "content": { "type": "string" },
+        "pageNumber": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "Equation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "latex",
+        "pageNumber"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "latex": { "type": "string" },
+        "pageNumber": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "Assets": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tables",
+        "figures",
+        "codeBlocks",
+        "equations",
+        "citations"
+      ],
+      "properties": {
+        "tables": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/Table" }
+        },
+        "figures": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/Figure" }
+        },
+        "codeBlocks": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/CodeBlock" }
+        },
+        "equations": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/Equation" }
+        },
+        "citations": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/Citation" }
+        }
+      }
+    },
+    "Diagnostics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "extractionEngine",
+        "extractionVersion",
+        "processingTimeMs",
+        "retryCount"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["success", "partial_success", "failed"]
+        },
+        "extractionEngine": { "type": "string" },
+        "extractionVersion": { "type": "string" },
+        "processingTimeMs": { "type": "integer", "minimum": 0 },
+        "warnings": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "errors": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "skippedPages": {
+          "type": "array",
+          "items": { "type": "integer", "minimum": 1 }
+        },
+        "retryCount": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "markdown": "# Introduction to Knowledge Systems\n\nKnowledge systems transform raw documents into connected semantic graphs.\n\n## Section 1: Overview\n\nPDF Inspector handles parsing, semantic sectioning, and chunking.",
+  "json_layout": {
+    "pages": [
+      {
+        "page": 1,
+        "headings": ["Introduction to Knowledge Systems", "Section 1: Overview"]
+      }
+    ]
+  },
+  "metadata": {
+    "title": "Introduction to Knowledge Systems",
+    "author": "ARC Engineering",
+    "page_count": 1
+  },
+  "ocr_applied": false
+}

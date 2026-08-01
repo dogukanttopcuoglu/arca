@@ -1,0 +1,23 @@
+services:
+  firecrawl-pdf-service:
+    build:
+      context: ./services/firecrawl
+      dockerfile: Dockerfile
+    container_name: firecrawl-pdf-service
+    ports:
+      - "3002:3002"
+    environment:
+      - PORT=3002
+      - NODE_ENV=production
+    restart: unless-stopped
+
+  arca-pdf-inspector:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: arca-pdf-inspector
+    depends_on:
+      - firecrawl-pdf-service
+    environment:
+      - FIRECRAWL_BASE_URL=http://firecrawl-pdf-service:3002
+    restart: "no"

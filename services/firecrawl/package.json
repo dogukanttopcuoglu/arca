@@ -1,0 +1,14 @@
+{
+  "name": "firecrawl-pdf-service",
+  "version": "1.0.0",
+  "description": "Firecrawl PDF Extraction HTTP Microservice integrating firecrawl-pdf-inspector for ARC Pipeline",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "@firecrawl/pdf-inspector": "*",
+    "pdf-parse": "^1.1.1"
+  }
+}
