@@ -46,8 +46,9 @@ var turkishStopwords = map[string]bool{
 }
 
 // KeywordExtractor defines the strategy seam for extracting keywords from chunks.
+// Entities are provided so implementations can suppress entity-fragment tokens from the lexical index.
 type KeywordExtractor interface {
-	Extract(ctx context.Context, chunks []pdfmodel.KnowledgeChunk, lang string) ([]pdfmodel.Keyword, error)
+	Extract(ctx context.Context, chunks []pdfmodel.KnowledgeChunk, lang string, entities []pdfmodel.Entity) ([]pdfmodel.Keyword, error)
 }
 
 // RuleBasedKeywordExtractor implements KeywordExtractor using term-frequency and stopword filtering.
@@ -59,10 +60,13 @@ func NewRuleBasedKeywordExtractor() *RuleBasedKeywordExtractor {
 }
 
 // Extract executes term-frequency keyword extraction and returns sorted, deterministic keywords.
-func (e *RuleBasedKeywordExtractor) Extract(ctx context.Context, chunks []pdfmodel.KnowledgeChunk, lang string) ([]pdfmodel.Keyword, error) {
+// Entity fragment tokens (sub-tokens of any extracted entity name) are suppressed from the output.
+func (e *RuleBasedKeywordExtractor) Extract(ctx context.Context, chunks []pdfmodel.KnowledgeChunk, lang string, entities []pdfmodel.Entity) ([]pdfmodel.Keyword, error) {
 	if len(chunks) == 0 {
 		return []pdfmodel.Keyword{}, nil
 	}
+
+	entityFragments := buildEntityFragmentBlocklist(entities)
 
 	freqMap := make(map[string]float64)
 	chunkMap := make(map[string][]string)
@@ -81,6 +85,10 @@ func (e *RuleBasedKeywordExtractor) Extract(ctx context.Context, chunks []pdfmod
 				continue
 			}
 			if stopwords[w] || englishStopwords[w] || turkishStopwords[w] {
+				continue
+			}
+			// Entity-aware filtering: suppress sub-tokens of extracted entity names
+			if entityFragments[w] {
 				continue
 			}
 
@@ -156,4 +164,22 @@ func isDigitOnly(s string) bool {
 		}
 	}
 	return true
+}
+
+// buildEntityFragmentBlocklist splits each entity canonical name into lowercase tokens
+// and returns them as a blocklist set. This prevents entity sub-tokens like "def", "jam",
+// "new", "york" from leaking into the keyword lexical index when compound named entities
+// like "Def Jam Recordings" or "New York" are present in the extraction output.
+func buildEntityFragmentBlocklist(entities []pdfmodel.Entity) map[string]bool {
+	blocklist := make(map[string]bool)
+	for _, e := range entities {
+		tokens := strings.Fields(strings.ToLower(e.Name))
+		for _, tok := range tokens {
+			// Only block tokens that are at least 3 chars to avoid over-suppression
+			if len(tok) >= 3 {
+				blocklist[tok] = true
+			}
+		}
+	}
+	return blocklist
 }

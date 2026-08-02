@@ -10,53 +10,8 @@
     "language": "en",
     "keywords": [
       {
-        "value": "def",
-        "score": 1,
-        "source": "rule_based",
-        "chunk_ids": [
-          "chunk-101",
-          "chunk-102"
-        ]
-      },
-      {
-        "value": "jam",
-        "score": 1,
-        "source": "rule_based",
-        "chunk_ids": [
-          "chunk-101",
-          "chunk-102"
-        ]
-      },
-      {
-        "value": "new",
-        "score": 1,
-        "source": "rule_based",
-        "chunk_ids": [
-          "chunk-101",
-          "chunk-102"
-        ]
-      },
-      {
-        "value": "recordings",
-        "score": 1,
-        "source": "rule_based",
-        "chunk_ids": [
-          "chunk-101",
-          "chunk-102"
-        ]
-      },
-      {
-        "value": "york",
-        "score": 1,
-        "source": "rule_based",
-        "chunk_ids": [
-          "chunk-101",
-          "chunk-102"
-        ]
-      },
-      {
         "value": "albums",
-        "score": 0.5,
+        "score": 1,
         "source": "rule_based",
         "chunk_ids": [
           "chunk-102"
@@ -64,7 +19,7 @@
       },
       {
         "value": "alongside",
-        "score": 0.5,
+        "score": 1,
         "source": "rule_based",
         "chunk_ids": [
           "chunk-101"
@@ -72,7 +27,7 @@
       },
       {
         "value": "art",
-        "score": 0.5,
+        "score": 1,
         "source": "rule_based",
         "chunk_ids": [
           "chunk-102"
@@ -80,7 +35,7 @@
       },
       {
         "value": "create",
-        "score": 0.5,
+        "score": 1,
         "source": "rule_based",
         "chunk_ids": [
           "chunk-102"
@@ -88,7 +43,7 @@
       },
       {
         "value": "creative",
-        "score": 0.5,
+        "score": 1,
         "source": "rule_based",
         "chunk_ids": [
           "chunk-101"
@@ -96,7 +51,7 @@
       },
       {
         "value": "drive",
-        "score": 0.5,
+        "score": 1,
         "source": "rule_based",
         "chunk_ids": [
           "chunk-101"
@@ -104,7 +59,7 @@
       },
       {
         "value": "essence",
-        "score": 0.5,
+        "score": 1,
         "source": "rule_based",
         "chunk_ids": [
           "chunk-102"
@@ -112,7 +67,7 @@
       },
       {
         "value": "expectation",
-        "score": 0.5,
+        "score": 1,
         "source": "rule_based",
         "chunk_ids": [
           "chunk-102"
@@ -120,7 +75,7 @@
       },
       {
         "value": "expression",
-        "score": 0.5,
+        "score": 1,
         "source": "rule_based",
         "chunk_ids": [
           "chunk-101"
@@ -128,10 +83,50 @@
       },
       {
         "value": "founded",
-        "score": 0.5,
+        "score": 1,
         "source": "rule_based",
         "chunk_ids": [
           "chunk-101"
+        ]
+      },
+      {
+        "value": "fundamental",
+        "score": 1,
+        "source": "rule_based",
+        "chunk_ids": [
+          "chunk-101"
+        ]
+      },
+      {
+        "value": "hip",
+        "score": 1,
+        "source": "rule_based",
+        "chunk_ids": [
+          "chunk-102"
+        ]
+      },
+      {
+        "value": "hop",
+        "score": 1,
+        "source": "rule_based",
+        "chunk_ids": [
+          "chunk-102"
+        ]
+      },
+      {
+        "value": "human",
+        "score": 1,
+        "source": "rule_based",
+        "chunk_ids": [
+          "chunk-101"
+        ]
+      },
+      {
+        "value": "legendary",
+        "score": 1,
+        "source": "rule_based",
+        "chunk_ids": [
+          "chunk-102"
         ]
       }
     ],
@@ -302,53 +297,8 @@
       "content_type": "",
       "keywords": [
         {
-          "value": "def",
-          "score": 1,
-          "source": "rule_based",
-          "chunk_ids": [
-            "chunk-101",
-            "chunk-102"
-          ]
-        },
-        {
-          "value": "jam",
-          "score": 1,
-          "source": "rule_based",
-          "chunk_ids": [
-            "chunk-101",
-            "chunk-102"
-          ]
-        },
-        {
-          "value": "new",
-          "score": 1,
-          "source": "rule_based",
-          "chunk_ids": [
-            "chunk-101",
-            "chunk-102"
-          ]
-        },
-        {
-          "value": "recordings",
-          "score": 1,
-          "source": "rule_based",
-          "chunk_ids": [
-            "chunk-101",
-            "chunk-102"
-          ]
-        },
-        {
-          "value": "york",
-          "score": 1,
-          "source": "rule_based",
-          "chunk_ids": [
-            "chunk-101",
-            "chunk-102"
-          ]
-        },
-        {
           "value": "alongside",
-          "score": 0.5,
+          "score": 1,
           "source": "rule_based",
           "chunk_ids": [
             "chunk-101"
@@ -356,7 +306,7 @@
         },
         {
           "value": "creative",
-          "score": 0.5,
+          "score": 1,
           "source": "rule_based",
           "chunk_ids": [
             "chunk-101"
@@ -364,7 +314,7 @@
         },
         {
           "value": "drive",
-          "score": 0.5,
+          "score": 1,
           "source": "rule_based",
           "chunk_ids": [
             "chunk-101"
@@ -372,7 +322,7 @@
         },
         {
           "value": "expression",
-          "score": 0.5,
+          "score": 1,
           "source": "rule_based",
           "chunk_ids": [
             "chunk-101"
@@ -380,7 +330,23 @@
         },
         {
           "value": "founded",
-          "score": 0.5,
+          "score": 1,
+          "source": "rule_based",
+          "chunk_ids": [
+            "chunk-101"
+          ]
+        },
+        {
+          "value": "fundamental",
+          "score": 1,
+          "source": "rule_based",
+          "chunk_ids": [
+            "chunk-101"
+          ]
+        },
+        {
+          "value": "human",
+          "score": 1,
           "source": "rule_based",
           "chunk_ids": [
             "chunk-101"
@@ -467,53 +433,8 @@
       "content_type": "",
       "keywords": [
         {
-          "value": "def",
-          "score": 1,
-          "source": "rule_based",
-          "chunk_ids": [
-            "chunk-101",
-            "chunk-102"
-          ]
-        },
-        {
-          "value": "jam",
-          "score": 1,
-          "source": "rule_based",
-          "chunk_ids": [
-            "chunk-101",
-            "chunk-102"
-          ]
-        },
-        {
-          "value": "new",
-          "score": 1,
-          "source": "rule_based",
-          "chunk_ids": [
-            "chunk-101",
-            "chunk-102"
-          ]
-        },
-        {
-          "value": "recordings",
-          "score": 1,
-          "source": "rule_based",
-          "chunk_ids": [
-            "chunk-101",
-            "chunk-102"
-          ]
-        },
-        {
-          "value": "york",
-          "score": 1,
-          "source": "rule_based",
-          "chunk_ids": [
-            "chunk-101",
-            "chunk-102"
-          ]
-        },
-        {
           "value": "albums",
-          "score": 0.5,
+          "score": 1,
           "source": "rule_based",
           "chunk_ids": [
             "chunk-102"
@@ -521,7 +442,7 @@
         },
         {
           "value": "art",
-          "score": 0.5,
+          "score": 1,
           "source": "rule_based",
           "chunk_ids": [
             "chunk-102"
@@ -529,7 +450,7 @@
         },
         {
           "value": "create",
-          "score": 0.5,
+          "score": 1,
           "source": "rule_based",
           "chunk_ids": [
             "chunk-102"
@@ -537,7 +458,7 @@
         },
         {
           "value": "essence",
-          "score": 0.5,
+          "score": 1,
           "source": "rule_based",
           "chunk_ids": [
             "chunk-102"
@@ -545,7 +466,31 @@
         },
         {
           "value": "expectation",
-          "score": 0.5,
+          "score": 1,
+          "source": "rule_based",
+          "chunk_ids": [
+            "chunk-102"
+          ]
+        },
+        {
+          "value": "hip",
+          "score": 1,
+          "source": "rule_based",
+          "chunk_ids": [
+            "chunk-102"
+          ]
+        },
+        {
+          "value": "hop",
+          "score": 1,
+          "source": "rule_based",
+          "chunk_ids": [
+            "chunk-102"
+          ]
+        },
+        {
+          "value": "legendary",
+          "score": 1,
           "source": "rule_based",
           "chunk_ids": [
             "chunk-102"

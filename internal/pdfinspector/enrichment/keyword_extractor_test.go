@@ -13,7 +13,7 @@ func TestRuleBasedKeywordExtractor(t *testing.T) {
 	extractor := enrichment.NewRuleBasedKeywordExtractor()
 
 	t.Run("empty document / chunks returns empty keywords", func(t *testing.T) {
-		keywords, err := extractor.Extract(ctx, nil, "en")
+		keywords, err := extractor.Extract(ctx, nil, "en", nil)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -30,7 +30,7 @@ func TestRuleBasedKeywordExtractor(t *testing.T) {
 			},
 		}
 
-		keywords, err := extractor.Extract(ctx, chunks, "en")
+		keywords, err := extractor.Extract(ctx, chunks, "en", nil)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -68,7 +68,7 @@ func TestRuleBasedKeywordExtractor(t *testing.T) {
 			},
 		}
 
-		keywords, err := extractor.Extract(ctx, chunks, "en")
+		keywords, err := extractor.Extract(ctx, chunks, "en", nil)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -90,7 +90,7 @@ func TestRuleBasedKeywordExtractor(t *testing.T) {
 			},
 		}
 
-		keywords, err := extractor.Extract(ctx, chunks, "en")
+		keywords, err := extractor.Extract(ctx, chunks, "en", nil)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -110,7 +110,7 @@ func TestRuleBasedKeywordExtractor(t *testing.T) {
 			},
 		}
 
-		keywords, err := extractor.Extract(ctx, chunks, "tr")
+		keywords, err := extractor.Extract(ctx, chunks, "tr", nil)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -134,8 +134,8 @@ func TestRuleBasedKeywordExtractor(t *testing.T) {
 			},
 		}
 
-		keywords1, _ := extractor.Extract(ctx, chunks, "en")
-		keywords2, _ := extractor.Extract(ctx, chunks, "en")
+		keywords1, _ := extractor.Extract(ctx, chunks, "en", nil)
+		keywords2, _ := extractor.Extract(ctx, chunks, "en", nil)
 
 		if len(keywords1) != len(keywords2) {
 			t.Fatalf("nondeterministic keyword count: %d vs %d", len(keywords1), len(keywords2))
@@ -152,4 +152,50 @@ func TestRuleBasedKeywordExtractor(t *testing.T) {
 			t.Errorf("expected top keyword 'architecture', got %q", keywords1[0].Value)
 		}
 	})
+}
+
+// Behavior Contract: Keyword extractor must suppress sub-tokens of extracted entity names.
+// "def", "jam", "new", "york" must not appear in keywords when Def Jam Recordings and New York are entities.
+func TestKeywordExtractor_FiltersEntityFragments(t *testing.T) {
+	ctx := context.Background()
+	extractor := enrichment.NewRuleBasedKeywordExtractor()
+
+	chunks := []pdfmodel.KnowledgeChunk{
+		{
+			ChunkID:         "chunk-101",
+			ContentMarkdown: "Rick Rubin founded Def Jam Recordings in New York alongside Russell Simmons. Creative expression is a fundamental human drive.",
+		},
+	}
+
+	entities := []pdfmodel.Entity{
+		{ID: "organization:def-jam-recordings", Name: "Def Jam Recordings", Type: pdfmodel.EntityTypeOrganization},
+		{ID: "location:new-york", Name: "New York", Type: pdfmodel.EntityTypeLocation},
+		{ID: "person:rick-rubin", Name: "Rick Rubin", Type: pdfmodel.EntityTypePerson},
+	}
+
+	keywords, err := extractor.Extract(ctx, chunks, "en", entities)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	entityFragments := []string{"def", "jam", "recordings", "new", "york", "rick", "rubin"}
+	for _, kw := range keywords {
+		for _, fragment := range entityFragments {
+			if kw.Value == fragment {
+				t.Errorf("BEHAVIOR CONTRACT VIOLATION: entity fragment %q leaked into keyword index", kw.Value)
+			}
+		}
+	}
+
+	// Semantic keywords must still be present
+	foundSemantic := false
+	semantic := map[string]bool{"creative": true, "expression": true, "founded": true, "alongside": true, "fundamental": true, "drive": true}
+	for _, kw := range keywords {
+		if semantic[kw.Value] {
+			foundSemantic = true
+		}
+	}
+	if !foundSemantic {
+		t.Error("expected semantic keywords like 'creative' or 'expression' to remain after entity filtering")
+	}
 }

@@ -23,7 +23,7 @@ func NewKeywordExtractorPass(extractor KeywordExtractor) *KeywordExtractorPass {
 
 func (p *KeywordExtractorPass) Name() string { return "KeywordExtractorPass" }
 func (p *KeywordExtractorPass) Requires() []Capability {
-	return []Capability{CapabilityRawMetadata, CapabilityLanguage}
+	return []Capability{CapabilityRawMetadata, CapabilityLanguage, CapabilityEntities}
 }
 func (p *KeywordExtractorPass) Provides() []Capability { return []Capability{CapabilityKeywords} }
 
@@ -37,7 +37,13 @@ func (p *KeywordExtractorPass) Execute(ctx context.Context, input *EnrichmentInp
 		lang = input.Metadata.Language
 	}
 
-	keywords, err := p.extractor.Extract(ctx, input.Chunks, lang)
+	// Collect document-level entities for entity-aware keyword filtering
+	var entities []pdfmodel.Entity
+	if input.Metadata != nil {
+		entities = input.Metadata.Entities
+	}
+
+	keywords, err := p.extractor.Extract(ctx, input.Chunks, lang, entities)
 	if err != nil {
 		return err
 	}
