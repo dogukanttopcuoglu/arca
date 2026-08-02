@@ -1,27 +1,15 @@
-package main
+package enrichment_test
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
+	"testing"
 
 	"arca/internal/pdfinspector/enrichment"
 	pdfmodel "arca/internal/pdfinspector/model"
 )
 
-func main() {
-	pdfPath := `C:\Users\Dogukan\OneDrive\standup\rick-rubin.pdf`
-	fmt.Printf("Loading PDF: %s\n", pdfPath)
-
-	// Check if file exists
-	fi, err := os.Stat(pdfPath)
-	if err != nil {
-		fmt.Printf("ERROR loading PDF file: %v\n", err)
-		return
-	}
-	fmt.Printf("PDF File Size: %d bytes\n", fi.Size())
-
-	// Build realistic EnrichmentInput representing actual PDF content extracted from Rick Rubin - The Creative Act
+func TestGenerateInspectionResultV2(t *testing.T) {
 	meta := &pdfmodel.DocumentMetadata{
 		Title:  "Extracted PDF Document",
 		Author: "Firecrawl Inspector",
@@ -84,16 +72,13 @@ func main() {
 	}
 
 	enricher := enrichment.NewEnricher()
-	report := enricher.Enrich(input)
+	_ = enricher.Enrich(input)
 
 	outputJSON, err := json.MarshalIndent(input, "", "  ")
 	if err != nil {
-		fmt.Printf("JSON Marshal error: %v\n", err)
-		return
+		t.Fatalf("JSON marshal error: %v", err)
 	}
 
-	outFile := `.scratch/inspection_result_rick_rubin_v2.json`
+	outFile := `c:/Users/Dogukan/Desktop/arca/.scratch/inspection_result_rick_rubin_v2.json`
 	_ = os.WriteFile(outFile, outputJSON, 0644)
-	fmt.Printf("Successfully generated empirical runtime JSON output: %s\n", outFile)
-	fmt.Printf("Report Execution Timing: %+v\n", report.StageDurations)
 }
