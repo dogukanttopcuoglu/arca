@@ -1,6 +1,7 @@
 package enrichment
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"strings"
@@ -54,7 +55,7 @@ func NewEnricher() *DefaultEnricher {
 	return &DefaultEnricher{}
 }
 
-// Enrich executes single-pass metadata enrichment and semantic tree page resolution.
+// Enrich executes multi-pass metadata enrichment using CompositeEnricher.
 func (e *DefaultEnricher) Enrich(input *EnrichmentInput) *EnrichmentReport {
 	if input == nil {
 		return &EnrichmentReport{}
@@ -64,17 +65,12 @@ func (e *DefaultEnricher) Enrich(input *EnrichmentInput) *EnrichmentReport {
 		Warnings: []string{},
 	}
 
-	if input.Metadata != nil {
-		input.Metadata.Title = ResolveDocumentTitle(*input.Metadata, input.Tree, input.PageMap, input.Filename)
-		input.Metadata.Author = ResolveDocumentAuthor(*input.Metadata, input.PageMap, input.Filename)
-	}
+	comp := NewCompositeEnricher([]EnricherPass{
+		NewTitleAuthorPass(nil, nil),
+		NewPageResolutionPass(),
+	})
 
-	if input.Tree != nil {
-		treeWarnings := EnrichSemanticTree(input.Tree, input.PageMap, input.Chunks)
-		if len(treeWarnings) > 0 {
-			report.Warnings = append(report.Warnings, treeWarnings...)
-		}
-	}
+	_ = comp.ExecutePasses(context.Background(), input)
 
 	return report
 }

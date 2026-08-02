@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARC Document Intelligence OS — Kapsamlı Mimari & Müfredat Masterclass</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- MathJax for rendering formulas -->
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        :root {
+            --bg-dark: #070a12;
+            --bg-card: #0f172a;
+            --bg-card-hover: #1e293b;
+            --bg-code: #0b1120;
+            --accent-blue: #38bdf8;
+            --accent-purple: #c084fc;
+            --accent-emerald: #34d399;
+            --accent-amber: #fbbf24;
+            --accent-rose: #fb7185;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-color: rgba(255, 255, 255, 0.08);
+            --border-glow: rgba(56, 189, 248, 0.25);
+            --font-head: 'Outfit', sans-serif;
+            --font-body: 'Plus Jakarta Sans', sans-serif;
+            --font-code: 'Fira Code', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: var(--font-body);
+            line-height: 1.7;
+            padding-bottom: 120px;
+        }
+
+        .glow-bg {
+            position: fixed;
+            top: -100px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 1400px;
+            height: 700px;
+            background: radial-gradient(circle, rgba(56, 189, 248, 0.15) 0%, rgba(192, 132, 252, 0.1) 40%, rgba(7, 10, 18, 0) 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            max-width: 1440px;
+            margin: 0 auto;
+            padding: 0 32px;
+            position: relative;
+            z-index: 1;
+        }
+
+        header {
+            padding: 64px 0 40px;
+            text-align: center;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 48px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 6px 20px;
+            background: rgba(56, 189, 248, 0.1);
+            border: 1px solid var(--border-glow);
+            border-radius: 9999px;
+            color: var(--accent-blue);
+            font-family: var(--font-code);
+            font-size: 0.88rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            letter-spacing: 0.05em;
+        }
+
+        h1 {
+            font-family: var(--font-head);
+            font-size: 3.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #ffffff 0%, #38bdf8 45%, #c084fc 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 16px;
+            letter-spacing: -0.02em;
+        }
+
+        p.subtitle {
+            font-size: 1.25rem;
+            color: var(--text-muted);
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 24px;
+            margin-bottom: 56px;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 28px;
+            text-align: center;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .stat-card:hover {
+            border-color: var(--accent-blue);
+            transform: translateY(-6px);
+            box-shadow: 0 20px 40px -15px rgba(56, 189, 248, 0.3);
+        }
+
+        .stat-number {
+            font-family: var(--font-head);
+            font-size: 3rem;
+            font-weight: 800;
+            color: var(--accent-blue);
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        /* Tabs Navigation */
+        .nav-tabs {
+            display: flex;
+            gap: 14px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 40px;
+            overflow-x: auto;
+            padding-bottom: 12px;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: 1px solid transparent;
+            color: var(--text-muted);
+            font-family: var(--font-head);
+            font-size: 1.05rem;
+            font-weight: 600;
+            padding: 14px 28px;
+            border-radius: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-main);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .tab-btn.active {
+            color: #070a12;
+            background: var(--accent-blue);
+            border-color: var(--accent-blue);
+            box-shadow: 0 6px 20px rgba(56, 189, 248, 0.4);
+        }
+
+        .tab-panel {
+            display: none;
+        }
+
+        .tab-panel.active {
+            display: block;
+            animation: fadeIn 0.4s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Deep Dive Sections */
+        .deep-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            padding: 40px;
+            margin-bottom: 40px;
+            transition: all 0.3s ease;
+        }
+
+        .deep-section:hover {
+            border-color: var(--border-glow);
+            box-shadow: 0 16px 36px -12px rgba(0, 0, 0, 0.6);
+        }
+
+        .deep-title {
+            font-family: var(--font-head);
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--accent-blue);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .deep-subtitle {
+            font-family: var(--font-head);
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--accent-purple);
+            margin: 24px 0 12px;
+        }
+
+        .deep-desc {
+            color: #cbd5e1;
+            font-size: 1.05rem;
+            margin-bottom: 24px;
+            line-height: 1.8;
+        }
+
+        /* Formula & Concept Highlight Boxes */
+        .highlight-box {
+            background: rgba(56, 189, 248, 0.08);
+            border-left: 4px solid var(--accent-blue);
+            padding: 20px 24px;
+            border-radius: 0 14px 14px 0;
+            margin-bottom: 24px;
+            font-size: 1rem;
+            color: #e2e8f0;
+        }
+
+        .highlight-box strong {
+            color: var(--accent-blue);
+        }
+
+        .formula-box {
+            background: var(--bg-code);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 20px;
+            text-align: center;
+            font-size: 1.2rem;
+            margin-bottom: 24px;
+            color: var(--accent-emerald);
+        }
+
+        /* Architecture Grid */
+        .arch-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 24px;
+            margin-bottom: 28px;
+        }
+
+        .arch-card {
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+        }
+
+        .arch-card-header {
+            font-family: var(--font-head);
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--accent-amber);
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .arch-card-list {
+            list-style: none;
+            font-size: 0.95rem;
+            color: var(--text-muted);
+        }
+
+        .arch-card-list li {
+            margin-bottom: 8px;
+            position: relative;
+            padding-left: 18px;
+        }
+
+        .arch-card-list li::before {
+            content: "➔";
+            position: absolute;
+            left: 0;
+            color: var(--accent-blue);
+            font-size: 0.8rem;
+        }
+
+        .code-snippet {
+            background: var(--bg-code);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px;
+            font-family: var(--font-code);
+            font-size: 0.85rem;
+            color: #a5f3fc;
+            overflow-x: auto;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+
+        .file-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .file-badge {
+            background: #0b1120;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 10px 16px;
+            font-family: var(--font-code);
+            font-size: 0.85rem;
+            color: #93c5fd;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.2s ease;
+        }
+
+        .file-badge:hover {
+            border-color: var(--accent-blue);
+            color: #ffffff;
+            background: rgba(56, 189, 248, 0.15);
+            transform: translateY(-2px);
+        }
+
+        /* Flow Diagram */
+        .flow-diagram {
+            background: #080d1a;
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 36px;
+            margin-bottom: 44px;
+            overflow-x: auto;
+        }
+
+        .flow-flex {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            gap: 18px;
+        }
+
+        .flow-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border-glow);
+            padding: 18px 26px;
+            border-radius: 16px;
+            text-align: center;
+            min-width: 150px;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+        }
+
+        .flow-box-title {
+            font-family: var(--font-head);
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--accent-blue);
+        }
+
+        .flow-box-sub {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .flow-arrow {
+            color: var(--accent-amber);
+            font-weight: bold;
+            font-size: 1.3rem;
+        }
+
+        /* ADR Master Table */
+        .adr-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--bg-card);
+            border-radius: 20px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            margin-bottom: 44px;
+        }
+
+        .adr-table th, .adr-table td {
+            padding: 20px 26px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .adr-table th {
+            background: rgba(255, 255, 255, 0.03);
+            font-family: var(--font-head);
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .adr-table td {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+        }
+
+        .adr-badge {
+            font-family: var(--font-code);
+            font-size: 0.78rem;
+            padding: 4px 12px;
+            border-radius: 6px;
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--accent-emerald);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            font-weight: 600;
+        }
+
+        footer {
+            text-align: center;
+            padding-top: 56px;
+            border-top: 1px solid var(--border-color);
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="glow-bg"></div>
+
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <span class="badge">EKSİKSİZ MİMARİ MASTERCLASS DOKÜMANTASYONU</span>
+            <h1>ARC Document Intelligence OS</h1>
+            <p class="subtitle">PDF Parser'dan GraphRAG, Multi-Tenant Evidentiary OS ve Native MCP Platformuna Uzanan Derin Mimari Kataloğu</p>
+        </header>
+
+        <!-- Stats Overview -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number">18</div>
+                <div class="stat-label">Resmi Mimari Karar Belgesi (ADR)</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">10/10</div>
+                <div class="stat-label">Milestone 2 Tamamlanan Bilet</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">100%</div>
+                <div class="stat-label">Yeşil Unit Test Kapsayıcılığı</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">3-Way</div>
+                <div class="stat-label">RRF Fusion (Dense + Sparse + Graph)</div>
+            </div>
+        </div>
+
+        <!-- End to End Flow Diagram -->
+        <div class="flow-diagram">
+            <h3 style="font-family: var(--font-head); margin-bottom: 24px; color: var(--accent-blue); text-align: center;">⚡ Tam Sistem Mimari Akış Şeması (End-to-End Pipeline)</h3>
+            <div class="flow-flex">
+                <div class="flow-box">
+                    <div class="flow-box-title">PDF Inspector</div>
+                    <div class="flow-box-sub">Step 0..5 Parser Core</div>
+                </div>
+                <span class="flow-arrow">➔</span>
+                <div class="flow-box">
+                    <div class="flow-box-title">Diff & Indexer</div>
+                    <div class="flow-box-sub">6-State Signature Engine</div>
+                </div>
+                <span class="flow-arrow">➔</span>
+                <div class="flow-box">
+                    <div class="flow-box-title">Stores</div>
+                    <div class="flow-box-sub">Vector & BFS GraphStore</div>
+                </div>
+                <span class="flow-arrow">➔</span>
+                <div class="flow-box">
+                    <div class="flow-box-title">3-Way RRF Hybrid</div>
+                    <div class="flow-box-sub">Dense + Sparse + Graph</div>
+                </div>
+                <span class="flow-arrow">➔</span>
+                <div class="flow-box">
+                    <div class="flow-box-title">Context & Verification</div>
+                    <div class="flow-box-sub">[Ref N] & Evidence Pipeline</div>
+                </div>
+                <span class="flow-arrow">➔</span>
+                <div class="flow-box">
+                    <div class="flow-box-title">Agent & Delivery</div>
+                    <div class="flow-box-sub">MCP / REST / CLI Adapters</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="nav-tabs">
+            <button class="tab-btn active" onclick="switchTab('tab-ms1')">1. PDF Ingestion & Semantic Parsing</button>
+            <button class="tab-btn" onclick="switchTab('tab-ms2-indexing')">2. Indexing & 3-Way Retrieval</button>
+            <button class="tab-btn" onclick="switchTab('tab-ms2-rag')">3. RAG & Evidence Verification OS</button>
+            <button class="tab-btn" onclick="switchTab('tab-ms2-graph-agent')">4. Knowledge Graph, Agent & MCP</button>
+            <button class="tab-btn" onclick="switchTab('tab-adrs')">5. Tüm ADR Kararları (0001 - 0018)</button>
+        </div>
+
+        <!-- ==================== TAB 1: MILESTONE 1 ==================== -->
+        <div id="tab-ms1" class="tab-panel active">
+            <div class="section-header">
+                <h2 class="section-title">📦 1. Knowledge Ingestion & PDF Inspector Core</h2>
+                <p class="section-desc">PDF dokümanlarını sadece metin olarak değil, semantik ağaç (Semantic Tree), ebeveyn-çocuk chunk hiyerarşisi ve teşhis kayıtlarıyla çözen çekirdek katman.</p>
+            </div>
+
+            <!-- Deep Section 1.1 -->
+            <div class="deep-section">
+                <h3 class="deep-title">1.1 PDF Inspection Pipeline (Step 0'dan Step 5'e Orkestrasyon)</h3>
+                <p class="deep-desc">
+                    ARC'nin giriş katmanı, yüklenen PDF dosyalarını 6 aşamalı (0..5) disiplinli bir hat üzerinden geçirir. İşlem sırasında dosya bozukluğu, şifre koruması veya kısmi okuma hataları <code>DiagnosticWarning</code> kayıtlarına dönüştürülür; sistem asla çökmek yerine zarif bozulma (graceful degradation) gösterir.
+                </p>
+
+                <div class="highlight-box">
+                    <strong>Mimari Prensip:</strong> <code>Inspector</code> orkestratörü üçüncü parti PDF ayrıştırıcılara (Firecrawl SDK vb.) sıkı sıkıya bağlanmaz; <code>FirecrawlClient</code> adapter'ı üzerinden soyutlanmıştır.
+                </div>
+
+                <div class="arch-grid">
+                    <div class="arch-card">
+                        <div class="arch-card-header">
+                            <span>Pipeline Aşamaları</span>
+                            <span style="font-family: var(--font-code); color: var(--accent-emerald);">Step 0..5</span>
+                        </div>
+                        <ul class="arch-card-list">
+                            <li><strong>Step 0: Validation</strong> — Byte boyutu ve PDF magic header doğrulaması.</li>
+                            <li><strong>Step 1: Raw Extraction</strong> — OCR ve düz metin/layout çekimi.</li>
+                            <li><strong>Step 2: Structural Parsing</strong> — Tablo, kod ve görsel varlıklarının ayıklanması.</li>
+                            <li><strong>Step 3: Semantic Enrichment</strong> — Başlık (H1-H6) hiyerarşisinin kurulması.</li>
+                            <li><strong>Step 4: Chunk Generation</strong> — Parent-Child chunk'larının üretilmesi.</li>
+                            <li><strong>Step 5: Diagnostics</strong> — Hata ve uyarı loglarının raporlanması.</li>
+                        </ul>
+                    </div>
+
+                    <div class="arch-card">
+                        <div class="arch-card-header">
+                            <span>Önemli Tipler & Struct'lar</span>
+                            <span style="font-family: var(--font-code); color: var(--accent-purple);">Domain</span>
+                        </div>
+                        <ul class="arch-card-list">
+                            <li><code>PDFInspectionResult</code> — İnceleme sonucunun ana konteyneri.</li>
+                            <li><code>KnowledgeChunk</code> — Semantik bilgi birimi.</li>
+                            <li><code>AssetMetadata</code> — Tablo, kod ve görsel varlık türleri.</li>
+                            <li><code>DiagnosticWarning</code> — Sayfa bazlı hata ve uyarı logu.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="code-snippet">
+type PDFInspectionResult struct {
+    SchemaVersion string             `json:"schema_version"`
+    Document      DocumentMetadata   `json:"document"`
+    Chunks        []KnowledgeChunk   `json:"chunks"`
+    Assets        []AssetMetadata    `json:"assets,omitempty"`
+    Diagnostics   DiagnosticReport   `json:"diagnostics"`
+}
+                </div>
+
+                <div class="file-badges">
+                    <a class="file-badge" href="file:///c:/Users/Dogukan/Desktop/arca/internal/pdfinspector/inspector/inspector.go">📁 internal/pdfinspector/inspector/inspector.go</a>
+                    <a class="file-badge" href="file:///c:/Users/Dogukan/Desktop/arca/internal/pdfinspector/inspector/inspector_test.go">🧪 internal/pdfinspector/inspector/inspector_test.go</a>
+                    <a class="file-badge" href="file:///c:/Users/Dogukan/Desktop/arca/internal/pdfinspector/model/inspection.go">📁 internal/pdfinspector/model/inspection.go</a>
+                    <a class="file-badge" href="file:///c:/Users/Dogukan/Desktop/arca/internal/pdfinspector/model/model_test.go">🧪 internal/pdfinspector/model/model_test.go</a>
+                </div>
+            </div>
+
+            <!-- Deep Section 1.2 -->
+            <div class="deep-section">
+                <h3 class="deep-title">1.2 Semantic Tree Reconstruction & Parent-Child Chunking</h3>
+                <p class="deep-desc">
+                    Klasik RAG sistemlerindeki sabit karakterli (character-length) kesimlerin aksine ARC, dokümanın iç içe geçmiş başlık ağacını (Semantic Tree) kurar. Küçük çocuk chunk'lar (Child Chunks) arama hassasiyeti sağlarken, ebeveyn chunk'lar (Parent Chunks) LLM cevabı türetilirken bağlam kaybını engeller.
+                </p>
+
+                <div class="arch-grid">
+                    <div class="arch-card">
+                        <div class="arch-card-header">
+                            <span>KnowledgeChunk Yapısı</span>
+                            <span style="font-family: var(--font-code); color: var(--accent-blue);">Model</span>
+                        </div>
+                        <ul class="arch-card-list">
+                            <li><code>ChunkID</code> — Benzersiz SHA-256 kimliği.</li>
+                            <li><code>ParentChunkID</code> — Bağlı olduğu üst bölüm ID'si.</li>
+                            <li><code>ChildChunkIDs</code> — Alt parçaların kimlik dizisi.</li>
+                            <li><code>PageNumbers</code> — Yer aldığı sayfa numaraları dizisi.</li>
+                            <li><code>SectionPath</code> — Örn: "Architecture/Indexing Engine".</li>
+                        </ul>
+                    </div>
+
+                    <div class="arch-card">
+                        <div class="arch-card-header">
+                            <span>İçerik Tipleri (ContentType)</span>
+                            <span style="font-family: var(--font-code); color: var(--accent-amber);">Enum</span>
+                        </div>
+                        <ul class="arch-card-list">
+                            <li><code>ContentTypeParagraph</code> — Düz metin parçası.</li>
+                            <li><code>ContentTypeTable</code> — Markdown tablo yapısı.</li>
+                            <li><code>ContentTypeCode</code> — Kod bloğu.</li>
+                            <li><code>ContentTypeEquation</code> — Matematiksel formül.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="file-badges">
+                    <a class="file-badge" href="file:///c:/Users/Dogukan/Desktop/arca/internal/pdfinspector/semantic/extractor.go">📁 internal/pdfinspector/semantic/extractor.go</a>
+                    <a class="file-badge" href="file:///c:/Users/Dogukan/Desktop/arca/internal/pdfinspector/semantic/semantic_test.go">🧪 internal/pdfinspector/semantic/semantic_test.go</a>
+                    <a class="file-badge" href="file:///c:/Users/Dogukan/Desktop/arca/internal/pdfinspector/enrichment/enricher.go">📁 internal/pdfinspector/enrichment/enricher.go</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== TAB 2: MILESTONE 2 INDEXING ==================== -->
+        <div id="tab-ms2-indexing" class="tab-panel">
+            <div class="section-header">
+                <h2 class="section-title">⚡ 2. Knowledge Indexing & 3-Way Hybrid Retrieval Engine</h2>
+                <p class="section-desc">Akıllı vektör indeksleme, 6-durumlu fark motoru, Cosine Similarity depolama ve Dense+Sparse+Graph 3'lü Reciprocal Rank Fusion (RRF) skor birleştirmesi.</p>
+            </div>
+
+            <!-- Deep Section 2.1 -->
+            <div class="deep-section">
+                <h3 class="deep-title">2.1 6-State Signature Diff Engine (ADR-0008)</h3>
+                <p class="deep-desc">
+                    Büyük doküman kütüphanelerinde vektör veritabanına yeniden embedding göndermek son derece maliyetlidir. <code>DiffEngine</code>, her chunk için imza hesaplayarak veritabanındaki mevcut durumla karşılaştırır ve yalnızca değişen parçaları vektörleştirir.
+                </p>
+
+                <div class="formula-box">
+                    $$\text{IndexSignature} = \text{SHA256}(\text{ContentHash} + \text{Provider} + \text{Model} + \text{Version} + \text{SchemaVer})$$
+                </div>
+
+                <div class="arch-grid">
+                    <div class="arch-card">
+                        <div class="arch-card-header">
+                            <span>6 Fark Durumu (Diff State)</span>
+                            <span style="font-family: var(--font-code); color: var(--accent-emerald);">State Machine</span>
+                        </div>
+                        <ul class="arch-card-list">
+                            <li><code>UNCHANGED</code> — İçerik ve model aynı, işlem yapılmaz.</li>
+                            <li><code>CONTENT_CHANGED</code> — Metin değişti, re-embed edilir.</li>
+                            <li><code>MODEL_CHANGED</code> — Embedding modeli değişti, re-embed edilir.</li>
+                            <li><code>NEW</code> — Yeni eklenen chunk.</li>
+                            <li><code>DELETED</code> — Silinen chunk (vektör silinir).</li>
+                            <li><code>SCHEMA_CHANGED</code> — Şema yapısı güncellendi.</li>
+                        </ul>
+                    </div>
+
+                    <div class="arch-card">
+                        <div class="arch-card-header">
+                            <span>DiffPlan Mantığı</span>
+                            <span style="font-family: var(--font-code); color: var(--accent-purple);">Execution</span>
+                        </div>
+                        <ul class="arch-card-list">
+                            <li><code>ChunksToEmbed()</code> — Yalnızca yeni/değişen chunk'ları döner.</li>
+                            <li><code>PointsToDelete()</code> — Veritabanından silinecek ID'leri döner.</li>
+                            <li>Vektör maliyetini %90+ oranında düşürür.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="file-badges">
+                    <a class="file-badge" href="file:///c:/Users/Dogukan/Desktop/arca/internal/indexing/diff/engine.go">📁 internal/indexing/diff/engine.go</a>
+                    <a class="file-badge" href="file:///c:/Users/Dogukan/Desktop/arca/internal/indexing/diff/plan.go">📁 internal/indexing/diff/plan.go</a>
+                    <a class="file-badge" href="file:///c:/Users/Dogukan/Desktop/arca/internal/indexing/diff/engine_test.go">🧪 internal/indexing/diff/engine_test.go</a>
+                    <a class="file-badge" href="file:///c:/Users/Dogukan/Desktop/arca/internal/indexing/model/signature.go">📁 internal/indexing/model/signature.go</a>
+                </div>
+            </div>
+
+            <!-- Deep Section 2.2 -->
+            <div class="deep-section">
+                <h3 class="deep-title">2.2 Vector Store Seam & InMemory Cosine Similarity Adapter</h3>
+                <p class="deep-desc">
+                    <code>VectorStore</code> arayüzü, veritabanı bağımlılığını soyutlar. <code>InMemoryVectorStore</code> adapter'ı ise L2-normalized Cosine Similarity kullanarak bellek içi yüksek performanslı vektör araması yapar.
+                </p>
+
+                <div class="formula-box">
+                    $$\text{CosineSimilarity}(A, B) = \frac{A \cdot B}{\|A\| \|B\|} = \sum_{i=1}^{n} A_i B_i \quad (\text{L2-normalized vectors for speed})$$
+                </div>
+
+                <div class="file-badges">
+                    <a class="file-badge" href="file:///c:/Users/Dogukan/Desktop/arca/internal/indexing/store/store.go">📁 internal/indexing/store/store.go</a>
+                    <a class="file-badge" href="file:///c:/Users/Dogukan/Desktop/arca/internal/indexing/store/inmemory.go">📁 internal/indexing/store/inmemory.go</a>
+                    <a class="file-badge" href="file:///c:/Users/Dogukan/Desktop/arca/internal/indexing/store/inmemory_test.go">🧪 internal/indexing/store/inmemory_test.go</a>
+                    <a class="file-badge" href="file:///c:/Users/Dogukan/Desktop/arca/internal/indexing/worker/worker.go">📁 internal/indexing/worker/worker.go</a>
+                </div>
+            </div>
+
+            <!-- Deep Section 2.3 -->
+            <div class="deep-section">
+                <h3 class="deep-title">2.3 Reciprocal Rank Fusion (RRF k=60) Hybrid Retrieval Engine</h3>
+                <p class="deep-desc">
+                    Farklı arama kanallarından (Vektör/Dense, Kelime/Sparse BM25, Çizge/Graph) gelen farklı skor dağılımlarını doğrudan toplamak yerine, sıra tabanlı **Reciprocal Rank Fusion (RRF)** algoritması ile birleştirir.
+                </p>
+
+                <div class="formula-box">
+                    $$\text{RRF\_Score}(d \in D) = \sum_{m \in M} \frac{1}{k + r_m(d)} \quad (k = 60)$$
+                </div>
+
+                <div class="file-badges">
+                    <a class="file-badge" href="file:///c:/Users/Dogukan/Desktop/arca/internal/retrieval/seam/retriever.go">📁 internal/retrieval/seam/retriever.go</a>
+                    <a class="file-badge" href="file:///c:/Users/Dogukan/Desktop/arca/internal/retrieval/dense/retriever.go">📁 internal/retrieval/dense/retriever.go</a>
+                    <a class="file-badge" href="file:///c:/Users/Dogukan/Desktop/arca/internal/retrieval/hybrid/fusion.go">📁 internal/retrieval/hybrid/fusion.go</a>
+                    <a class="file-badge" href="file:///c:/Users/Dogukan/Desktop/arca/internal/retrieval/hybrid/hybrid_test.go">🧪 internal/retrieval/hybrid/hybrid_test.go</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== TAB 3: MILESTONE 2 RAG ==================== -->
+        <div id="tab-ms2-rag" class="tab-panel">
+            <div class="section-header">
+                <h2 class="section-title">🛡️ 3. RAG Orchestration & Evidentiary Verification OS</h2>
+                <p class="section-desc">Soru-cevap hattı, token bütçeleme, değişmez alıntı doğrulama, canlı SSE akışı ve multi-tenant güvenlik izolasyonu.</p>
+            </div>
+
+            <!-- Deep Section 3.1 -->
+            <div class="deep-section">
+                <h3 class="deep-title">3.1 AnswerEngine & ContextBuilder (ADR-0009 & ADR-0010)</h3>
+                <p class="deep-desc">
+                    <code>AnswerEngine</code>, sorguyu anlar, alakalı chunk'ları getirir ve <code>ContextBuilder</code> bileşenine teslim eder. <code>ContextBuilder</code> token sınırına göre bağlamı düzenler, mükerrer kayıtları temizler ve LLM için immutable <code>[Ref 1]</code>, <code>[Ref 2]</code> etiketlerini basar.
+                </p>
+
+                <div class="code-snippet">
+type ContextWindow struct {
+    Sources    []SourceReference `json:"sources"`
+    Content    string            `json:"content"`
+    TokenCount int               `json:"token_count"`
+}
+                </div>
+
+                <div class="file-badges">
+                    <a class="file-badge" href="file:///c:/Users/Dogukan/Desktop/arca/internal/qa/engine.go">📁 internal/qa/engine.go</a>
+                    <a class="file-badge" href="file:///c:/Users/Dogukan/Desktop/arca/internal/qa/analyzer.go">📁 internal/qa/analyzer.go</a>
+                    <a class="file-badge" href="file:///c:/Users/Dogukan/Desktop/arca/internal/qa/context/builder.go">📁 internal/qa/context/builder.go</a>
+                    <a class="file-badge" href="file:///c:/Users/Dogukan/Desktop/arca/internal/qa/context/token.go">📁 internal/qa/context/token.go</a>
+                </div>
+            </div>
+
+            <!-- Deep Section 3.2 -->
+            <div class="deep-section">
+                <h3 class="deep-title">3.2 Citation Extraction & Phased Verification (ADR-0012 & ADR-0013)</h3>
+                <p class="deep-desc">
+                    LLM alıntı otoritesi değildir; ürettiği <code>[Ref N]</code> etiketleri <code>CitationExtractor</code> tarafından Regex/AST ile taranır ve <code>ContextWindow</code> kaynaklarıyla doğrulanır. Sahte etiketler (halüsinasyonlar) <code>InvalidReferences++</code> olarak raporda işaretlenir.
+                </p>
+
+                <div class="arch-grid">
+                    <div class="arch-card">
+                        <div class="arch-card-header">
+                            <span>VerificationReport</span>
+                            <span style="font-family: var(--font-code); color: var(--accent-emerald);">Metrics</span>
+                        </div>
+                        <ul class="arch-card-list">
+                            <li><code>TotalClaims</code> — LLM'in ürettiği toplam iddia sayısı.</li>
+                            <li><code>VerifiedClaims</code> — Bağlamla eşleşen geçerli iddialar.</li>
+                            <li><code>InvalidReferences</code> — Geçersiz/uydurma etiket sayısı (örn. [Ref 99]).</li>
+                            <li><code>MissingCitations</code> — Alıntısı eksik kalan iddialar.</li>
+                        </ul>
+                    </div>
+
+                    <div class="arch-card">
+                        <div class="arch-card-header">
+                            <span>Fazlı Verification Yapısı</span>
+                            <span style="font-family: var(--font-code); color: var(--accent-purple);">Phases</span>
+                        </div>
+                        <ul class="arch-card-list">
+                            <li><strong>Phase 1 (Structural MVP):</strong> Sıfır ek gecikmeyle etiket ve sayfa eşliği doğrulaması.</li>
+                            <li><strong>Phase 2 (Entailment Seam):</strong> <code>EntailmentChecker</code> NLI modeliyle anlamsal doğruluk skorlaması.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="file-badges">
+                    <a class="file-badge" href="file:///c:/Users/Dogukan/Desktop/arca/internal/qa/citation/extractor.go">📁 internal/qa/citation/extractor.go</a>
+                    <a class="file-badge" href="file:///c:/Users/Dogukan/Desktop/arca/internal/qa/verification/pipeline.go">📁 internal/qa/verification/pipeline.go</a>
+                    <a class="file-badge" href="file:///c:/Users/Dogukan/Desktop/arca/internal/qa/verification/verification_test.go">🧪 internal/qa/verification/verification_test.go</a>
+                </div>
+            </div>
+
+            <!-- Deep Section 3.3 -->
+            <div class="deep-section">
+                <h3 class="deep-title">3.3 Dual-Mode Execution & Multi-Tenant Security (ADR-0014 & ADR-0015)</h3>
+                <p class="deep-desc">
+                    Anlık sohbetler için <code>StreamingAnswerEngine</code> (SSE canlı token akışı) + Derin araştırmalar için asenkron <code>QAJob</code> durum makinesi. Kullanıcı sorgu filtrelerinden tamamen bağımsız <code>SecurityContext</code> (TenantID, UserID, Permissions) ile kurumsal veri izolasyonu.
+                </p>
+
+                <div class="file-badges">
+                    <a class="file-badge" href="file:///c:/Users/Dogukan/Desktop/arca/internal/qa/streaming.go">📁 internal/qa/streaming.go</a>
+                    <a class="file-badge" href="file:///c:/Users/Dogukan/Desktop/arca/internal/qa/job/job.go">📁 internal/qa/job/job.go</a>
+                    <a class="file-badge" href="file:///c:/Users/Dogukan/Desktop/arca/internal/qa/job/state.go">📁 internal/qa/job/state.go</a>
+                    <a class="file-badge" href="file:///c:/Users/Dogukan/Desktop/arca/internal/security/context.go">📁 internal/security/context.go</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== TAB 4: GRAPH, AGENT & MCP ==================== -->
+        <div id="tab-ms2-graph-agent" class="tab-panel">
+            <div class="section-header">
+                <h2 class="section-title">🧠 4. Knowledge Graph, Agentic Layer & Native MCP Server</h2>
+                <p class="section-desc">3 kanallı GraphRAG, otonom ReAct araştırma motoru ve Claude Desktop / Cursor / Poke için Native MCP sunucusu.</p>
+            </div>
+
+            <!-- Deep Section 4.1 -->
+            <div class="deep-section">
+                <h3 class="deep-title">4.1 Knowledge Graph Bounded Context & 3-Way GraphRAG (ADR-0016)</h3>
+                <p class="deep-desc">
+                    <code>internal/graph</code> paketi bağımsız bir Bounded Context'tir. Doküman, Bölüm, Chunk, Varlık, Kavram ve Alıntı düğümlerini ilişkilendirir. <code>GraphRetriever</code> arama motorumuza 3. kanal olarak takılır ve 3'lü RRF birleştirmesi yapılmasını sağlar.
+                </p>
+
+                <div class="formula-box">
+                    $$\text{Dense Vector Search} + \text{Sparse BM25 Search} + \text{Graph Traversal Search} \xrightarrow{\text{RRF Fusion}} \text{SearchResults}$$
+                </div>
+
+                <div class="file-badges">
+                    <a class="file-badge" href="file:///c:/Users/Dogukan/Desktop/arca/internal/graph/model/node.go">📁 internal/graph/model/node.go</a>
+                    <a class="file-badge" href="file:///c:/Users/Dogukan/Desktop/arca/internal/graph/store/store.go">📁 internal/graph/store/store.go</a>
+                    <a class="file-badge" href="file:///c:/Users/Dogukan/Desktop/arca/internal/graph/store/inmemory.go">📁 internal/graph/store/inmemory.go</a>
+                    <a class="file-badge" href="file:///c:/Users/Dogukan/Desktop/arca/internal/graph/retriever/retriever.go">📁 internal/graph/retriever/retriever.go</a>
+                    <a class="file-badge" href="file:///c:/Users/Dogukan/Desktop/arca/internal/graph/graph_test.go">🧪 internal/graph/graph_test.go</a>
+                </div>
+            </div>
+
+            <!-- Deep Section 4.2 -->
+            <div class="deep-section">
+                <h3 class="deep-title">4.2 Agentic Research Engine (ReAct Controller) (ADR-0017)</h3>
+                <p class="deep-desc">
+                    Çok adımlı karmaşık araştırmalar için plan türetir (Planner+Executor). Sistem yeteneklerini birer <code>Tool</code> seam'i olarak çağırır ve <code>AgentPolicy</code> (MaxSteps, TokenBudget, Approval) sınırlarını zorunlu kılar.
+                </p>
+
+                <div class="file-badges">
+                    <a class="file-badge" href="file:///c:/Users/Dogukan/Desktop/arca/internal/agent/engine.go">📁 internal/agent/engine.go</a>
+                    <a class="file-badge" href="file:///c:/Users/Dogukan/Desktop/arca/internal/agent/policy.go">📁 internal/agent/policy.go</a>
+                    <a class="file-badge" href="file:///c:/Users/Dogukan/Desktop/arca/internal/agent/tool/tool.go">📁 internal/agent/tool/tool.go</a>
+                    <a class="file-badge" href="file:///c:/Users/Dogukan/Desktop/arca/internal/agent/tool/knowledge.go">📁 internal/agent/tool/knowledge.go</a>
+                    <a class="file-badge" href="file:///c:/Users/Dogukan/Desktop/arca/internal/agent/agent_test.go">🧪 internal/agent/agent_test.go</a>
+                </div>
+            </div>
+
+            <!-- Deep Section 4.3 -->
+            <div class="deep-section">
+                <h3 class="deep-title">4.3 Delivery Adapters (MCP Server, REST API & CLI) (ADR-0018)</h3>
+                <p class="deep-desc">
+                    İç çekirdek mantığımız 3 farklı teslimat adapter'ı ile dış dünyaya açılır: <code>cmd/arc-mcp</code> (Claude Desktop / Cursor / Poke için Native MCP Sunucusu), <code>cmd/arc-server</code> (Fiber HTTP REST & SSE) ve <code>cmd/arc</code> (Developer CLI).
+                </p>
+
+                <div class="arch-grid">
+                    <div class="arch-card">
+                        <div class="arch-card-header">
+                            <span>Native MCP Tools</span>
+                            <span style="font-family: var(--font-code); color: var(--accent-rose);">Protocol</span>
+                        </div>
+                        <ul class="arch-card-list">
+                            <li><code>inspect_pdf</code> — PDF inceleme aracı.</li>
+                            <li><code>search_knowledge_space</code> — Semantik arama aracı.</li>
+                            <li><code>traverse_knowledge_graph</code> — Çizge dolaşım aracı.</li>
+                            <li><code>ask_verified_question</code> — Kanıt doğrulamalı QA aracı.</li>
+                            <li><code>run_agent_research</code> — Otonom araştırma planı aracı.</li>
+                        </ul>
+                    </div>
+
+                    <div class="arch-card">
+                        <div class="arch-card-header">
+                            <span>CLI & Server Delivery</span>
+                            <span style="font-family: var(--font-code); color: var(--accent-blue);">Adapters</span>
+                        </div>
+                        <ul class="arch-card-list">
+                            <li><code>arc inspect <file></code> — Terminal PDF inceleme.</li>
+                            <li><code>arc ask <query></code> — Terminal hızlı soru-cevap.</li>
+                            <li><code>arc research <query></code> — Terminal otonom araştırma.</li>
+                            <li><code>/api/v1/qa/stream</code> — SSE canlı yayın servisi.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="file-badges">
+                    <a class="file-badge" href="file:///c:/Users/Dogukan/Desktop/arca/cmd/arc-mcp/server/server.go">📁 cmd/arc-mcp/server/server.go</a>
+                    <a class="file-badge" href="file:///c:/Users/Dogukan/Desktop/arca/cmd/arc-mcp/main.go">📁 cmd/arc-mcp/main.go</a>
+                    <a class="file-badge" href="file:///c:/Users/Dogukan/Desktop/arca/cmd/arc-mcp/mcp_test.go">🧪 cmd/arc-mcp/mcp_test.go</a>
+                    <a class="file-badge" href="file:///c:/Users/Dogukan/Desktop/arca/cmd/arc-server/main.go">📁 cmd/arc-server/main.go</a>
+                    <a class="file-badge" href="file:///c:/Users/Dogukan/Desktop/arca/cmd/arc/cli/app.go">📁 cmd/arc/cli/app.go</a>
+                    <a class="file-badge" href="file:///c:/Users/Dogukan/Desktop/arca/cmd/arc/main.go">📁 cmd/arc/main.go</a>
+                    <a class="file-badge" href="file:///c:/Users/Dogukan/Desktop/arca/cmd/arc/cli_test.go">🧪 cmd/arc/cli_test.go</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== TAB 5: ADRS ==================== -->
+        <div id="tab-adrs" class="tab-panel">
+            <div class="section-header">
+                <h2 class="section-title">🏛️ Kabul Edilen Tüm Mimari Karar Belgeleri (ADR-0001 — ADR-0018)</h2>
+                <p class="section-desc">ARC projesinin teknik sınırlarını, sorumluluk ayrımlarını ve tasarım kararlarını resmi olarak belgeleyen ADR kayıtları.</p>
+            </div>
+
+            <table class="adr-table">
+                <thead>
+                    <tr>
+                        <th>ADR kiti</th>
+                        <th>Karar Başlığı</th>
+                        <th>Kısa Mimari Özet</th>
+                        <th>Durum</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>ADR-0008</strong></td>
+                        <td>Knowledge Indexing & Retrieval Architecture</td>
+                        <td>6-state diff engine, InMemory Cosine VectorStore & Hybrid RRF (k=60)</td>
+                        <td><span class="adr-badge">ACCEPTED</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>ADR-0009</strong></td>
+                        <td>RAG Orchestration Pipeline Architecture</td>
+                        <td>Modular pipeline composition across independent seams</td>
+                        <td><span class="adr-badge">ACCEPTED</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>ADR-0010</strong></td>
+                        <td>Context Assembly Boundary & Token Budgeting</td>
+                        <td>ContextBuilder in internal/qa/context managing [Ref N] markers</td>
+                        <td><span class="adr-badge">ACCEPTED</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>ADR-0011</strong></td>
+                        <td>Prompt Assembly & LLM Provider Boundary</td>
+                        <td>Vendor-agnostic prompt builder and pure LLM transport seam</td>
+                        <td><span class="adr-badge">ACCEPTED</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>ADR-0012</strong></td>
+                        <td>Citation Extraction & Verification Strategy</td>
+                        <td>Inline reference markers + post-processing VerificationReport</td>
+                        <td><span class="adr-badge">ACCEPTED</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>ADR-0013</strong></td>
+                        <td>Evidence Verification & Entailment Seam</td>
+                        <td>Phase 1 Structural MVP + Phase 2 EntailmentChecker seam</td>
+                        <td><span class="adr-badge">ACCEPTED</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>ADR-0014</strong></td>
+                        <td>RAG Execution Model (Streaming & Async)</td>
+                        <td>StreamingAnswerEngine (SSE) + Async QAJob state machine</td>
+                        <td><span class="adr-badge">ACCEPTED</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>ADR-0015</strong></td>
+                        <td>Knowledge Boundary & Multi-Document Isolation</td>
+                        <td>3-tier hierarchy (Workspace->Space->Doc) & SecurityContext</td>
+                        <td><span class="adr-badge">ACCEPTED</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>ADR-0016</strong></td>
+                        <td>Knowledge Graph Bounded Context</td>
+                        <td>internal/graph Bounded Context & 3-way RRF GraphRAG</td>
+                        <td><span class="adr-badge">ACCEPTED</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>ADR-0017</strong></td>
+                        <td>Agentic Knowledge Orchestration Layer</td>
+                        <td>AgentEngine ReAct planner + AgentPolicy limits & Tool seams</td>
+                        <td><span class="adr-badge">ACCEPTED</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>ADR-0018</strong></td>
+                        <td>External Interface & Deployment Boundary</td>
+                        <td>Core Engine + 3 delivery adapters (MCP Server, REST API, CLI)</td>
+                        <td><span class="adr-badge">ACCEPTED</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Footer -->
+        <footer>
+            <p>ARC Document Intelligence OS &copy; 2026 — Google Antigravity & Matt Pocock Flow Güvencesiyle</p>
+        </footer>
+    </div>
+
+    <script>
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-panel').forEach(panel => {
+                panel.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            document.getElementById(tabId).classList.add('active');
+            event.currentTarget.classList.add('active');
+        }
+    </script>
+</body>
+</html>

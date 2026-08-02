@@ -90,5 +90,15 @@ The graph search adapter implementing the `Retriever` interface seam to enable 3
 ## AgentEngine
 The top-level autonomous reasoning controller (`Planner` + `Executor`) orchestrating multi-step research tasks, tool calls (`KnowledgeTool`, `GraphTool`, `MCPTool`), and security policies (`MaxSteps`, `ApprovalSeam`).
 
+## EnricherPass
+The deep module interface seam representing an isolated compiler-pass style enrichment stage (`Name`, `Requires`, `Provides`, `Execute`).
+
+## CompositeEnricher
+The enrichment pipeline orchestrator executing an ordered sequence of `EnricherPass` stages with contract validation.
+
+## TitleResolver
+The fallback chain seam (`PDFMetadata` -> `Heading` -> `TOC` -> `LLM` -> `Unknown`) deriving document title without hardcoded book heuristics.
+
+
 
 
