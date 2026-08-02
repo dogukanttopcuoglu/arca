@@ -120,6 +120,16 @@ Document-level aggregated entity record (`ID`, `Name`, `Type`, `Aliases`, `Menti
 ## EntityExtractorPass
 The compiler-pass stage running `EntityExtractor` strategies to extract mentions and populate document/chunk entities.
 
+## ConceptSource
+Typed provenance enum (`"rule_based"`, `"llm"`, `"hybrid"`).
+
+## Concept
+Minimal domain object representing an abstract topic or theme (`ID`, `Name`, `Score`, `Source`).
+
+## ConceptExtractorPass
+The compiler-pass stage running `ConceptExtractor` strategies to synthesize headings and key phrases into abstract topics.
+
+
 
 
 
