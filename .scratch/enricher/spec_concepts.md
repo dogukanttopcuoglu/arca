@@ -9,7 +9,7 @@
 
 ## 1. Executive Summary
 
-This specification defines the minimal architecture for abstract topic and concept discovery in ARC's enrichment pipeline. Following ADR-0022, `Concept` is modeled as a lean struct (`ID`, `Name`, `Score`, `Source`) attached to both `DocumentMetadata` and `KnowledgeChunk`. `ConceptExtractorPass` delegates to a pluggable `ConceptExtractor` strategy interface.
+This specification defines the architecture for abstract topic and concept discovery in ARC's enrichment pipeline. Following ADR-0022, `Concept` is modeled as a lean struct (`ID`, `Name`, `Score`, `Source`) attached to both `DocumentMetadata` and `KnowledgeChunk`. `ConceptExtractorPass` delegates to a narrow `ConceptExtractor` strategy interface taking `ConceptInput`.
 
 ---
 
@@ -33,10 +33,18 @@ type Concept struct {
 }
 ```
 
-### 2.2 Interface Seam (`internal/pdfinspector/enrichment/concept_extractor.go`)
+### 2.2 Narrow Input & Interface Seam (`internal/pdfinspector/enrichment/concept_extractor.go`)
 ```go
+type ConceptInput struct {
+    Tree     *pdfmodel.SemanticTree
+    Chunks   []pdfmodel.KnowledgeChunk
+    Keywords []pdfmodel.Keyword
+    Entities []pdfmodel.Entity
+    Language string
+}
+
 type ConceptExtractor interface {
-    ExtractConcepts(ctx context.Context, input *EnrichmentInput, lang string) ([]pdfmodel.Concept, error)
+    ExtractConcepts(ctx context.Context, input ConceptInput) ([]pdfmodel.Concept, error)
 }
 ```
 
@@ -52,5 +60,5 @@ const (
 ## 3. Implementation Plan & Tickets
 
 - **Ticket 10 (`10-concept-domain-model.md`)**: Add `concept.go` with `Concept` and `ConceptSource` structs, update `DocumentMetadata` and `KnowledgeChunk`, and declare `CapabilityConcepts` token.
-- **Ticket 11 (`11-rule-based-concept-extractor.md`)**: Implement `ConceptExtractor` interface seam and `RuleBasedConceptExtractor` synthesizing section headings and key phrases.
-- **Ticket 12 (`12-concept-extractor-pass-integration.md`)**: Implement `ConceptExtractorPass` and integrate into `CompositeEnricher`.
+- **Ticket 11 (`11-rule-based-concept-extractor.md`)**: Implement `ConceptExtractor` interface seam with `ConceptInput` and `RuleBasedConceptExtractor` synthesizing section headings and key phrases.
+- **Ticket 12 (`12-concept-extractor-pass-integration.md`)**: Implement `ConceptExtractorPass` with explicit capability contract (`CapabilitySemanticTree`, `CapabilityKeywords`, `CapabilityEntities`) and integrate into `CompositeEnricher`.

@@ -40,4 +40,7 @@ type KnowledgeChunk struct {
 	IsOversized      bool             `json:"is_oversized,omitempty"`
 	Keywords         []Keyword        `json:"keywords,omitempty"`
 	Entities         []EntityMention  `json:"entities,omitempty"`
+	Concepts         []Concept        `json:"concepts,omitempty"`
+	Relations        []Relation       `json:"relations,omitempty"`
+	Summary          *Summary         `json:"summary,omitempty"`
 }

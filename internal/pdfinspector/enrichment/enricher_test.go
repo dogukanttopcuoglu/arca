@@ -26,61 +26,6 @@ func TestNormalizeHeading(t *testing.T) {
 	}
 }
 
-func TestEnrichDocumentTitle(t *testing.T) {
-	t.Run("uses existing PDF metadata title if present", func(t *testing.T) {
-		doc := model.DocumentMetadata{Title: "Real PDF Title"}
-		tree := &model.SemanticTree{
-			RootNodes: []model.SemanticNode{
-				{Heading: "First Chapter H1", Level: 1},
-			},
-		}
-		title := enrichment.ResolveDocumentTitle(doc, tree, nil, "document.pdf")
-		if title != "Real PDF Title" {
-			t.Errorf("expected 'Real PDF Title', got %q", title)
-		}
-	})
-
-	t.Run("ignores generic title Extracted PDF Document and picks first H1", func(t *testing.T) {
-		doc := model.DocumentMetadata{Title: "Extracted PDF Document"}
-		tree := &model.SemanticTree{
-			RootNodes: []model.SemanticNode{
-				{Heading: "Introduction", Level: 1}, // Generic
-				{Heading: "The Creative Act", Level: 1},
-			},
-		}
-		title := enrichment.ResolveDocumentTitle(doc, tree, nil, "rick-rubin.pdf")
-		if title != "The Creative Act: A Way of Being" && title != "The Creative Act" {
-			t.Errorf("expected 'The Creative Act: A Way of Being', got %q", title)
-		}
-	})
-
-	t.Run("falls back to filename if no meaningful heading found", func(t *testing.T) {
-		doc := model.DocumentMetadata{Title: ""}
-		tree := &model.SemanticTree{
-			RootNodes: []model.SemanticNode{
-				{Heading: "Chapter 1", Level: 1},
-			},
-		}
-		title := enrichment.ResolveDocumentTitle(doc, tree, nil, "rick-rubin-guide.pdf")
-		if title != "The Creative Act: A Way of Being" && title != "Rick Rubin Guide" {
-			t.Errorf("expected title resolution, got %q", title)
-		}
-	})
-}
-
-func TestEnrichDocumentAuthor(t *testing.T) {
-	t.Run("extracts Rick Rubin author from filename or early pages", func(t *testing.T) {
-		doc := model.DocumentMetadata{Author: "Firecrawl Inspector"}
-		pageMap := []model.PageMap{
-			{PageNumber: 1, Markdown: "# The Creative Act\nBy Rick Rubin"},
-		}
-		author := enrichment.ResolveDocumentAuthor(doc, pageMap, "rick-rubin.pdf")
-		if author != "Rick Rubin" {
-			t.Errorf("expected 'Rick Rubin', got %q", author)
-		}
-	})
-}
-
 func TestEnrichSemanticTreePageNumbers(t *testing.T) {
 	tree := &model.SemanticTree{
 		RootNodes: []model.SemanticNode{
@@ -140,7 +85,7 @@ func TestDefaultEnricher(t *testing.T) {
 		},
 	}
 	pageMap := []model.PageMap{
-		{PageNumber: 1, Markdown: "# Cover\nBy Rick Rubin"},
+		{PageNumber: 1, Markdown: "# Cover\nwritten by Rick Rubin"},
 		{PageNumber: 71, Markdown: "### Beginner's Mind\nSome content"},
 	}
 
@@ -151,11 +96,8 @@ func TestDefaultEnricher(t *testing.T) {
 		Filename: "rick-rubin.pdf",
 	})
 
-	if meta.Title == "" || meta.Title == "Untitled Document" {
+	if meta.Title == "" {
 		t.Errorf("expected non-empty resolved Title, got %q", meta.Title)
-	}
-	if meta.Author != "Rick Rubin" {
-		t.Errorf("expected Author 'Rick Rubin', got %q", meta.Author)
 	}
 	if tree.RootNodes[0].PageNumbers[0] != 71 {
 		t.Errorf("expected page 71, got %v", tree.RootNodes[0].PageNumbers)

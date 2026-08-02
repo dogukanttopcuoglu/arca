@@ -2,6 +2,7 @@ package enrichment
 
 import (
 	"context"
+	"strings"
 
 	pdfmodel "arca/internal/pdfinspector/model"
 )
@@ -23,7 +24,7 @@ func NewEntityExtractorPass(extractor EntityExtractor) *EntityExtractorPass {
 
 func (p *EntityExtractorPass) Name() string { return "EntityExtractorPass" }
 func (p *EntityExtractorPass) Requires() []Capability {
-	return []Capability{CapabilityRawMetadata, CapabilityLanguage}
+	return []Capability{CapabilityRawMetadata, CapabilityLanguage, CapabilitySemanticTree}
 }
 func (p *EntityExtractorPass) Provides() []Capability { return []Capability{CapabilityEntities} }
 
@@ -60,7 +61,7 @@ func (p *EntityExtractorPass) Execute(ctx context.Context, input *EnrichmentInpu
 		var entityOrder []string
 
 		for _, m := range mentions {
-			key := string(m.Type) + ":" + m.Text
+			key := string(m.Type) + ":" + strings.ToLower(strings.TrimSpace(m.Text))
 			if ent, exists := entityGroupMap[key]; exists {
 				ent.Mentions = append(ent.Mentions, m)
 				ent.Score += 0.1

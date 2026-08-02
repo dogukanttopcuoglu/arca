@@ -70,6 +70,9 @@ func (e *DefaultEnricher) Enrich(input *EnrichmentInput) *EnrichmentReport {
 		NewPageResolutionPass(),
 		NewKeywordExtractorPass(nil),
 		NewEntityExtractorPass(nil),
+		NewConceptExtractorPass(nil),
+		NewRelationExtractorPass(nil),
+		NewSummaryPass(nil),
 	})
 
 	report, _ := comp.ExecutePasses(context.Background(), input)
@@ -111,67 +114,6 @@ func NormalizeHeading(input string) string {
 	// 5. Normalize multi-spaces
 	result = multiSpaceRegex.ReplaceAllString(result, " ")
 	return strings.TrimSpace(result)
-}
-
-// ResolveDocumentTitle derives a meaningful document title using priority fallback logic.
-func ResolveDocumentTitle(doc model.DocumentMetadata, tree *model.SemanticTree, pageMap []model.PageMap, filename string) string {
-	// Priority 1: Check existing PDF metadata title (if non-generic & non-promotional)
-	if doc.Title != "" && !isGenericHeading(doc.Title) {
-		return doc.Title
-	}
-
-	// Priority 2: Check for book title in early pageMap text (pages 1-5)
-	for _, pm := range pageMap {
-		if pm.PageNumber <= 5 {
-			lower := strings.ToLower(pm.Markdown)
-			if strings.Contains(lower, "creative act") {
-				return "The Creative Act: A Way of Being"
-			}
-		}
-	}
-
-	// Priority 3: Check filename for book / author patterns
-	if filename != "" {
-		lowerFn := strings.ToLower(filename)
-		if strings.Contains(lowerFn, "rick-rubin") || strings.Contains(lowerFn, "creative-act") {
-			return "The Creative Act: A Way of Being"
-		}
-	}
-
-	// Priority 4: Check cover / early page headings (pages 1-5)
-	if tree != nil {
-		for _, node := range tree.RootNodes {
-			norm := NormalizeHeading(node.Heading)
-			if len(node.PageNumbers) > 0 && node.PageNumbers[0] <= 5 && !isGenericHeading(node.Heading) && norm != "robert henri" {
-				return node.Heading
-			}
-		}
-	}
-
-	// Default fallback
-	return "The Creative Act: A Way of Being"
-}
-
-// ResolveDocumentAuthor derives author metadata from metadata, cover text, or filename.
-func ResolveDocumentAuthor(doc model.DocumentMetadata, pageMap []model.PageMap, filename string) string {
-	if doc.Author != "" && !isGenericHeading(doc.Author) {
-		return doc.Author
-	}
-
-	// Search early pages for author name patterns
-	for _, pm := range pageMap {
-		if pm.PageNumber <= 5 {
-			if strings.Contains(strings.ToLower(pm.Markdown), "rick rubin") {
-				return "Rick Rubin"
-			}
-		}
-	}
-
-	if filename != "" && strings.Contains(strings.ToLower(filename), "rick-rubin") {
-		return "Rick Rubin"
-	}
-
-	return "Unknown Author"
 }
 
 func isGenericHeading(heading string) bool {

@@ -129,6 +129,32 @@ Minimal domain object representing an abstract topic or theme (`ID`, `Name`, `Sc
 ## ConceptExtractorPass
 The compiler-pass stage running `ConceptExtractor` strategies to synthesize headings and key phrases into abstract topics.
 
+## RelationSource
+Typed provenance enum (`"rule_based"`, `"llm"`, `"hybrid"`).
+
+## RelationType
+Typed predicate classification for directed Knowledge Graph edges (`"founded_by"`, `"located_in"`, `"part_of"`, `"relates_to"`, `"author_of"`, `"associated_with"`).
+
+## Relation
+Minimal directed Subject-Predicate-Object domain record (`ID`, `SubjectID`, `Predicate`, `ObjectID`, `Confidence`, `ChunkID`, `Source`).
+
+## RelationExtractorPass
+The compiler-pass stage running `RelationExtractor` strategies to extract directed edges between entities and concepts.
+
+## SummarySource
+Typed provenance enum (`"rule_based"`, `"llm"`, `"hybrid"`).
+
+## Summary
+Minimal domain record encapsulating text and provenance (`Text`, `Source`).
+
+## SummaryResult
+Container holding document-level summary and map of chunk-level summaries.
+
+## SummaryPass
+The compiler-pass stage running `SummaryExtractor` strategies to attach executive and section summaries to documents and chunks.
+
+
+
 
 
 

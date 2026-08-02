@@ -16,6 +16,9 @@ const (
 	CapabilityResolvedPages Capability = "resolved_pages"
 	CapabilityKeywords      Capability = "keywords"
 	CapabilityEntities      Capability = "entities"
+	CapabilityConcepts      Capability = "concepts"
+	CapabilityRelations     Capability = "relations"
+	CapabilitySummary       Capability = "summary"
 )
 
 // EnricherPass defines the seam for an isolated enrichment stage (compiler pass pattern).

@@ -18,7 +18,10 @@ type DocumentMetadata struct {
 	PDFType          string    `json:"pdfType,omitempty"`
 	Language         string    `json:"language,omitempty"`
 	Keywords         []Keyword `json:"keywords,omitempty"`
-	Entities         []Entity  `json:"entities,omitempty"`
+	Entities         []Entity   `json:"entities,omitempty"`
+	Concepts         []Concept  `json:"concepts,omitempty"`
+	Relations        []Relation `json:"relations,omitempty"`
+	Summary          *Summary   `json:"summary,omitempty"`
 }
 
 // PageMap maps an individual PDF page number to its extracted raw Markdown text.
