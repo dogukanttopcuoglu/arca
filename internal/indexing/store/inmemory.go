@@ -47,10 +47,6 @@ func (s *InMemoryVectorStore) SearchVector(ctx context.Context, query VectorSear
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	if len(query.Vector) == 0 {
-		return []VectorSearchResult{}, nil
-	}
-
 	topK := query.TopK
 	if topK <= 0 {
 		topK = 10
@@ -63,7 +59,10 @@ func (s *InMemoryVectorStore) SearchVector(ctx context.Context, query VectorSear
 			continue
 		}
 
-		score := cosineSimilarity(query.Vector, pt.Vector)
+		score := float32(0.0)
+		if len(query.Vector) > 0 {
+			score = cosineSimilarity(query.Vector, pt.Vector)
+		}
 		if query.MinScore > 0 && score < query.MinScore {
 			continue
 		}
