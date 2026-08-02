@@ -8,6 +8,7 @@ import (
 type VectorMetadata struct {
 	DocumentID       string   `json:"document_id"`
 	ChunkID          string   `json:"chunk_id"`
+	ChunkOrder       int      `json:"chunk_order"`
 	SectionPath      string   `json:"section_path,omitempty"`
 	PageNumbers      []int    `json:"page_numbers,omitempty"`
 	ContentHash      string   `json:"content_hash,omitempty"`
