@@ -57,9 +57,16 @@ type DefaultEnricher struct {
 	relationExtractor RelationExtractor
 }
 
-// NewEnricher constructs a DefaultEnricher instance using default rule-based extractors.
+// NewEnricher constructs a DefaultEnricher using the HybridEntityExtractor by default.
+// The hybrid extractor combines RuleBasedEntityExtractor (high-precision primary) with
+// GLiNEREntityExtractor (high-recall secondary). If the GLiNER service is unavailable,
+// extraction gracefully falls back to rule-based only.
 func NewEnricher() *DefaultEnricher {
-	return &DefaultEnricher{}
+	ruleBased := NewRuleBasedEntityExtractor()
+	gliner := NewGLiNEREntityExtractor("", 0) // uses defaults: localhost:8088, 3s timeout
+	return &DefaultEnricher{
+		entityExtractor: NewHybridEntityExtractor(ruleBased, gliner),
+	}
 }
 
 // NewEnricherWithExtractors constructs a DefaultEnricher with injected extractor strategy providers.

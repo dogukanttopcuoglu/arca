@@ -152,20 +152,6 @@
         "score": 0.9
       },
       {
-        "id": "person:rick rubin",
-        "name": "Rick Rubin",
-        "type": "person",
-        "mentions": [
-          {
-            "text": "Rick Rubin",
-            "type": "person",
-            "chunk_id": "chunk-101",
-            "confidence": 0.9
-          }
-        ],
-        "score": 0.8
-      },
-      {
         "id": "location:new york",
         "name": "New York",
         "type": "location",
@@ -184,6 +170,20 @@
           }
         ],
         "score": 0.9
+      },
+      {
+        "id": "person:rick rubin",
+        "name": "Rick Rubin",
+        "type": "person",
+        "mentions": [
+          {
+            "text": "Rick Rubin",
+            "type": "person",
+            "chunk_id": "chunk-101",
+            "confidence": 0.9
+          }
+        ],
+        "score": 0.8
       }
     ],
     "concepts": [
@@ -361,16 +361,16 @@
           "confidence": 0.85
         },
         {
-          "text": "Rick Rubin",
-          "type": "person",
-          "chunk_id": "chunk-101",
-          "confidence": 0.9
-        },
-        {
           "text": "New York",
           "type": "location",
           "chunk_id": "chunk-101",
           "confidence": 0.88
+        },
+        {
+          "text": "Rick Rubin",
+          "type": "person",
+          "chunk_id": "chunk-101",
+          "confidence": 0.9
         }
       ],
       "concepts": [
