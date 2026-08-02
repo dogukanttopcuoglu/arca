@@ -108,6 +108,19 @@ The pluggable strategy seam (`Extract(ctx, chunks, lang) ([]Keyword, error)`) an
 ## Keyword
 Structured metadata object (`Value`, `Score`, `Source`, `ChunkIDs`) attached to both document and individual `KnowledgeChunk` instances.
 
+## EntityType
+Typed classification enum (`"person"`, `"organization"`, `"location"`, `"product"`, `"event"`, `"miscellaneous"`).
+
+## EntityMention
+Surface text occurrence of a typed entity (`Text`, `Type`, `ChunkID`, `Confidence`) attached to individual chunks.
+
+## Entity
+Document-level aggregated entity record (`ID`, `Name`, `Type`, `Aliases`, `Mentions`, `Score`).
+
+## EntityExtractorPass
+The compiler-pass stage running `EntityExtractor` strategies to extract mentions and populate document/chunk entities.
+
+
 
 
 
