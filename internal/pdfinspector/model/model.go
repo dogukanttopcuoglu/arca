@@ -74,6 +74,36 @@ type Keyword struct {
 	ChunkIDs []string      `json:"chunk_ids,omitempty"`
 }
 
+// EntityType defines typed classification for named entities.
+type EntityType string
+
+const (
+	EntityTypePerson       EntityType = "person"
+	EntityTypeOrganization EntityType = "organization"
+	EntityTypeLocation     EntityType = "location"
+	EntityTypeProduct      EntityType = "product"
+	EntityTypeEvent        EntityType = "event"
+	EntityTypeMisc         EntityType = "miscellaneous"
+)
+
+// EntityMention represents a surface text occurrence of a typed entity.
+type EntityMention struct {
+	Text       string     `json:"text"`
+	Type       EntityType `json:"type"`
+	ChunkID    string     `json:"chunk_id"`
+	Confidence float64    `json:"confidence"`
+}
+
+// Entity represents a document-level aggregated entity record.
+type Entity struct {
+	ID       string          `json:"id"`
+	Name     string          `json:"name"`
+	Type     EntityType      `json:"type"`
+	Aliases  []string        `json:"aliases,omitempty"`
+	Mentions []EntityMention `json:"mentions,omitempty"`
+	Score    float64         `json:"score"`
+}
+
 // DocumentMetadata represents administrative, technical, and structural metadata extracted from a PDF document.
 type DocumentMetadata struct {
 	Title            string    `json:"title,omitempty"`
@@ -90,6 +120,7 @@ type DocumentMetadata struct {
 	PDFType          string    `json:"pdfType,omitempty"`
 	Language         string    `json:"language,omitempty"`
 	Keywords         []Keyword `json:"keywords,omitempty"`
+	Entities         []Entity  `json:"entities,omitempty"`
 }
 
 // Validate verifies structural correctness for DocumentMetadata.
@@ -495,6 +526,7 @@ type KnowledgeChunk struct {
 	Fingerprint      string           `json:"fingerprint,omitempty"`
 	IsOversized      bool             `json:"is_oversized,omitempty"`
 	Keywords         []Keyword        `json:"keywords,omitempty"`
+	Entities         []EntityMention  `json:"entities,omitempty"`
 }
 
 // Validate verifies KnowledgeChunk invariants.

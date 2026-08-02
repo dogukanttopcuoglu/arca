@@ -69,6 +69,7 @@ func (e *DefaultEnricher) Enrich(input *EnrichmentInput) *EnrichmentReport {
 		NewTitleAuthorPass(nil, nil),
 		NewPageResolutionPass(),
 		NewKeywordExtractorPass(nil),
+		NewEntityExtractorPass(nil),
 	})
 
 	report, _ := comp.ExecutePasses(context.Background(), input)
