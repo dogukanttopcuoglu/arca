@@ -33,3 +33,22 @@ Extracted non-prose elements (tables, figures, code blocks, equations, citations
 ## Semantic Metadata Enrichment Layer
 The non-destructive post-extraction phase in PDF Inspector that resolves page numbers for `SemanticTree` heading nodes using normalized heading matching across `PageMap` and `KnowledgeChunk` provenance, while deriving document titles from first meaningful headings (`H1`/`H2`) when PDF metadata is absent.
 
+## Indexing Job
+A background task managing the asynchronous vector generation, differential signature comparison, and vector database upserting of extracted `KnowledgeChunk`s.
+
+## EmbeddingProvider
+The deep module interface abstracting external LLM embedding APIs (OpenAI, Gemini, Ollama, Voyage) behind a unified batching and capability seam.
+
+## VectorStore
+The persistence abstraction managing vector point storage, nearest-neighbor searches, and document deletions (implemented via Qdrant, PgVector, or InMemory adapters).
+
+## IndexSignature
+The composite hash (`ContentHash:EmbeddingProvider:EmbeddingModel:EmbeddingVersion:ChunkSchemaVersion`) used for differential re-indexing to avoid redundant embedding API calls.
+
+## MetadataFilter
+The strongly-typed, canonical filtering structure allowing domain queries by document ID, chunk ID, page numbers, and content types without leaking database-specific query syntax.
+
+## Retriever
+The top-level search abstraction encapsulating Dense Vector, Sparse Lexical (BM25), and Hybrid (RRF) retrieval strategies behind a clean query interface.
+
+
