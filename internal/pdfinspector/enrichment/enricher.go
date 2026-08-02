@@ -86,6 +86,7 @@ func (e *DefaultEnricher) Enrich(input *EnrichmentInput) *EnrichmentReport {
 
 	comp := NewCompositeEnricher([]EnricherPass{
 		NewLanguageDetectionPass(),
+		NewChunkStatisticsPass(),
 		NewTitleAuthorPass(nil, nil),
 		NewPageResolutionPass(),
 		NewEntityExtractorPass(e.entityExtractor),

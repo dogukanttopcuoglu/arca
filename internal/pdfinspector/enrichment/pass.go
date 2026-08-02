@@ -14,6 +14,7 @@ const (
 	CapabilitySemanticTree  Capability = "semantic_tree"
 	CapabilityResolvedTitle Capability = "resolved_title"
 	CapabilityResolvedPages Capability = "resolved_pages"
+	CapabilityChunkStats    Capability = "chunk_stats"
 	CapabilityKeywords      Capability = "keywords"
 	CapabilityEntities      Capability = "entities"
 	CapabilityConcepts      Capability = "concepts"

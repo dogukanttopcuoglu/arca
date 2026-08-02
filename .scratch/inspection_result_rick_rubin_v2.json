@@ -132,26 +132,6 @@
     ],
     "entities": [
       {
-        "id": "organization:def jam recordings",
-        "name": "Def Jam Recordings",
-        "type": "organization",
-        "mentions": [
-          {
-            "text": "Def Jam Recordings",
-            "type": "organization",
-            "chunk_id": "chunk-101",
-            "confidence": 0.85
-          },
-          {
-            "text": "Def Jam Recordings",
-            "type": "organization",
-            "chunk_id": "chunk-102",
-            "confidence": 0.85
-          }
-        ],
-        "score": 0.9
-      },
-      {
         "id": "location:new york",
         "name": "New York",
         "type": "location",
@@ -167,6 +147,26 @@
             "type": "location",
             "chunk_id": "chunk-102",
             "confidence": 0.88
+          }
+        ],
+        "score": 0.9
+      },
+      {
+        "id": "organization:def jam recordings",
+        "name": "Def Jam Recordings",
+        "type": "organization",
+        "mentions": [
+          {
+            "text": "Def Jam Recordings",
+            "type": "organization",
+            "chunk_id": "chunk-102",
+            "confidence": 0.85
+          },
+          {
+            "text": "Def Jam Recordings",
+            "type": "organization",
+            "chunk_id": "chunk-101",
+            "confidence": 0.85
           }
         ],
         "score": 0.9
@@ -288,8 +288,8 @@
         15
       ],
       "content_markdown": "Rick Rubin founded Def Jam Recordings in New York alongside Russell Simmons. Creative expression is a fundamental human drive.",
-      "token_estimate": 0,
-      "character_count": 0,
+      "token_estimate": 31,
+      "character_count": 126,
       "source_offsets": {
         "start_char": 0,
         "end_char": 0
@@ -355,16 +355,16 @@
       ],
       "entities": [
         {
-          "text": "Def Jam Recordings",
-          "type": "organization",
-          "chunk_id": "chunk-101",
-          "confidence": 0.85
-        },
-        {
           "text": "New York",
           "type": "location",
           "chunk_id": "chunk-101",
           "confidence": 0.88
+        },
+        {
+          "text": "Def Jam Recordings",
+          "type": "organization",
+          "chunk_id": "chunk-101",
+          "confidence": 0.85
         },
         {
           "text": "Rick Rubin",
@@ -424,8 +424,8 @@
         71
       ],
       "content_markdown": "Def Jam Recordings released legendary hip-hop albums in New York. To create without expectation is the essence of art.",
-      "token_estimate": 0,
-      "character_count": 0,
+      "token_estimate": 29,
+      "character_count": 118,
       "source_offsets": {
         "start_char": 0,
         "end_char": 0
