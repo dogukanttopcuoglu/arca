@@ -76,10 +76,12 @@ func TestMetadataFilterValidation(t *testing.T) {
 	t.Run("valid metadata filter passes validation", func(t *testing.T) {
 		now := time.Now()
 		filter := model.MetadataFilter{
-			DocumentIDs:  []string{"doc-1"},
-			PageNumbers:  []int{1, 2},
-			ContentTypes: []string{pdfmodel.ContentTypeParagraph, pdfmodel.ContentTypeTable},
-			IndexedAfter: &now,
+			WorkspaceID:      "ws-acme",
+			KnowledgeSpaceID: "ks-design",
+			DocumentIDs:      []string{"doc-1"},
+			PageNumbers:      []int{1, 2},
+			ContentTypes:     []string{pdfmodel.ContentTypeParagraph, pdfmodel.ContentTypeTable},
+			IndexedAfter:     &now,
 		}
 		if err := filter.Validate(); err != nil {
 			t.Errorf("expected valid filter, got error: %v", err)

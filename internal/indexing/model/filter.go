@@ -9,6 +9,8 @@ import (
 
 // MetadataFilter represents a strongly-typed, database-agnostic domain filtering abstraction across ingestion and retrieval.
 type MetadataFilter struct {
+	WorkspaceID       string     `json:"workspace_id,omitempty"`
+	KnowledgeSpaceID string     `json:"knowledge_space_id,omitempty"`
 	DocumentIDs       []string   `json:"document_ids,omitempty"`
 	ChunkIDs          []string   `json:"chunk_ids,omitempty"`
 	PageNumbers       []int      `json:"page_numbers,omitempty"`
