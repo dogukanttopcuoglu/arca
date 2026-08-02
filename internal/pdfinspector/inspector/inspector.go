@@ -29,6 +29,7 @@ type PDFInspector struct {
 	chunker    chunking.Engine
 	extractor  assets.Extractor
 	aggregator diagnostics.Aggregator
+	enricher   enrichment.Enricher
 }
 
 // NewPDFInspector constructs a PDFInspector with injected dependencies.
@@ -47,6 +48,31 @@ func NewPDFInspector(
 		chunker:    chunker,
 		extractor:  extractor,
 		aggregator: aggregator,
+		enricher:   enrichment.NewEnricher(),
+	}
+}
+
+// NewPDFInspectorWithEnricher constructs a PDFInspector with explicit Enricher seam injection.
+func NewPDFInspectorWithEnricher(
+	cfg *config.Config,
+	client firecrawl.Client,
+	processor semantic.Processor,
+	chunker chunking.Engine,
+	extractor assets.Extractor,
+	aggregator diagnostics.Aggregator,
+	enricher enrichment.Enricher,
+) *PDFInspector {
+	if enricher == nil {
+		enricher = enrichment.NewEnricher()
+	}
+	return &PDFInspector{
+		cfg:        cfg,
+		client:     client,
+		processor:  processor,
+		chunker:    chunker,
+		extractor:  extractor,
+		aggregator: aggregator,
+		enricher:   enricher,
 	}
 }
 
@@ -168,10 +194,17 @@ func (i *PDFInspector) InspectPDF(ctx context.Context, r io.Reader) (*model.PDFI
 		}
 	}
 
-	// 5. Semantic Metadata Enrichment Layer (ADR 0007)
-	enrichWarnings := enrichment.EnrichSemanticTree(tree, docContent.PageMap, chunks)
-	if len(enrichWarnings) > 0 {
-		warnings = append(warnings, enrichWarnings...)
+	docMeta := buildDocumentMetadata(raw, tree, chunks, docContent.PageMap)
+
+	// 5. Semantic Metadata Enrichment Layer (ADR 0007 via Deep Enricher Seam)
+	enrichReport := i.enricher.Enrich(&enrichment.EnrichmentInput{
+		Metadata: &docMeta,
+		Tree:     tree,
+		PageMap:  docContent.PageMap,
+		Chunks:   chunks,
+	})
+	if enrichReport != nil && len(enrichReport.Warnings) > 0 {
+		warnings = append(warnings, enrichReport.Warnings...)
 	}
 
 	diag := i.aggregator.BuildDiagnosticsWithOptions(diagnostics.DiagnosticOptions{
@@ -181,10 +214,6 @@ func (i *PDFInspector) InspectPDF(ctx context.Context, r io.Reader) (*model.PDFI
 		RetryCount:   retryCount,
 		StartTime:    start,
 	})
-
-	docMeta := buildDocumentMetadata(raw, tree, chunks, docContent.PageMap)
-	docMeta.Title = enrichment.ResolveDocumentTitle(docMeta, tree, docContent.PageMap, "")
-	docMeta.Author = enrichment.ResolveDocumentAuthor(docMeta, docContent.PageMap, "")
 
 	result := model.NewPDFInspectionResult()
 	result.Document = docMeta

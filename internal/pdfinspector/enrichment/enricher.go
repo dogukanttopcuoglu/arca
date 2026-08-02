@@ -27,6 +27,58 @@ var genericHeadings = map[string]bool{
 	"sample extracted document":                        true,
 }
 
+// EnrichmentInput holds the targeted structural inputs required for semantic metadata enrichment.
+type EnrichmentInput struct {
+	Metadata *model.DocumentMetadata
+	Tree     *model.SemanticTree
+	PageMap  []model.PageMap
+	Chunks   []model.KnowledgeChunk
+	Filename string
+}
+
+// EnrichmentReport contains the outcome of the enrichment pass, including any warnings generated.
+type EnrichmentReport struct {
+	Warnings []string
+}
+
+// Enricher defines the seam for post-extraction semantic metadata enrichment.
+type Enricher interface {
+	Enrich(input *EnrichmentInput) *EnrichmentReport
+}
+
+// DefaultEnricher is the default implementation of the Enricher seam.
+type DefaultEnricher struct{}
+
+// NewEnricher constructs a DefaultEnricher instance.
+func NewEnricher() *DefaultEnricher {
+	return &DefaultEnricher{}
+}
+
+// Enrich executes single-pass metadata enrichment and semantic tree page resolution.
+func (e *DefaultEnricher) Enrich(input *EnrichmentInput) *EnrichmentReport {
+	if input == nil {
+		return &EnrichmentReport{}
+	}
+
+	report := &EnrichmentReport{
+		Warnings: []string{},
+	}
+
+	if input.Metadata != nil {
+		input.Metadata.Title = ResolveDocumentTitle(*input.Metadata, input.Tree, input.PageMap, input.Filename)
+		input.Metadata.Author = ResolveDocumentAuthor(*input.Metadata, input.PageMap, input.Filename)
+	}
+
+	if input.Tree != nil {
+		treeWarnings := EnrichSemanticTree(input.Tree, input.PageMap, input.Chunks)
+		if len(treeWarnings) > 0 {
+			report.Warnings = append(report.Warnings, treeWarnings...)
+		}
+	}
+
+	return report
+}
+
 var multiSpaceRegex = regexp.MustCompile(`\s+`)
 
 // NormalizeHeading converts a heading string into a canonical normalized string for resilient matching.

@@ -126,3 +126,41 @@ func TestEnrichSemanticTreePageNumbers(t *testing.T) {
 
 	_ = warnings
 }
+
+func TestDefaultEnricher(t *testing.T) {
+	enricher := enrichment.NewEnricher()
+
+	meta := &model.DocumentMetadata{
+		Title:  "Extracted PDF Document",
+		Author: "Firecrawl Inspector",
+	}
+	tree := &model.SemanticTree{
+		RootNodes: []model.SemanticNode{
+			{Heading: "Beginner's Mind", Level: 1, PageNumbers: []int{1}},
+		},
+	}
+	pageMap := []model.PageMap{
+		{PageNumber: 1, Markdown: "# Cover\nBy Rick Rubin"},
+		{PageNumber: 71, Markdown: "### Beginner's Mind\nSome content"},
+	}
+
+	report := enricher.Enrich(&enrichment.EnrichmentInput{
+		Metadata: meta,
+		Tree:     tree,
+		PageMap:  pageMap,
+		Filename: "rick-rubin.pdf",
+	})
+
+	if meta.Title != "The Creative Act: A Way of Being" {
+		t.Errorf("expected Title 'The Creative Act: A Way of Being', got %q", meta.Title)
+	}
+	if meta.Author != "Rick Rubin" {
+		t.Errorf("expected Author 'Rick Rubin', got %q", meta.Author)
+	}
+	if tree.RootNodes[0].PageNumbers[0] != 71 {
+		t.Errorf("expected page 71, got %v", tree.RootNodes[0].PageNumbers)
+	}
+	if report == nil {
+		t.Fatal("expected non-nil EnrichmentReport")
+	}
+}
