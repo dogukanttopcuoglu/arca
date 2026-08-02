@@ -99,6 +99,16 @@ The enrichment pipeline orchestrator executing an ordered sequence of `EnricherP
 ## TitleResolver
 The fallback chain seam (`PDFMetadata` -> `Heading` -> `TOC` -> `LLM` -> `Unknown`) deriving document title without hardcoded book heuristics.
 
+## LanguageDetectionPass
+An early enrichment pass determining document ISO language code (`"en"`, `"tr"`) to configure downstream stopwords and tokenization.
+
+## KeywordExtractor
+The pluggable strategy seam (`Extract(ctx, chunks, lang) ([]Keyword, error)`) and registry supporting `rule_based`, `llm`, and `hybrid` extractors.
+
+## Keyword
+Structured metadata object (`Value`, `Score`, `Source`, `ChunkIDs`) attached to both document and individual `KnowledgeChunk` instances.
+
+
 
 
 

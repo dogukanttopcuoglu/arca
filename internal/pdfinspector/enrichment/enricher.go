@@ -65,8 +65,10 @@ func (e *DefaultEnricher) Enrich(input *EnrichmentInput) *EnrichmentReport {
 	}
 
 	comp := NewCompositeEnricher([]EnricherPass{
+		NewLanguageDetectionPass(),
 		NewTitleAuthorPass(nil, nil),
 		NewPageResolutionPass(),
+		NewKeywordExtractorPass(nil),
 	})
 
 	report, _ := comp.ExecutePasses(context.Background(), input)

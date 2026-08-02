@@ -57,6 +57,23 @@ type Validatable interface {
 	Validate() error
 }
 
+// KeywordSource defines the typed provenance of an extracted keyword.
+type KeywordSource string
+
+const (
+	KeywordSourceRuleBased KeywordSource = "rule_based"
+	KeywordSourceLLM       KeywordSource = "llm"
+	KeywordSourceHybrid    KeywordSource = "hybrid"
+)
+
+// Keyword represents structured semantic keyword metadata.
+type Keyword struct {
+	Value    string        `json:"value"`
+	Score    float64       `json:"score"`
+	Source   KeywordSource `json:"source"`
+	ChunkIDs []string      `json:"chunk_ids,omitempty"`
+}
+
 // DocumentMetadata represents administrative, technical, and structural metadata extracted from a PDF document.
 type DocumentMetadata struct {
 	Title            string    `json:"title,omitempty"`
@@ -71,6 +88,8 @@ type DocumentMetadata struct {
 	Encrypted        bool      `json:"encrypted"`
 	Searchable       bool      `json:"searchable"`
 	PDFType          string    `json:"pdfType,omitempty"`
+	Language         string    `json:"language,omitempty"`
+	Keywords         []Keyword `json:"keywords,omitempty"`
 }
 
 // Validate verifies structural correctness for DocumentMetadata.
@@ -475,6 +494,7 @@ type KnowledgeChunk struct {
 	ContentHash      string           `json:"content_hash,omitempty"`
 	Fingerprint      string           `json:"fingerprint,omitempty"`
 	IsOversized      bool             `json:"is_oversized,omitempty"`
+	Keywords         []Keyword        `json:"keywords,omitempty"`
 }
 
 // Validate verifies KnowledgeChunk invariants.
