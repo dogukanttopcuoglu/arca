@@ -37,9 +37,12 @@ type EnrichmentInput struct {
 	Filename string
 }
 
-// EnrichmentReport contains the outcome of the enrichment pass, including any warnings generated.
+// EnrichmentReport contains the comprehensive metrics and outcome of the enrichment pass pipeline.
 type EnrichmentReport struct {
-	Warnings []string
+	Warnings          []string          `json:"warnings"`
+	StageDurations    map[string]int64  `json:"stage_durations_ms"`
+	ResolvedResolvers map[string]string `json:"resolved_resolvers,omitempty"`
+	SkippedStages     []string          `json:"skipped_stages,omitempty"`
 }
 
 // Enricher defines the seam for post-extraction semantic metadata enrichment.
@@ -61,16 +64,15 @@ func (e *DefaultEnricher) Enrich(input *EnrichmentInput) *EnrichmentReport {
 		return &EnrichmentReport{}
 	}
 
-	report := &EnrichmentReport{
-		Warnings: []string{},
-	}
-
 	comp := NewCompositeEnricher([]EnricherPass{
 		NewTitleAuthorPass(nil, nil),
 		NewPageResolutionPass(),
 	})
 
-	_ = comp.ExecutePasses(context.Background(), input)
+	report, _ := comp.ExecutePasses(context.Background(), input)
+	if report == nil {
+		return &EnrichmentReport{}
+	}
 
 	return report
 }

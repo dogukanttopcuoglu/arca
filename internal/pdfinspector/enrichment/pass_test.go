@@ -42,9 +42,13 @@ func TestCompositeEnricher(t *testing.T) {
 			Metadata: &pdfmodel.DocumentMetadata{},
 		}
 
-		err := comp.ExecutePasses(ctx, input)
+		report, err := comp.ExecutePasses(ctx, input)
 		if err != nil {
 			t.Fatalf("unexpected error executing passes: %v", err)
+		}
+
+		if report == nil || len(report.StageDurations) == 0 {
+			t.Error("expected non-empty StageDurations in report")
 		}
 
 		if !pass1.executed || !pass2.executed {

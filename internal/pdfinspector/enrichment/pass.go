@@ -3,6 +3,7 @@ package enrichment
 import (
 	"context"
 	"fmt"
+	"time"
 )
 
 // Capability models explicit compiler-pass style inputs and outputs for enrichment stages.
@@ -36,10 +37,17 @@ func NewCompositeEnricher(passes []EnricherPass) *CompositeEnricher {
 	}
 }
 
-// ExecutePasses validates capability contracts and executes each pass sequentially.
-func (c *CompositeEnricher) ExecutePasses(ctx context.Context, input *EnrichmentInput) error {
+// ExecutePasses validates capability contracts and executes each pass sequentially, returning a rich EnrichmentReport.
+func (c *CompositeEnricher) ExecutePasses(ctx context.Context, input *EnrichmentInput) (*EnrichmentReport, error) {
 	if input == nil {
-		return fmt.Errorf("enrichment input cannot be nil")
+		return nil, fmt.Errorf("enrichment input cannot be nil")
+	}
+
+	report := &EnrichmentReport{
+		Warnings:          []string{},
+		StageDurations:    make(map[string]int64),
+		ResolvedResolvers: make(map[string]string),
+		SkippedStages:     []string{},
 	}
 
 	available := make(map[Capability]bool)
@@ -54,15 +62,25 @@ func (c *CompositeEnricher) ExecutePasses(ctx context.Context, input *Enrichment
 		}
 
 		// Verify required capabilities
+		missingCap := false
 		for _, req := range pass.Requires() {
 			if !available[req] {
-				return fmt.Errorf("pass %q missing required capability %q", pass.Name(), req)
+				missingCap = true
+				report.SkippedStages = append(report.SkippedStages, pass.Name())
+				break
 			}
 		}
 
-		if err := pass.Execute(ctx, input); err != nil {
-			return fmt.Errorf("pass %q failed: %w", pass.Name(), err)
+		if missingCap {
+			continue
 		}
+
+		start := time.Now()
+		if err := pass.Execute(ctx, input); err != nil {
+			return report, fmt.Errorf("pass %q failed: %w", pass.Name(), err)
+		}
+		durationMs := time.Since(start).Milliseconds()
+		report.StageDurations[pass.Name()] = durationMs
 
 		// Mark provided capabilities as available
 		for _, prov := range pass.Provides() {
@@ -70,7 +88,7 @@ func (c *CompositeEnricher) ExecutePasses(ctx context.Context, input *Enrichment
 		}
 	}
 
-	return nil
+	return report, nil
 }
 
 // TitleAuthorPass implements EnricherPass for document title and author resolution.
