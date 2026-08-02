@@ -51,4 +51,44 @@ The strongly-typed, canonical filtering structure allowing domain queries by doc
 ## Retriever
 The top-level search abstraction encapsulating Dense Vector, Sparse Lexical (BM25), and Hybrid (RRF) retrieval strategies behind a clean query interface.
 
+## AnswerEngine
+The high-level RAG orchestration engine combining Query Understanding, Retrieval, Context Assembly, Prompt Engineering, and Evidence Verification via modular pipeline composition.
+
+## QueryAnalyzer
+The domain seam responsible for extracting user intent, named entities, and structural metadata filters from natural language queries.
+
+## ContextBuilder
+The QA orchestration component responsible for token budgeting, duplicate removal, section re-ordering, and immutable citation marker (`[Ref N]`) injection.
+
+## ContextWindow
+The prompt-ready structured payload containing deduplicated content, immutable source references, and total token count produced by `ContextBuilder`.
+
+## PromptBuilder
+The domain seam constructing system instructions, RAG citation rules, and user context payloads into vendor-agnostic `PromptMessage` structures.
+
+## LLMProvider
+The deep module interface abstracting external text generation APIs (OpenAI, Anthropic Claude, Ollama, Llama 3) behind a unified prompt execution seam.
+
+## CitationExtractor
+The verification component that parses inline reference markers (`[Ref N]`) from LLM outputs, maps them back to verified `ContextWindow` sources, and flags invalid or hallucinated references.
+
+## VerificationPipeline
+The evidence verification pipeline enforcing structural reference existence (Phase 1) and semantic NLI entailment scoring (Phase 2).
+
+## QAJob
+The asynchronous state machine (`Pending` -> `Planning` -> `Retrieving` -> `Generating` -> `Verifying` -> `Completed`) managing long-running multi-document deep research tasks.
+
+## KnowledgeSpace
+The canonical 3-tier domain isolation boundary (`Workspace` -> `KnowledgeSpace` -> `Document` -> `KnowledgeChunk`) enabling multi-document RAG across libraries and projects.
+
+## GraphStore
+The graph persistence abstraction managing nodes (`Document`, `Section`, `Chunk`, `Entity`, `Concept`, `Citation`) and edges for relational GraphRAG traversals.
+
+## GraphRetriever
+The graph search adapter implementing the `Retriever` interface seam to enable 3-way RRF score fusion (Dense + Sparse + Graph).
+
+## AgentEngine
+The top-level autonomous reasoning controller (`Planner` + `Executor`) orchestrating multi-step research tasks, tool calls (`KnowledgeTool`, `GraphTool`, `MCPTool`), and security policies (`MaxSteps`, `ApprovalSeam`).
+
+
 
