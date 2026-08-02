@@ -74,14 +74,14 @@ func (e *RuleBasedRelationExtractor) ExtractRelations(ctx context.Context, input
 			len(personEntities) > 0 && len(orgEntities) > 0 {
 			for _, p := range personEntities {
 				for _, o := range orgEntities {
-					relID := "rel:" + p.ID + ":" + string(pdfmodel.RelationTypeFoundedBy) + ":" + o.ID
+					relID := "rel:" + o.ID + ":" + string(pdfmodel.RelationTypeFoundedBy) + ":" + p.ID
 					if !seen[relID] {
 						seen[relID] = true
 						relations = append(relations, pdfmodel.Relation{
 							ID:         relID,
-							SubjectID:  p.ID,
+							SubjectID:  o.ID,
 							Predicate:  pdfmodel.RelationTypeFoundedBy,
-							ObjectID:   o.ID,
+							ObjectID:   p.ID,
 							Confidence: 0.90,
 							ChunkID:    ch.ChunkID,
 							Source:     pdfmodel.RelationSourceRuleBased,

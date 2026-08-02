@@ -904,7 +904,7 @@ type ContextWindow struct {
         <!-- ==================== TAB 5: ADRS ==================== -->
         <div id="tab-adrs" class="tab-panel">
             <div class="section-header">
-                <h2 class="section-title">🏛️ Kabul Edilen Tüm Mimari Karar Belgeleri (ADR-0001 — ADR-0018)</h2>
+                <h2 class="section-title">🏛️ Kabul Edilen Tüm Mimari Karar Belgeleri (ADR-0001 — ADR-0024)</h2>
                 <p class="section-desc">ARC projesinin teknik sınırlarını, sorumluluk ayrımlarını ve tasarım kararlarını resmi olarak belgeleyen ADR kayıtları.</p>
             </div>
 
@@ -994,6 +994,30 @@ type ContextWindow struct {
                         <td><strong>ADR-0020</strong></td>
                         <td>Language Detection & Pluggable Keyword Extraction Architecture</td>
                         <td>LanguageDetectionPass, pluggable KeywordExtractor seam, structured Keyword model</td>
+                        <td><span class="adr-badge">ACCEPTED</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>ADR-0021</strong></td>
+                        <td>Entity Extraction Architecture & Mention Seam</td>
+                        <td>EntityExtractorPass, EntityMention extraction seam, document-level entity aggregation</td>
+                        <td><span class="adr-badge">ACCEPTED</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>ADR-0022</strong></td>
+                        <td>Concept Domain Model & Topic Extraction Architecture</td>
+                        <td>ConceptExtractorPass, narrow ConceptInput strategy seam, abstract topic discovery</td>
+                        <td><span class="adr-badge">ACCEPTED</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>ADR-0023</strong></td>
+                        <td>Relation Extraction Architecture & SPO Graph Seam</td>
+                        <td>RelationExtractorPass, narrow SPO triple relation model, deterministic ID deduplication</td>
+                        <td><span class="adr-badge">ACCEPTED</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>ADR-0024</strong></td>
+                        <td>Summary Extraction Architecture & Extractive Strategy Seam</td>
+                        <td>SummaryPass, pure producer SummaryExtractor seam, extractive document & chunk summaries</td>
                         <td><span class="adr-badge">ACCEPTED</span></td>
                     </tr>
                 </tbody>

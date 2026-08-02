@@ -38,7 +38,13 @@ func (p *EntityExtractorPass) Execute(ctx context.Context, input *EnrichmentInpu
 		lang = input.Metadata.Language
 	}
 
-	mentions, err := p.extractor.ExtractEntities(ctx, input.Chunks, lang)
+	entityInput := EntityInput{
+		Chunks:   input.Chunks,
+		Language: lang,
+		Labels:   []string{"person", "organization", "location", "product", "work of art"},
+	}
+
+	mentions, err := p.extractor.ExtractEntities(ctx, entityInput)
 	if err != nil {
 		return err
 	}

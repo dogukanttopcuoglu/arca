@@ -51,11 +51,24 @@ type Enricher interface {
 }
 
 // DefaultEnricher is the default implementation of the Enricher seam.
-type DefaultEnricher struct{}
+type DefaultEnricher struct {
+	entityExtractor   EntityExtractor
+	conceptExtractor  ConceptExtractor
+	relationExtractor RelationExtractor
+}
 
-// NewEnricher constructs a DefaultEnricher instance.
+// NewEnricher constructs a DefaultEnricher instance using default rule-based extractors.
 func NewEnricher() *DefaultEnricher {
 	return &DefaultEnricher{}
+}
+
+// NewEnricherWithExtractors constructs a DefaultEnricher with injected extractor strategy providers.
+func NewEnricherWithExtractors(ee EntityExtractor, ce ConceptExtractor, re RelationExtractor) *DefaultEnricher {
+	return &DefaultEnricher{
+		entityExtractor:   ee,
+		conceptExtractor:  ce,
+		relationExtractor: re,
+	}
 }
 
 // Enrich executes multi-pass metadata enrichment using CompositeEnricher.
@@ -69,9 +82,9 @@ func (e *DefaultEnricher) Enrich(input *EnrichmentInput) *EnrichmentReport {
 		NewTitleAuthorPass(nil, nil),
 		NewPageResolutionPass(),
 		NewKeywordExtractorPass(nil),
-		NewEntityExtractorPass(nil),
-		NewConceptExtractorPass(nil),
-		NewRelationExtractorPass(nil),
+		NewEntityExtractorPass(e.entityExtractor),
+		NewConceptExtractorPass(e.conceptExtractor),
+		NewRelationExtractorPass(e.relationExtractor),
 		NewSummaryPass(nil),
 	})
 

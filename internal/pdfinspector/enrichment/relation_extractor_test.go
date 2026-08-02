@@ -54,19 +54,19 @@ func TestRuleBasedRelationExtractor(t *testing.T) {
 
 		foundFoundedBy := false
 		for _, rel := range relations {
-			if rel.SubjectID == "entity:rick-rubin" && rel.ObjectID == "entity:def-jam-recordings" {
+			if rel.SubjectID == "entity:def-jam-recordings" && rel.ObjectID == "entity:rick-rubin" {
 				foundFoundedBy = true
 				if rel.Predicate != pdfmodel.RelationTypeFoundedBy {
 					t.Errorf("expected RelationTypeFoundedBy, got %q", rel.Predicate)
 				}
-				if rel.ID != "rel:entity:rick-rubin:founded_by:entity:def-jam-recordings" {
+				if rel.ID != "rel:entity:def-jam-recordings:founded_by:entity:rick-rubin" {
 					t.Errorf("unexpected deterministic relation ID: %q", rel.ID)
 				}
 			}
 		}
 
 		if !foundFoundedBy {
-			t.Error("expected 'Rick Rubin founded Def Jam Recordings' SPO relation")
+			t.Error("expected 'Def Jam Recordings founded_by Rick Rubin' SPO relation")
 		}
 	})
 }

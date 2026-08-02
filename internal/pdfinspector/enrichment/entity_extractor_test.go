@@ -13,7 +13,10 @@ func TestRuleBasedEntityExtractor(t *testing.T) {
 	extractor := enrichment.NewRuleBasedEntityExtractor()
 
 	t.Run("empty document / chunks returns empty entity mentions", func(t *testing.T) {
-		mentions, err := extractor.ExtractEntities(ctx, nil, "en")
+		mentions, err := extractor.ExtractEntities(ctx, enrichment.EntityInput{
+			Chunks:   nil,
+			Language: "en",
+		})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -30,7 +33,10 @@ func TestRuleBasedEntityExtractor(t *testing.T) {
 			},
 		}
 
-		mentions, err := extractor.ExtractEntities(ctx, chunks, "en")
+		mentions, err := extractor.ExtractEntities(ctx, enrichment.EntityInput{
+			Chunks:   chunks,
+			Language: "en",
+		})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -65,7 +71,10 @@ func TestRuleBasedEntityExtractor(t *testing.T) {
 			},
 		}
 
-		mentions, err := extractor.ExtractEntities(ctx, chunks, "tr")
+		mentions, err := extractor.ExtractEntities(ctx, enrichment.EntityInput{
+			Chunks:   chunks,
+			Language: "tr",
+		})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}

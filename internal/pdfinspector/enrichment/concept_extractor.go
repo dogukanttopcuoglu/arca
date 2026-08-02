@@ -68,15 +68,29 @@ func (e *RuleBasedConceptExtractor) ExtractConcepts(ctx context.Context, input C
 		}
 	}
 
-	// 2. Synthesize concepts from top high-salience Keywords (score >= 0.75)
+	// Build entity fragment lookup map to prevent entity fragments (e.g. "york", "def") from leaking into concepts
+	entityFragments := make(map[string]bool)
+	for _, ent := range input.Entities {
+		words := strings.Fields(strings.ToLower(ent.Name))
+		for _, w := range words {
+			if len(w) > 2 {
+				entityFragments[w] = true
+			}
+		}
+	}
+
+	// 2. Synthesize concepts from top high-salience multi-word Keywords (score >= 0.75)
 	for _, kw := range input.Keywords {
-		if kw.Score >= 0.75 && len(kw.Value) > 3 {
-			key := strings.ToLower(kw.Value)
+		trimmedKw := strings.TrimSpace(kw.Value)
+		key := strings.ToLower(trimmedKw)
+
+		// Concept Domain Boundary Rule: Concepts MUST NOT be single-word unigrams or entity fragments
+		if kw.Score >= 0.75 && len(trimmedKw) > 3 && strings.Contains(trimmedKw, " ") && !entityFragments[key] {
 			if !seen[key] {
 				seen[key] = true
 				concepts = append(concepts, pdfmodel.Concept{
-					ID:     "concept:" + slugify(kw.Value),
-					Name:   kw.Value,
+					ID:     "concept:" + slugify(trimmedKw),
+					Name:   trimmedKw,
 					Score:  kw.Score,
 					Source: pdfmodel.ConceptSourceRuleBased,
 				})

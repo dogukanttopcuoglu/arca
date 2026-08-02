@@ -1,0 +1,734 @@
+{
+  "Metadata": {
+    "title": "The Creative Act: A Way of Being",
+    "author": "Rick Rubin",
+    "creationDate": "0001-01-01T00:00:00Z",
+    "modificationDate": "0001-01-01T00:00:00Z",
+    "pageCount": 0,
+    "encrypted": false,
+    "searchable": false,
+    "language": "en",
+    "keywords": [
+      {
+        "value": "def",
+        "score": 1,
+        "source": "rule_based",
+        "chunk_ids": [
+          "chunk-101",
+          "chunk-102"
+        ]
+      },
+      {
+        "value": "jam",
+        "score": 1,
+        "source": "rule_based",
+        "chunk_ids": [
+          "chunk-101",
+          "chunk-102"
+        ]
+      },
+      {
+        "value": "new",
+        "score": 1,
+        "source": "rule_based",
+        "chunk_ids": [
+          "chunk-101",
+          "chunk-102"
+        ]
+      },
+      {
+        "value": "recordings",
+        "score": 1,
+        "source": "rule_based",
+        "chunk_ids": [
+          "chunk-101",
+          "chunk-102"
+        ]
+      },
+      {
+        "value": "york",
+        "score": 1,
+        "source": "rule_based",
+        "chunk_ids": [
+          "chunk-101",
+          "chunk-102"
+        ]
+      },
+      {
+        "value": "albums",
+        "score": 0.5,
+        "source": "rule_based",
+        "chunk_ids": [
+          "chunk-102"
+        ]
+      },
+      {
+        "value": "alongside",
+        "score": 0.5,
+        "source": "rule_based",
+        "chunk_ids": [
+          "chunk-101"
+        ]
+      },
+      {
+        "value": "art",
+        "score": 0.5,
+        "source": "rule_based",
+        "chunk_ids": [
+          "chunk-102"
+        ]
+      },
+      {
+        "value": "create",
+        "score": 0.5,
+        "source": "rule_based",
+        "chunk_ids": [
+          "chunk-102"
+        ]
+      },
+      {
+        "value": "creative",
+        "score": 0.5,
+        "source": "rule_based",
+        "chunk_ids": [
+          "chunk-101"
+        ]
+      },
+      {
+        "value": "drive",
+        "score": 0.5,
+        "source": "rule_based",
+        "chunk_ids": [
+          "chunk-101"
+        ]
+      },
+      {
+        "value": "essence",
+        "score": 0.5,
+        "source": "rule_based",
+        "chunk_ids": [
+          "chunk-102"
+        ]
+      },
+      {
+        "value": "expectation",
+        "score": 0.5,
+        "source": "rule_based",
+        "chunk_ids": [
+          "chunk-102"
+        ]
+      },
+      {
+        "value": "expression",
+        "score": 0.5,
+        "source": "rule_based",
+        "chunk_ids": [
+          "chunk-101"
+        ]
+      },
+      {
+        "value": "founded",
+        "score": 0.5,
+        "source": "rule_based",
+        "chunk_ids": [
+          "chunk-101"
+        ]
+      }
+    ],
+    "entities": [
+      {
+        "id": "organization:def jam recordings",
+        "name": "Def Jam Recordings",
+        "type": "organization",
+        "mentions": [
+          {
+            "text": "Def Jam Recordings",
+            "type": "organization",
+            "chunk_id": "chunk-101",
+            "confidence": 0.85
+          },
+          {
+            "text": "Def Jam Recordings",
+            "type": "organization",
+            "chunk_id": "chunk-102",
+            "confidence": 0.85
+          }
+        ],
+        "score": 0.9
+      },
+      {
+        "id": "person:rick rubin",
+        "name": "Rick Rubin",
+        "type": "person",
+        "mentions": [
+          {
+            "text": "Rick Rubin",
+            "type": "person",
+            "chunk_id": "chunk-101",
+            "confidence": 0.9
+          }
+        ],
+        "score": 0.8
+      },
+      {
+        "id": "location:new york",
+        "name": "New York",
+        "type": "location",
+        "mentions": [
+          {
+            "text": "New York",
+            "type": "location",
+            "chunk_id": "chunk-101",
+            "confidence": 0.88
+          },
+          {
+            "text": "New York",
+            "type": "location",
+            "chunk_id": "chunk-102",
+            "confidence": 0.88
+          }
+        ],
+        "score": 0.9
+      }
+    ],
+    "concepts": [
+      {
+        "id": "concept:recordings",
+        "name": "recordings",
+        "score": 1,
+        "source": "rule_based"
+      },
+      {
+        "id": "concept:york",
+        "name": "york",
+        "score": 1,
+        "source": "rule_based"
+      },
+      {
+        "id": "concept:the-creative-act-a-way-of-being",
+        "name": "The Creative Act: A Way of Being",
+        "score": 0.98,
+        "source": "rule_based"
+      },
+      {
+        "id": "concept:beginners-mind",
+        "name": "Beginner's Mind",
+        "score": 0.94,
+        "source": "rule_based"
+      },
+      {
+        "id": "concept:everyone-is-a-creator",
+        "name": "Everyone Is a Creator",
+        "score": 0.94,
+        "source": "rule_based"
+      }
+    ],
+    "relations": [
+      {
+        "id": "rel:person:rick rubin:founded_by:organization:def jam recordings",
+        "subject_id": "person:rick rubin",
+        "predicate": "founded_by",
+        "object_id": "organization:def jam recordings",
+        "confidence": 0.9,
+        "chunk_id": "chunk-101",
+        "source": "rule_based"
+      },
+      {
+        "id": "rel:organization:def jam recordings:located_in:location:new york",
+        "subject_id": "organization:def jam recordings",
+        "predicate": "located_in",
+        "object_id": "location:new york",
+        "confidence": 0.85,
+        "chunk_id": "chunk-101",
+        "source": "rule_based"
+      },
+      {
+        "id": "rel:organization:def jam recordings:relates_to:concept:recordings",
+        "subject_id": "organization:def jam recordings",
+        "predicate": "relates_to",
+        "object_id": "concept:recordings",
+        "confidence": 0.8,
+        "chunk_id": "chunk-101",
+        "source": "rule_based"
+      },
+      {
+        "id": "rel:organization:def jam recordings:relates_to:concept:york",
+        "subject_id": "organization:def jam recordings",
+        "predicate": "relates_to",
+        "object_id": "concept:york",
+        "confidence": 0.8,
+        "chunk_id": "chunk-101",
+        "source": "rule_based"
+      },
+      {
+        "id": "rel:person:rick rubin:relates_to:concept:recordings",
+        "subject_id": "person:rick rubin",
+        "predicate": "relates_to",
+        "object_id": "concept:recordings",
+        "confidence": 0.8,
+        "chunk_id": "chunk-101",
+        "source": "rule_based"
+      },
+      {
+        "id": "rel:person:rick rubin:relates_to:concept:york",
+        "subject_id": "person:rick rubin",
+        "predicate": "relates_to",
+        "object_id": "concept:york",
+        "confidence": 0.8,
+        "chunk_id": "chunk-101",
+        "source": "rule_based"
+      },
+      {
+        "id": "rel:location:new york:relates_to:concept:recordings",
+        "subject_id": "location:new york",
+        "predicate": "relates_to",
+        "object_id": "concept:recordings",
+        "confidence": 0.8,
+        "chunk_id": "chunk-101",
+        "source": "rule_based"
+      },
+      {
+        "id": "rel:location:new york:relates_to:concept:york",
+        "subject_id": "location:new york",
+        "predicate": "relates_to",
+        "object_id": "concept:york",
+        "confidence": 0.8,
+        "chunk_id": "chunk-101",
+        "source": "rule_based"
+      }
+    ],
+    "summary": {
+      "text": "Rick Rubin founded Def Jam Recordings in New York alongside Russell Simmons. Def Jam Recordings released legendary hip-hop albums in New York. Key Topics: recordings, york, The Creative Act: A Way of Being.",
+      "source": "rule_based"
+    }
+  },
+  "Tree": {
+    "rootNodes": [
+      {
+        "id": "node-1",
+        "heading": "The Creative Act: A Way of Being",
+        "level": 1,
+        "pageNumbers": [
+          1
+        ],
+        "children": [
+          {
+            "id": "node-2",
+            "heading": "Everyone Is a Creator",
+            "level": 2,
+            "pageNumbers": [
+              15
+            ]
+          },
+          {
+            "id": "node-3",
+            "heading": "Beginner's Mind",
+            "level": 2,
+            "pageNumbers": [
+              71
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "PageMap": [
+    {
+      "pageNumber": 1,
+      "markdown": "# The Creative Act: A Way of Being\nwritten by Rick Rubin"
+    },
+    {
+      "pageNumber": 15,
+      "markdown": "## Everyone Is a Creator\nRick Rubin founded Def Jam Recordings in New York alongside Russell Simmons. Creative expression is a fundamental human drive."
+    },
+    {
+      "pageNumber": 71,
+      "markdown": "## Beginner's Mind\nDef Jam Recordings released legendary hip-hop albums in New York. To create without expectation is the essence of art."
+    }
+  ],
+  "Chunks": [
+    {
+      "chunk_id": "chunk-101",
+      "parent_chunk_id": null,
+      "child_chunk_ids": null,
+      "chunk_order": 0,
+      "document_id": "",
+      "section_path": "The Creative Act: A Way of Being \u003e Everyone Is a Creator",
+      "heading_level": 2,
+      "page_numbers": [
+        15
+      ],
+      "content_markdown": "Rick Rubin founded Def Jam Recordings in New York alongside Russell Simmons. Creative expression is a fundamental human drive.",
+      "token_estimate": 0,
+      "character_count": 0,
+      "source_offsets": {
+        "start_char": 0,
+        "end_char": 0
+      },
+      "content_type": "",
+      "keywords": [
+        {
+          "value": "def",
+          "score": 1,
+          "source": "rule_based",
+          "chunk_ids": [
+            "chunk-101",
+            "chunk-102"
+          ]
+        },
+        {
+          "value": "jam",
+          "score": 1,
+          "source": "rule_based",
+          "chunk_ids": [
+            "chunk-101",
+            "chunk-102"
+          ]
+        },
+        {
+          "value": "new",
+          "score": 1,
+          "source": "rule_based",
+          "chunk_ids": [
+            "chunk-101",
+            "chunk-102"
+          ]
+        },
+        {
+          "value": "recordings",
+          "score": 1,
+          "source": "rule_based",
+          "chunk_ids": [
+            "chunk-101",
+            "chunk-102"
+          ]
+        },
+        {
+          "value": "york",
+          "score": 1,
+          "source": "rule_based",
+          "chunk_ids": [
+            "chunk-101",
+            "chunk-102"
+          ]
+        },
+        {
+          "value": "alongside",
+          "score": 0.5,
+          "source": "rule_based",
+          "chunk_ids": [
+            "chunk-101"
+          ]
+        },
+        {
+          "value": "creative",
+          "score": 0.5,
+          "source": "rule_based",
+          "chunk_ids": [
+            "chunk-101"
+          ]
+        },
+        {
+          "value": "drive",
+          "score": 0.5,
+          "source": "rule_based",
+          "chunk_ids": [
+            "chunk-101"
+          ]
+        },
+        {
+          "value": "expression",
+          "score": 0.5,
+          "source": "rule_based",
+          "chunk_ids": [
+            "chunk-101"
+          ]
+        },
+        {
+          "value": "founded",
+          "score": 0.5,
+          "source": "rule_based",
+          "chunk_ids": [
+            "chunk-101"
+          ]
+        }
+      ],
+      "entities": [
+        {
+          "text": "Def Jam Recordings",
+          "type": "organization",
+          "chunk_id": "chunk-101",
+          "confidence": 0.85
+        },
+        {
+          "text": "Rick Rubin",
+          "type": "person",
+          "chunk_id": "chunk-101",
+          "confidence": 0.9
+        },
+        {
+          "text": "New York",
+          "type": "location",
+          "chunk_id": "chunk-101",
+          "confidence": 0.88
+        }
+      ],
+      "concepts": [
+        {
+          "id": "concept:recordings",
+          "name": "recordings",
+          "score": 1,
+          "source": "rule_based"
+        },
+        {
+          "id": "concept:york",
+          "name": "york",
+          "score": 1,
+          "source": "rule_based"
+        },
+        {
+          "id": "concept:the-creative-act-a-way-of-being",
+          "name": "The Creative Act: A Way of Being",
+          "score": 0.98,
+          "source": "rule_based"
+        },
+        {
+          "id": "concept:everyone-is-a-creator",
+          "name": "Everyone Is a Creator",
+          "score": 0.94,
+          "source": "rule_based"
+        }
+      ],
+      "relations": [
+        {
+          "id": "rel:person:rick rubin:founded_by:organization:def jam recordings",
+          "subject_id": "person:rick rubin",
+          "predicate": "founded_by",
+          "object_id": "organization:def jam recordings",
+          "confidence": 0.9,
+          "chunk_id": "chunk-101",
+          "source": "rule_based"
+        },
+        {
+          "id": "rel:organization:def jam recordings:located_in:location:new york",
+          "subject_id": "organization:def jam recordings",
+          "predicate": "located_in",
+          "object_id": "location:new york",
+          "confidence": 0.85,
+          "chunk_id": "chunk-101",
+          "source": "rule_based"
+        },
+        {
+          "id": "rel:organization:def jam recordings:relates_to:concept:recordings",
+          "subject_id": "organization:def jam recordings",
+          "predicate": "relates_to",
+          "object_id": "concept:recordings",
+          "confidence": 0.8,
+          "chunk_id": "chunk-101",
+          "source": "rule_based"
+        },
+        {
+          "id": "rel:organization:def jam recordings:relates_to:concept:york",
+          "subject_id": "organization:def jam recordings",
+          "predicate": "relates_to",
+          "object_id": "concept:york",
+          "confidence": 0.8,
+          "chunk_id": "chunk-101",
+          "source": "rule_based"
+        },
+        {
+          "id": "rel:person:rick rubin:relates_to:concept:recordings",
+          "subject_id": "person:rick rubin",
+          "predicate": "relates_to",
+          "object_id": "concept:recordings",
+          "confidence": 0.8,
+          "chunk_id": "chunk-101",
+          "source": "rule_based"
+        },
+        {
+          "id": "rel:person:rick rubin:relates_to:concept:york",
+          "subject_id": "person:rick rubin",
+          "predicate": "relates_to",
+          "object_id": "concept:york",
+          "confidence": 0.8,
+          "chunk_id": "chunk-101",
+          "source": "rule_based"
+        },
+        {
+          "id": "rel:location:new york:relates_to:concept:recordings",
+          "subject_id": "location:new york",
+          "predicate": "relates_to",
+          "object_id": "concept:recordings",
+          "confidence": 0.8,
+          "chunk_id": "chunk-101",
+          "source": "rule_based"
+        },
+        {
+          "id": "rel:location:new york:relates_to:concept:york",
+          "subject_id": "location:new york",
+          "predicate": "relates_to",
+          "object_id": "concept:york",
+          "confidence": 0.8,
+          "chunk_id": "chunk-101",
+          "source": "rule_based"
+        }
+      ],
+      "summary": {
+        "text": "Rick Rubin founded Def Jam Recordings in New York alongside Russell Simmons.",
+        "source": "rule_based"
+      }
+    },
+    {
+      "chunk_id": "chunk-102",
+      "parent_chunk_id": null,
+      "child_chunk_ids": null,
+      "chunk_order": 0,
+      "document_id": "",
+      "section_path": "The Creative Act: A Way of Being \u003e Beginner's Mind",
+      "heading_level": 2,
+      "page_numbers": [
+        71
+      ],
+      "content_markdown": "Def Jam Recordings released legendary hip-hop albums in New York. To create without expectation is the essence of art.",
+      "token_estimate": 0,
+      "character_count": 0,
+      "source_offsets": {
+        "start_char": 0,
+        "end_char": 0
+      },
+      "content_type": "",
+      "keywords": [
+        {
+          "value": "def",
+          "score": 1,
+          "source": "rule_based",
+          "chunk_ids": [
+            "chunk-101",
+            "chunk-102"
+          ]
+        },
+        {
+          "value": "jam",
+          "score": 1,
+          "source": "rule_based",
+          "chunk_ids": [
+            "chunk-101",
+            "chunk-102"
+          ]
+        },
+        {
+          "value": "new",
+          "score": 1,
+          "source": "rule_based",
+          "chunk_ids": [
+            "chunk-101",
+            "chunk-102"
+          ]
+        },
+        {
+          "value": "recordings",
+          "score": 1,
+          "source": "rule_based",
+          "chunk_ids": [
+            "chunk-101",
+            "chunk-102"
+          ]
+        },
+        {
+          "value": "york",
+          "score": 1,
+          "source": "rule_based",
+          "chunk_ids": [
+            "chunk-101",
+            "chunk-102"
+          ]
+        },
+        {
+          "value": "albums",
+          "score": 0.5,
+          "source": "rule_based",
+          "chunk_ids": [
+            "chunk-102"
+          ]
+        },
+        {
+          "value": "art",
+          "score": 0.5,
+          "source": "rule_based",
+          "chunk_ids": [
+            "chunk-102"
+          ]
+        },
+        {
+          "value": "create",
+          "score": 0.5,
+          "source": "rule_based",
+          "chunk_ids": [
+            "chunk-102"
+          ]
+        },
+        {
+          "value": "essence",
+          "score": 0.5,
+          "source": "rule_based",
+          "chunk_ids": [
+            "chunk-102"
+          ]
+        },
+        {
+          "value": "expectation",
+          "score": 0.5,
+          "source": "rule_based",
+          "chunk_ids": [
+            "chunk-102"
+          ]
+        }
+      ],
+      "entities": [
+        {
+          "text": "Def Jam Recordings",
+          "type": "organization",
+          "chunk_id": "chunk-102",
+          "confidence": 0.85
+        },
+        {
+          "text": "New York",
+          "type": "location",
+          "chunk_id": "chunk-102",
+          "confidence": 0.88
+        }
+      ],
+      "concepts": [
+        {
+          "id": "concept:recordings",
+          "name": "recordings",
+          "score": 1,
+          "source": "rule_based"
+        },
+        {
+          "id": "concept:york",
+          "name": "york",
+          "score": 1,
+          "source": "rule_based"
+        },
+        {
+          "id": "concept:the-creative-act-a-way-of-being",
+          "name": "The Creative Act: A Way of Being",
+          "score": 0.98,
+          "source": "rule_based"
+        },
+        {
+          "id": "concept:beginners-mind",
+          "name": "Beginner's Mind",
+          "score": 0.94,
+          "source": "rule_based"
+        }
+      ],
+      "summary": {
+        "text": "Def Jam Recordings released legendary hip-hop albums in New York.",
+        "source": "rule_based"
+      }
+    }
+  ],
+  "Filename": "rick-rubin.pdf"
+}

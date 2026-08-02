@@ -8,9 +8,16 @@ import (
 	pdfmodel "arca/internal/pdfinspector/model"
 )
 
+// EntityInput encapsulating extraction parameters for provider strategies.
+type EntityInput struct {
+	Chunks   []pdfmodel.KnowledgeChunk
+	Language string
+	Labels   []string
+}
+
 // EntityExtractor defines the strategy seam for extracting entity mentions from text chunks.
 type EntityExtractor interface {
-	ExtractEntities(ctx context.Context, chunks []pdfmodel.KnowledgeChunk, lang string) ([]pdfmodel.EntityMention, error)
+	ExtractEntities(ctx context.Context, input EntityInput) ([]pdfmodel.EntityMention, error)
 }
 
 // RuleBasedEntityExtractor implements EntityExtractor using deterministic pattern matching.
@@ -26,7 +33,8 @@ func NewRuleBasedEntityExtractor() *RuleBasedEntityExtractor {
 }
 
 // ExtractEntities discovers raw surface mentions across chunks.
-func (e *RuleBasedEntityExtractor) ExtractEntities(ctx context.Context, chunks []pdfmodel.KnowledgeChunk, lang string) ([]pdfmodel.EntityMention, error) {
+func (e *RuleBasedEntityExtractor) ExtractEntities(ctx context.Context, input EntityInput) ([]pdfmodel.EntityMention, error) {
+	chunks := input.Chunks
 	if len(chunks) == 0 {
 		return []pdfmodel.EntityMention{}, nil
 	}
