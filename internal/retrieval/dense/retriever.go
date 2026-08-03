@@ -56,24 +56,31 @@ func (r *DenseRetriever) Retrieve(ctx context.Context, query seam.RetrievalQuery
 
 	// 3. Map VectorSearchResult objects to domain SearchResult objects
 	searchResults := make([]seam.SearchResult, len(storeResults))
-	chunkIDs := make([]string, len(storeResults))
+	chunkIDs := make([]string, 0, len(storeResults))
 	for i, res := range storeResults {
-		chunkIDs[i] = res.Metadata.ChunkID
+		if res.ContentMarkdown == "" {
+			chunkIDs = append(chunkIDs, res.Metadata.ChunkID)
+		}
 		searchResults[i] = seam.SearchResult{
-			ChunkID:  res.Metadata.ChunkID,
-			Score:    res.Score,
-			Metadata: res.Metadata,
+			ChunkID:         res.Metadata.ChunkID,
+			Score:           res.Score,
+			Metadata:        res.Metadata,
+			ContentMarkdown: res.ContentMarkdown,
 		}
 	}
 
-	// 4. Resolve chunk markdown content from ContentStore so QA has the actual text.
+	// 4. Resolve chunk markdown content from ContentStore only when the vector
+	// store did not carry it, so persistent content survives process boundaries
+	// while the ContentStore seam remains the in-process fallback.
 	if len(chunkIDs) > 0 {
 		contents, err := r.contentStore.GetContent(ctx, chunkIDs)
 		if err != nil {
 			return nil, fmt.Errorf("failed to resolve chunk content: %w", err)
 		}
 		for i := range searchResults {
-			searchResults[i].ContentMarkdown = contents[searchResults[i].ChunkID]
+			if searchResults[i].ContentMarkdown == "" {
+				searchResults[i].ContentMarkdown = contents[searchResults[i].ChunkID]
+			}
 		}
 	}
 

@@ -104,6 +104,47 @@ func TestDenseRetriever(t *testing.T) {
 	})
 }
 
+func TestDenseRetrieverContentFromVectorPoints(t *testing.T) {
+	ctx := context.Background()
+
+	mockProvider := provider.NewMockEmbeddingProvider("mock-provider", "mock-model-v1", 1536)
+	storeImpl := store.NewInMemoryVectorStore()
+	// Deliberately EMPTY ContentStore: content must come from the vector points.
+	contentStore := store.NewInMemoryContentStore()
+
+	pt := store.VectorPoint{
+		ID:              "pt-1",
+		Vector:          mockProviderGenerateVector(mockProvider, "Rick Rubin founded Def Jam Recordings in New York."),
+		ContentMarkdown: "Rick Rubin founded Def Jam Recordings in New York alongside Russell Simmons.",
+		Metadata: indexingmodel.VectorMetadata{
+			DocumentID:  "doc-1",
+			ChunkID:     "chk-1",
+			SectionPath: "Everyone Is a Creator",
+			ContentHash: "hash-1",
+		},
+	}
+	if err := storeImpl.UpsertPoints(ctx, []store.VectorPoint{pt}); err != nil {
+		t.Fatalf("failed to seed vector store: %v", err)
+	}
+
+	denseRetriever := dense.NewDenseRetriever(mockProvider, storeImpl, contentStore)
+
+	results, err := denseRetriever.Retrieve(ctx, seam.RetrievalQuery{
+		QueryText: "Rick Rubin founded Def Jam",
+		TopK:      5,
+		Mode:      seam.RetrievalDense,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error during retrieval: %v", err)
+	}
+	if len(results) != 1 {
+		t.Fatalf("expected 1 search result, got %d", len(results))
+	}
+	if results[0].ContentMarkdown != "Rick Rubin founded Def Jam Recordings in New York alongside Russell Simmons." {
+		t.Errorf("expected content from vector point, got %q", results[0].ContentMarkdown)
+	}
+}
+
 func mockProviderGenerateVector(p provider.EmbeddingProvider, text string) []float32 {
 	vec, err := p.EmbedQuery(context.Background(), text)
 	if err != nil || len(vec) == 0 {

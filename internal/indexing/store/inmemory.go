@@ -75,9 +75,10 @@ func (s *InMemoryVectorStore) SearchVector(ctx context.Context, query VectorSear
 		}
 
 		results = append(results, VectorSearchResult{
-			ID:       pt.ID,
-			Score:    score,
-			Metadata: pt.Metadata,
+			ID:              pt.ID,
+			Score:           score,
+			ContentMarkdown: pt.ContentMarkdown,
+			Metadata:        pt.Metadata,
 		})
 	}
 

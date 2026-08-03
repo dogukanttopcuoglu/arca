@@ -15,10 +15,12 @@ type VectorSearchQuery struct {
 }
 
 // VectorSearchResult encapsulates a single nearest-neighbor match returned by VectorStore.
+// ContentMarkdown carries the chunk markdown from the persistent point when available.
 type VectorSearchResult struct {
-	ID       string               `json:"id"`
-	Score    float32              `json:"score"`
-	Metadata model.VectorMetadata `json:"metadata"`
+	ID              string               `json:"id"`
+	Score           float32              `json:"score"`
+	ContentMarkdown string               `json:"content_markdown,omitempty"`
+	Metadata        model.VectorMetadata `json:"metadata"`
 }
 
 // VectorStore defines the low-level persistence abstraction for vector storage, search, and deletion.

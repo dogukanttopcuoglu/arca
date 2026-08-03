@@ -132,9 +132,10 @@ func (w *IndexingWorker) ExecuteSync(ctx context.Context, documentID string, chu
 			}
 
 			newPoints = append(newPoints, store.VectorPoint{
-				ID:       ptID,
-				Vector:   embRes.Vectors[bIdx],
-				Metadata: meta,
+				ID:              ptID,
+				Vector:          embRes.Vectors[bIdx],
+				ContentMarkdown: chk.ContentMarkdown,
+				Metadata:        meta,
 			})
 		}
 	}

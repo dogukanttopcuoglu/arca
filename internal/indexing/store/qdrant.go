@@ -43,8 +43,8 @@ func WithQdrantDimension(d uint64) QdrantOption {
 // host should be "hostname" or "hostname:port" (defaults gRPC port 6334).
 func NewQdrantVectorStore(host, collection string, opts ...QdrantOption) (*QdrantVectorStore, error) {
 	cfg := &qdrant.Config{
-		Host:                  host,
-		Port:                  defaultQdrantPort,
+		Host:                   host,
+		Port:                   defaultQdrantPort,
 		SkipCompatibilityCheck: true,
 	}
 	if h, p, ok := splitHostPort(host); ok {
@@ -173,6 +173,13 @@ func (s *QdrantVectorStore) UpsertPoints(ctx context.Context, points []VectorPoi
 		if err != nil {
 			return err
 		}
+		if pt.ContentMarkdown != "" {
+			contentValue, err := qdrant.NewValue(pt.ContentMarkdown)
+			if err != nil {
+				return err
+			}
+			payload["content_markdown"] = contentValue
+		}
 
 		pointStructs = append(pointStructs, &qdrant.PointStruct{
 			Id:      qdrant.NewID(pt.ID),
@@ -228,9 +235,10 @@ func (s *QdrantVectorStore) SearchVector(ctx context.Context, query VectorSearch
 			return nil, err
 		}
 		results = append(results, VectorSearchResult{
-			ID:       pointIDToString(sp.Id),
-			Score:    sp.Score,
-			Metadata: meta,
+			ID:              pointIDToString(sp.Id),
+			Score:           sp.Score,
+			ContentMarkdown: payloadToContent(sp.Payload),
+			Metadata:        meta,
 		})
 	}
 	return results, nil
@@ -274,9 +282,10 @@ func (s *QdrantVectorStore) ListPoints(ctx context.Context, filter model.Metadat
 				return nil, err
 			}
 			points = append(points, VectorPoint{
-				ID:       pointIDToString(rp.Id),
-				Vector:   vectorsOutputToSlice(rp.Vectors),
-				Metadata: meta,
+				ID:              pointIDToString(rp.Id),
+				Vector:          vectorsOutputToSlice(rp.Vectors),
+				ContentMarkdown: payloadToContent(rp.Payload),
+				Metadata:        meta,
 			})
 		}
 
@@ -341,19 +350,19 @@ func (s *QdrantVectorStore) Close() error {
 // and metadata reconstruction.
 func metadataToPayload(meta model.VectorMetadata) (map[string]*qdrant.Value, error) {
 	raw := map[string]any{
-		"workspace_id":        meta.WorkspaceID,
-		"knowledge_space_id":  meta.KnowledgeSpaceID,
-		"document_id":         meta.DocumentID,
-		"chunk_id":            meta.ChunkID,
-		"chunk_order":         int64(meta.ChunkOrder),
-		"section_path":        meta.SectionPath,
-		"content_type":        meta.ContentType,
-		"content_hash":        meta.ContentHash,
-		"embedding_provider":  meta.EmbeddingProvider,
-		"embedding_model":     meta.EmbeddingModel,
-		"embedding_version":   meta.EmbeddingVersion,
+		"workspace_id":         meta.WorkspaceID,
+		"knowledge_space_id":   meta.KnowledgeSpaceID,
+		"document_id":          meta.DocumentID,
+		"chunk_id":             meta.ChunkID,
+		"chunk_order":          int64(meta.ChunkOrder),
+		"section_path":         meta.SectionPath,
+		"content_type":         meta.ContentType,
+		"content_hash":         meta.ContentHash,
+		"embedding_provider":   meta.EmbeddingProvider,
+		"embedding_model":      meta.EmbeddingModel,
+		"embedding_version":    meta.EmbeddingVersion,
 		"chunk_schema_version": meta.ChunkSchemaVer,
-		"index_signature":     meta.IndexSignature,
+		"index_signature":      meta.IndexSignature,
 	}
 	if len(meta.PageNumbers) > 0 {
 		pages := make([]any, len(meta.PageNumbers))
@@ -437,6 +446,14 @@ func payloadToMetadata(payload map[string]*qdrant.Value) (model.VectorMetadata, 
 	}
 
 	return meta, nil
+}
+
+// payloadToContent extracts the persisted chunk markdown from a Qdrant payload.
+func payloadToContent(payload map[string]*qdrant.Value) string {
+	if v := payload["content_markdown"]; v != nil {
+		return v.GetStringValue()
+	}
+	return ""
 }
 
 // filterToQdrant translates a domain MetadataFilter into a Qdrant Filter.

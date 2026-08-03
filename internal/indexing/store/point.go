@@ -19,11 +19,13 @@ func CalculatePointID(documentID, sectionPath string, chunkOrder int) string {
 	return hexstr[0:8] + "-" + hexstr[8:12] + "-" + hexstr[12:16] + "-" + hexstr[16:20] + "-" + hexstr[20:32]
 }
 
-// VectorPoint represents a stored vector point containing stable Point ID, embedding vector, and typed VectorMetadata.
+// VectorPoint represents a stored vector point containing stable Point ID, embedding vector,
+// chunk markdown content, and typed VectorMetadata.
 type VectorPoint struct {
-	ID       string               `json:"id"`
-	Vector   []float32            `json:"vector"`
-	Metadata model.VectorMetadata `json:"metadata"`
+	ID              string               `json:"id"`
+	Vector          []float32            `json:"vector"`
+	ContentMarkdown string               `json:"content_markdown,omitempty"`
+	Metadata        model.VectorMetadata `json:"metadata"`
 }
 
 // Validate verifies structural invariants for VectorPoint.

@@ -24,8 +24,8 @@ func bufconnListen() *bufconn.Listener {
 // fakeCollectionsServer implements the Qdrant collections service in-memory.
 type fakeCollectionsServer struct {
 	qdrant.UnimplementedCollectionsServer
-	exists bool
-	created bool
+	exists    bool
+	created   bool
 	createReq *qdrant.CreateCollection
 }
 
@@ -338,8 +338,9 @@ func newTestQdrantStore(t *testing.T, points *fakePointsServer, collections *fak
 func samplePoints() []store.VectorPoint {
 	return []store.VectorPoint{
 		{
-			ID:     "pt-1",
-			Vector: []float32{1.0, 0.0, 0.0},
+			ID:              "pt-1",
+			Vector:          []float32{1.0, 0.0, 0.0},
+			ContentMarkdown: "Sample markdown content for the first chunk.",
 			Metadata: model.VectorMetadata{
 				WorkspaceID:       "ws-1",
 				KnowledgeSpaceID:  "space-1",
@@ -396,6 +397,7 @@ func TestQdrantVectorStore_UpsertSearchListDelete(t *testing.T) {
 		assert.Equal(t, []int{1, 2}, results[0].Metadata.PageNumbers)
 		assert.Equal(t, []string{"[1] Smith et al."}, results[0].Metadata.Citations)
 		assert.Equal(t, "sig-1", results[0].Metadata.IndexSignature)
+		assert.Equal(t, "Sample markdown content for the first chunk.", results[0].ContentMarkdown, "search must return persisted content")
 	})
 
 	t.Run("search respects document filter", func(t *testing.T) {
@@ -427,6 +429,11 @@ func TestQdrantVectorStore_UpsertSearchListDelete(t *testing.T) {
 			require.NotEmpty(t, pt.Vector, "ListPoints must preserve vectors")
 			assert.Equal(t, "doc-1", pt.Metadata.DocumentID)
 		}
+		contentByChunk := map[string]string{}
+		for _, pt := range listed {
+			contentByChunk[pt.Metadata.ChunkID] = pt.ContentMarkdown
+		}
+		assert.Equal(t, "Sample markdown content for the first chunk.", contentByChunk["chk-1"], "ListPoints must preserve persisted content")
 	})
 
 	t.Run("list points respects content type filter", func(t *testing.T) {
