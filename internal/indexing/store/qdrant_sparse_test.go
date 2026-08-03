@@ -7,7 +7,6 @@ import (
 	"arca/internal/indexing/model"
 	"arca/internal/indexing/sparse"
 	"arca/internal/indexing/store"
-	qdrant "github.com/qdrant/go-client/qdrant"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

@@ -200,8 +200,8 @@ func (f *fakePointsServer) Query(ctx context.Context, req *qdrant.QueryPoints) (
 		}
 		return testPointID(results[i].Id) < testPointID(results[j].Id)
 	})
-	if req.GetLimit() != nil && uint64(len(results)) > req.GetLimit().GetValue() {
-		results = results[:req.GetLimit().GetValue()]
+	if req.Limit != nil && uint64(len(results)) > *req.Limit {
+		results = results[:*req.Limit]
 	}
 	return &qdrant.QueryResponse{Result: results}, nil
 }
