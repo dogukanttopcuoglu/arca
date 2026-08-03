@@ -48,7 +48,7 @@ type Config struct {
 	OllamaBaseURL string `mapstructure:"OLLAMA_URL"`
 	// VectorStoreType selects the vector store adapter.
 	VectorStoreType VectorStoreType `mapstructure:"VECTOR_STORE"`
-	// VectorStoreURL is the connection endpoint for the vector store (Qdrant REST URL).
+	// VectorStoreURL is the connection endpoint for the vector store (Qdrant gRPC endpoint).
 	VectorStoreURL string `mapstructure:"QDRANT_URL"`
 	// QdrantCollection is the Qdrant collection name to use.
 	QdrantCollection string `mapstructure:"QDRANT_COLLECTION"`
@@ -65,7 +65,7 @@ func DefaultConfig() Config {
 		EmbeddingModel:        "mock-model-v1",
 		OllamaBaseURL:         "http://localhost:11434",
 		VectorStoreType:       VectorStoreInMemory,
-		VectorStoreURL:        "http://localhost:6333",
+		VectorStoreURL:        "http://localhost:6334", // gRPC port; the adapter does not speak REST
 		QdrantCollection:      "arca_chunks",
 		HTTPTimeout:           30 * time.Second,
 	}

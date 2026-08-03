@@ -62,7 +62,7 @@ func TestBuildVectorStore(t *testing.T) {
 	t.Run("qdrant store type returns qdrant adapter", func(t *testing.T) {
 		cfg := DefaultConfig()
 		cfg.VectorStoreType = VectorStoreQdrant
-		cfg.VectorStoreURL = "http://localhost:6333"
+		cfg.VectorStoreURL = "http://localhost:6334"
 		cfg.QdrantCollection = "arca_chunks"
 
 		s, err := buildVectorStore(cfg)

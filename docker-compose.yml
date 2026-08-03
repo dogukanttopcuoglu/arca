@@ -11,6 +11,25 @@ services:
       - NODE_ENV=production
     restart: unless-stopped
 
+  ollama:
+    image: ollama/ollama:latest
+    container_name: arca-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-models:/root/.ollama
+    restart: unless-stopped
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: arca-qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant-storage:/qdrant/storage
+    restart: unless-stopped
+
   arca-pdf-inspector:
     build:
       context: .
@@ -21,3 +40,7 @@ services:
     environment:
       - FIRECRAWL_BASE_URL=http://firecrawl-pdf-service:3002
     restart: "no"
+
+volumes:
+  ollama-models:
+  qdrant-storage:

@@ -22,7 +22,7 @@ func TestQdrantVectorStore_Live(t *testing.T) {
 	defer cancel()
 
 	collection := "arca_test_integration"
-	qs, err := store.NewQdrantVectorStore(host, collection)
+	qs, err := store.NewQdrantVectorStore(host, collection, store.WithQdrantDimension(3))
 	if err != nil {
 		t.Fatalf("failed to construct Qdrant store: %v", err)
 	}
@@ -31,13 +31,9 @@ func TestQdrantVectorStore_Live(t *testing.T) {
 		_ = qs.Close()
 	})
 
-	if err := qs.Health(ctx); err != nil {
-		t.Fatalf("Qdrant health check failed (is QDRANT_TEST_URL reachable?): %v", err)
-	}
-
 	points := []store.VectorPoint{
 		{
-			ID:     "live-pt-1",
+			ID:     "00000000-0000-0000-0000-000000000001",
 			Vector: []float32{1.0, 0.0, 0.0},
 			Metadata: model.VectorMetadata{
 				DocumentID:  "live-doc-1",
@@ -50,7 +46,7 @@ func TestQdrantVectorStore_Live(t *testing.T) {
 			},
 		},
 		{
-			ID:     "live-pt-2",
+			ID:     "00000000-0000-0000-0000-000000000002",
 			Vector: []float32{0.0, 1.0, 0.0},
 			Metadata: model.VectorMetadata{
 				DocumentID:  "live-doc-1",
@@ -64,8 +60,14 @@ func TestQdrantVectorStore_Live(t *testing.T) {
 		},
 	}
 
+	// The collection is auto-created on first write, so upsert precedes the health
+	// check just like real usage (see TestQdrantVectorStore_CollectionAutoCreate).
 	if err := qs.UpsertPoints(ctx, points); err != nil {
 		t.Fatalf("upsert failed: %v", err)
+	}
+
+	if err := qs.Health(ctx); err != nil {
+		t.Fatalf("Qdrant health check failed (is QDRANT_TEST_URL reachable?): %v", err)
 	}
 
 	t.Run("search returns indexed points", func(t *testing.T) {

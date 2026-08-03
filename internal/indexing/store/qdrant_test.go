@@ -2,7 +2,9 @@ package store_test
 
 import (
 	"context"
+	"fmt"
 	"net"
+	"sort"
 	"testing"
 
 	"arca/internal/indexing/model"
@@ -133,7 +135,26 @@ func (f *fakePointsServer) Search(ctx context.Context, req *qdrant.SearchPoints)
 	if req.GetLimit() > 0 && uint64(len(results)) > req.GetLimit() {
 		results = results[:req.GetLimit()]
 	}
+	// Sort by score desc (ID asc as a deterministic tie-break) to mirror real
+	// Qdrant best-match-first ordering; the fake otherwise iterates a map.
+	sort.Slice(results, func(i, j int) bool {
+		if results[i].Score != results[j].Score {
+			return results[i].Score > results[j].Score
+		}
+		return testPointID(results[i].Id) < testPointID(results[j].Id)
+	})
 	return &qdrant.SearchResponse{Result: results}, nil
+}
+
+// testPointID renders a PointId as its string form for deterministic ordering.
+func testPointID(id *qdrant.PointId) string {
+	if id == nil {
+		return ""
+	}
+	if u := id.GetUuid(); u != "" {
+		return u
+	}
+	return fmt.Sprintf("%d", id.GetNum())
 }
 
 func (f *fakePointsServer) Scroll(ctx context.Context, req *qdrant.ScrollPoints) (*qdrant.ScrollResponse, error) {
