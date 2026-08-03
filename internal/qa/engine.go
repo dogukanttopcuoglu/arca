@@ -106,9 +106,27 @@ func (e *AnswerEngine) Answer(ctx context.Context, query seam.RetrievalQuery) (*
 	draft.AnalyzedQuery = analyzed
 
 	if e.retriever != nil {
-		draft.SearchResults, err = e.retriever.Retrieve(ctx, query)
-		if err != nil {
-			return nil, fmt.Errorf("retrieval stage failed: %w", err)
+		// Decomposed queries (e.g. comparisons) retrieve each sub-query and
+		// merge deterministically; single-intent queries take the direct path.
+		if len(draft.AnalyzedQuery.SubQueries) > 0 {
+			var lists [][]seam.SearchResult
+			for _, sub := range draft.AnalyzedQuery.SubQueries {
+				subQuery := query
+				subQuery.QueryText = sub
+				results, err := e.retriever.Retrieve(ctx, subQuery)
+				if err != nil {
+					return nil, fmt.Errorf("retrieval stage failed for sub-query %q: %w", sub, err)
+				}
+				if len(results) > 0 {
+					lists = append(lists, results)
+				}
+			}
+			draft.SearchResults = seam.MergeRankedLists(lists, query.TopK)
+		} else {
+			draft.SearchResults, err = e.retriever.Retrieve(ctx, query)
+			if err != nil {
+				return nil, fmt.Errorf("retrieval stage failed: %w", err)
+			}
 		}
 	}
 

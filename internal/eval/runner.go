@@ -21,6 +21,10 @@ type Options struct {
 	Reranker          string
 	Collection        string
 	GitCommit         string
+	// Decompose, when non-nil, splits each gold-set query into deterministic
+	// sub-queries before retrieval; sub-results are merged via the shared
+	// MergeRankedLists seam — the same path the AnswerEngine uses.
+	Decompose func(query string) []string
 }
 
 // Runner executes a gold set against a Retriever and produces a Report.
@@ -87,9 +91,34 @@ func (r *Runner) Run(ctx context.Context, gs *GoldSet) (*Report, error) {
 			MinScore:  r.opts.MinScore,
 			Stats:     &retrievalseam.RetrievalStats{},
 		}
-		results, err := r.retriever.Retrieve(ctx, query)
-		if err != nil {
-			return nil, fmt.Errorf("query %q retrieval failed: %w", q.ID, err)
+		var results []retrievalseam.SearchResult
+		if r.opts.Decompose != nil {
+			subs := r.opts.Decompose(q.Query)
+			if len(subs) > 0 {
+				var lists [][]retrievalseam.SearchResult
+				for _, sub := range subs {
+					subQuery := query
+					subQuery.QueryText = sub
+					subResults, err := r.retriever.Retrieve(ctx, subQuery)
+					if err != nil {
+						return nil, fmt.Errorf("query %q sub-retrieval failed: %w", q.ID, err)
+					}
+					if len(subResults) > 0 {
+						lists = append(lists, subResults)
+					}
+				}
+				results = retrievalseam.MergeRankedLists(lists, query.TopK)
+			} else {
+				results, err = r.retriever.Retrieve(ctx, query)
+				if err != nil {
+					return nil, fmt.Errorf("query %q retrieval failed: %w", q.ID, err)
+				}
+			}
+		} else {
+			results, err = r.retriever.Retrieve(ctx, query)
+			if err != nil {
+				return nil, fmt.Errorf("query %q retrieval failed: %w", q.ID, err)
+			}
 		}
 
 		retrieved := make([]string, len(results))

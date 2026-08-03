@@ -3,6 +3,7 @@ package qa
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 
 	indexingmodel "arca/internal/indexing/model"
@@ -10,10 +11,13 @@ import (
 
 // AnalyzedQuery represents structured intent, entities, and metadata filters extracted from natural query text.
 type AnalyzedQuery struct {
-	RawQuery      string                       `json:"raw_query"`
-	Intent        string                       `json:"intent"`
-	Entities      []string                     `json:"entities,omitempty"`
+	RawQuery        string                       `json:"raw_query"`
+	Intent          string                       `json:"intent"`
+	Entities        []string                     `json:"entities,omitempty"`
 	ExtractedFilter indexingmodel.MetadataFilter `json:"extracted_filter,omitempty"`
+	// SubQueries holds deterministic decomposed sub-queries (e.g. the two
+	// sides of a comparison). Nil for single-intent queries.
+	SubQueries []string `json:"sub_queries,omitempty"`
 }
 
 // QueryAnalyzer defines the domain interface seam for query understanding and intent analysis.
@@ -30,7 +34,8 @@ func NewRuleBasedAnalyzer() *RuleBasedAnalyzer {
 	return &RuleBasedAnalyzer{}
 }
 
-// Analyze extracts basic query intent and keywords.
+// Analyze extracts basic query intent, keywords, and deterministic
+// sub-queries for comparison patterns (M4 decomposition experiment).
 func (a *RuleBasedAnalyzer) Analyze(ctx context.Context, query string) (*AnalyzedQuery, error) {
 	trimmed := strings.TrimSpace(query)
 	if trimmed == "" {
@@ -55,8 +60,40 @@ func (a *RuleBasedAnalyzer) Analyze(ctx context.Context, query string) (*Analyze
 	}
 
 	return &AnalyzedQuery{
-		RawQuery: trimmed,
-		Intent:   intent,
-		Entities: entities,
+		RawQuery:   trimmed,
+		Intent:     intent,
+		Entities:   entities,
+		SubQueries: decomposeComparison(trimmed),
 	}, nil
+}
+
+// decomposeComparison deterministically splits comparison queries into two
+// sub-queries using rule-based patterns. Returns nil when no pattern matches.
+func decomposeComparison(query string) []string {
+	patterns := []*regexp.Regexp{
+		// "Compare X with Y" / "Compare X and Y"
+		regexp.MustCompile(`(?i)^compare\s+(.+?)\s+(?:with|and)\s+(.+)$`),
+		// "X vs Y"
+		regexp.MustCompile(`(?i)^(.+?)\s+vs\.?\s+(.+)$`),
+		// "Explain the difference between X and Y"
+		regexp.MustCompile(`(?i)^.*?\bdifference\s+between\s+(.+?)\s+and\s+(.+)$`),
+		// "How do X and Y differ?"
+		regexp.MustCompile(`(?i)^how\s+do\s+(.+?)\s+and\s+(.+?)\s+differ`),
+		// "Contrast the approaches of X and Y" -> strip the lead-in
+		regexp.MustCompile(`(?i)^contrast\s+(?:the\s+approaches\s+of\s+)?(.+?)\s+and\s+(.+)$`),
+		// "What distinguishes X from Y?"
+		regexp.MustCompile(`(?i)^what\s+distinguishes\s+(.+?)\s+from\s+(.+)$`),
+	}
+
+	for _, re := range patterns {
+		if m := re.FindStringSubmatch(query); m != nil && len(m) == 3 {
+			left := strings.TrimSpace(m[1])
+			right := strings.TrimSpace(m[2])
+			if left == "" || right == "" || strings.EqualFold(left, right) {
+				continue
+			}
+			return []string{left, right}
+		}
+	}
+	return nil
 }

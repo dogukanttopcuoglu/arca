@@ -40,3 +40,26 @@ Manifest check: `fusion_policy: {"dense_weight": 1, "sparse_weight": 0.5, "spars
 - Weighted RRF and the cap mechanism stay in the code behind `FusionPolicy`; the orchestrator (M5) selects among the frozen policies via IntentHint.
 
 The M4→M5 handoff is now quantified: the orchestrator's job is `Comparison/Procedural → DenseBiased`, `Entity/SingleFact → Balanced`, with a measured ceiling of +0.125 comparison recall and a known −0.125 entity cost of getting the selection wrong.
+
+## Decomposition experiment (M4, hardened gold set v1.1)
+
+Gold set v1.1 adds four non-patterned comparison forms ("How do X and Y differ?",
+"What distinguishes X from Y?", "Explain the difference between...", "Contrast...")
+so the rule matcher cannot win by template-matching the gold set.
+
+| config (v1.1) | comp rec | comp mrr | entity rec | single_fact rec/mrr | concept rec | proc rec | global rec/mrr/ndcg |
+|---|---|---|---|---|---|---|---|
+| hybrid DenseBiased (ceiling) | 0.625 | 0.639 | 0.750 | 0.963 / 0.833 | 0.700 | 0.625 | 0.727 / 0.713 / 0.663 |
+| dense + decompose | 0.715 | 0.635 | 0.750 | 0.963 / 0.833 | — | — | 0.750 / 0.689 / 0.655 |
+| **hybrid Balanced + decompose** | **0.729** | 0.618 | **0.875** | 0.963 / 0.944 | 0.683 | 0.615 | **0.770 / 0.718 / 0.676** |
+
+Acceptance rule (decomposition vs the DenseBiased ceiling):
+1. Comparison recall beyond 0.625 ceiling: **PASS** (+0.104).
+2. Other intents within 5% tolerance: **PASS** (concept −2.4%, procedural −1.6%).
+3. Entity/single_fact gains preserved: **PASS** (entity +0.125 — hybrid+decompose
+   restores the exact-token rescue that DenseBiased sacrificed; single_fact 0.000).
+
+**Verdict: decomposition survives M4.** The rule-based comparison decomposition
+extends the analyzer deterministically, the engine and the benchmark share the
+same merge seam, and hybrid Balanced + decomposition dominates the alternatives
+on this data. Runtime intent-driven selection of this combination remains M5.

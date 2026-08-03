@@ -10,6 +10,7 @@ import (
 	"arca/internal/eval"
 	indexingmodel "arca/internal/indexing/model"
 	"arca/internal/indexing/store"
+	"arca/internal/qa"
 	"arca/internal/retrieval/hybrid"
 	retrievalseam "arca/internal/retrieval/seam"
 )
@@ -24,6 +25,7 @@ type EvalOptions struct {
 	FusionPolicyName string
 	SparseWeight     float64
 	SparseCap        int
+	Decompose        bool
 }
 
 // RunEval executes the retrieval benchmark against the real composition root:
@@ -92,6 +94,7 @@ func (a *App) RunEval(ctx context.Context, opts EvalOptions) (string, error) {
 			FusionPolicy:      fusionPolicy,
 			Collection:        a.runtime.cfg.QdrantCollection,
 			GitCommit:         gitHead(),
+			Decompose:         decomposeFunc(opts.Decompose),
 		},
 	)
 
@@ -131,6 +134,22 @@ func (s listPointsSource) ContentHashes(documentID string) ([]string, error) {
 		hashes[i] = p.Metadata.ContentHash
 	}
 	return hashes, nil
+}
+
+// decomposeFunc wires the rule-based analyzer's deterministic decomposition
+// into the eval runner when enabled; nil otherwise.
+func decomposeFunc(enabled bool) func(string) []string {
+	if !enabled {
+		return nil
+	}
+	analyzer := qa.NewRuleBasedAnalyzer()
+	return func(query string) []string {
+		analyzed, err := analyzer.Analyze(context.Background(), query)
+		if err != nil || analyzed == nil {
+			return nil
+		}
+		return analyzed.SubQueries
+	}
 }
 
 // gitHead returns the current git commit hash, or "unknown" when unavailable.

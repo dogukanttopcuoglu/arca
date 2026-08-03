@@ -1,0 +1,708 @@
+{
+  "schema_version": "1.1",
+  "corpus": {
+    "document_id": "rick-rubin",
+    "corpus_fingerprint": "51b1909e1a2639b3114eb4e9afaeeafa58938cbdb0d195392dc65d06ac0b483d",
+    "chunk_count": 196
+  },
+  "queries": [
+    {
+      "id": "rr-001",
+      "intent": "single_fact",
+      "query": "What is the goal of art?",
+      "expected_chunk_ids": [
+        "rick-rubin/point-of-view/001",
+        "rick-rubin/point-of-view/002"
+      ],
+      "expected_sections": [
+        "Point of View"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "rr-002",
+      "intent": "single_fact",
+      "query": "How should success be measured according to the book?",
+      "expected_chunk_ids": [
+        "rick-rubin/success/001",
+        "rick-rubin/success/002"
+      ],
+      "expected_sections": [
+        "Success"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "rr-003",
+      "intent": "single_fact",
+      "query": "What is the role of the gatekeeper in the creative process?",
+      "expected_chunk_ids": [
+        "rick-rubin/the-gatekeeper/001",
+        "rick-rubin/the-gatekeeper/002"
+      ],
+      "expected_sections": [
+        "The Gatekeeper"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "rr-004",
+      "intent": "single_fact",
+      "query": "What does the book say about competition in art?",
+      "expected_chunk_ids": [
+        "rick-rubin/non-competition/001",
+        "rick-rubin/non-competition/002"
+      ],
+      "expected_sections": [
+        "Non-Competition"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "rr-005",
+      "intent": "single_fact",
+      "query": "What is the purpose of temporary rules?",
+      "expected_chunk_ids": [
+        "rick-rubin/temporary-rules/001",
+        "rick-rubin/temporary-rules/002",
+        "rick-rubin/temporary-rules/003"
+      ],
+      "expected_sections": [
+        "Temporary Rules"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "rr-006",
+      "intent": "single_fact",
+      "query": "What is the abundant mindset?",
+      "expected_chunk_ids": [
+        "rick-rubin/the-abundant-mindset/001",
+        "rick-rubin/the-abundant-mindset/002"
+      ],
+      "expected_sections": [
+        "The Abundant Mindset"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "rr-007",
+      "intent": "single_fact",
+      "query": "What is the ecstatic state in art?",
+      "expected_chunk_ids": [
+        "rick-rubin/the-ecstatic/001",
+        "rick-rubin/the-ecstatic/002"
+      ],
+      "expected_sections": [
+        "The Ecstatic"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "rr-008",
+      "intent": "single_fact",
+      "query": "What is the essence of a work according to the book?",
+      "expected_chunk_ids": [
+        "rick-rubin/essence/001",
+        "rick-rubin/essence/002"
+      ],
+      "expected_sections": [
+        "Essence"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "rr-009",
+      "intent": "single_fact",
+      "query": "How should artists give feedback to collaborators?",
+      "expected_chunk_ids": [
+        "rick-rubin/cooperation/005"
+      ],
+      "expected_sections": [
+        "Cooperation"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "rr-010",
+      "intent": "concept",
+      "query": "What is the creative act about?",
+      "expected_chunk_ids": [
+        "rick-rubin/tuning-in/001",
+        "rick-rubin/why-make-art/001",
+        "rick-rubin/everyone-is-a-creator/001"
+      ],
+      "expected_sections": [
+        "Tuning In",
+        "Why Make Art?",
+        "Everyone Is a Creator"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "rr-011",
+      "intent": "concept",
+      "query": "What is beginner's mind?",
+      "expected_chunk_ids": [
+        "rick-rubin/beginner-s-mind/001",
+        "rick-rubin/beginner-s-mind/002",
+        "rick-rubin/beginner-s-mind/004"
+      ],
+      "expected_sections": [
+        "Beginner’s Mind"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "rr-012",
+      "intent": "concept",
+      "query": "What does the book say about the source of creativity?",
+      "expected_chunk_ids": [
+        "rick-rubin/the-source-of-creativity/001"
+      ],
+      "expected_sections": [
+        "The Source of Creativity"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "rr-013",
+      "intent": "concept",
+      "query": "What is the vessel and the filter?",
+      "expected_chunk_ids": [
+        "rick-rubin/the-vessel-and-the-filter/001"
+      ],
+      "expected_sections": [
+        "The Vessel and the Filter"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "rr-014",
+      "intent": "concept",
+      "query": "What does the book say about listening?",
+      "expected_chunk_ids": [
+        "rick-rubin/listening/001",
+        "rick-rubin/listening/002",
+        "rick-rubin/listening/003"
+      ],
+      "expected_sections": [
+        "Listening"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "rr-015",
+      "intent": "concept",
+      "query": "What is the prism of self?",
+      "expected_chunk_ids": [
+        "rick-rubin/the-prism-of-self/001"
+      ],
+      "expected_sections": [
+        "The Prism of Self"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "rr-016",
+      "intent": "concept",
+      "query": "What does the book say about play in the creative process?",
+      "expected_chunk_ids": [
+        "rick-rubin/play/001",
+        "rick-rubin/play/002",
+        "rick-rubin/play/003"
+      ],
+      "expected_sections": [
+        "Play"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "rr-017",
+      "intent": "concept",
+      "query": "What is the experimenter and the finisher?",
+      "expected_chunk_ids": [
+        "rick-rubin/the-experimenter-and-the-finisher/001"
+      ],
+      "expected_sections": [
+        "The Experimenter and the Finisher"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "rr-018",
+      "intent": "concept",
+      "query": "What is the translation phase of art-making?",
+      "expected_chunk_ids": [
+        "rick-rubin/translation/001",
+        "rick-rubin/translation/002"
+      ],
+      "expected_sections": [
+        "Translation"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "rr-019",
+      "intent": "concept",
+      "query": "What does Rick Rubin think about artificial intelligence?",
+      "expected_chunk_ids": [
+        "rick-rubin/beginner-s-mind/001",
+        "rick-rubin/beginner-s-mind/002"
+      ],
+      "expected_sections": [
+        "Beginner’s Mind"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "rr-020",
+      "intent": "procedural",
+      "query": "How does practice influence creativity?",
+      "expected_chunk_ids": [
+        "rick-rubin/practice/001",
+        "rick-rubin/practice/002",
+        "rick-rubin/practice/003"
+      ],
+      "expected_sections": [
+        "Practice"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "rr-021",
+      "intent": "procedural",
+      "query": "How can an artist overcome self-doubt?",
+      "expected_chunk_ids": [
+        "rick-rubin/self-doubt/001",
+        "rick-rubin/make-it-up/001",
+        "rick-rubin/make-it-up/002",
+        "rick-rubin/make-it-up/003"
+      ],
+      "expected_sections": [
+        "Self-Doubt",
+        "Make It Up"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "rr-022",
+      "intent": "procedural",
+      "query": "How to get unstuck when the work is not improving?",
+      "expected_chunk_ids": [
+        "rick-rubin/breaking-the-sameness/001",
+        "rick-rubin/small-steps/001"
+      ],
+      "expected_sections": [
+        "Breaking the Sameness",
+        "Small Steps"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "rr-023",
+      "intent": "procedural",
+      "query": "How to build momentum during the craft phase?",
+      "expected_chunk_ids": [
+        "rick-rubin/momentum/001",
+        "rick-rubin/momentum/002",
+        "rick-rubin/momentum/003"
+      ],
+      "expected_sections": [
+        "Momentum"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "rr-024",
+      "intent": "procedural",
+      "query": "How does the book suggest helping a blocked musician?",
+      "expected_chunk_ids": [
+        "rick-rubin/small-steps/001",
+        "rick-rubin/write-for-someone-else/001"
+      ],
+      "expected_sections": [
+        "Small Steps",
+        "Write for Someone Else"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "rr-025",
+      "intent": "procedural",
+      "query": "How to choose between two seeds of inspiration?",
+      "expected_chunk_ids": [
+        "rick-rubin/experimentation/005",
+        "rick-rubin/how-to-choose/001",
+        "rick-rubin/how-to-choose/002"
+      ],
+      "expected_sections": [
+        "Experimentation",
+        "How to Choose"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "rr-026",
+      "intent": "procedural",
+      "query": "How to find the right environment for creating?",
+      "expected_chunk_ids": [
+        "rick-rubin/setting/001"
+      ],
+      "expected_sections": [
+        "Setting"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "rr-027",
+      "intent": "procedural",
+      "query": "How should an artist respond when inspiration strikes?",
+      "expected_chunk_ids": [
+        "rick-rubin/inspiration/001",
+        "rick-rubin/inspiration/002",
+        "rick-rubin/inspiration/004"
+      ],
+      "expected_sections": [
+        "Inspiration"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "rr-028",
+      "intent": "comparison",
+      "query": "Compare Everyone Is a Creator with Beginner's Mind.",
+      "expected_chunk_ids": [
+        "rick-rubin/everyone-is-a-creator/001",
+        "rick-rubin/beginner-s-mind/001"
+      ],
+      "expected_sections": [
+        "Everyone Is a Creator",
+        "Beginner’s Mind"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "rr-029",
+      "intent": "comparison",
+      "query": "Compare experimenters with finishers.",
+      "expected_chunk_ids": [
+        "rick-rubin/the-experimenter-and-the-finisher/001"
+      ],
+      "expected_sections": [
+        "The Experimenter and the Finisher"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "rr-030",
+      "intent": "comparison",
+      "query": "Compare the seeds phase with the experimentation phase.",
+      "expected_chunk_ids": [
+        "rick-rubin/seeds/001",
+        "rick-rubin/experimentation/001"
+      ],
+      "expected_sections": [
+        "Seeds",
+        "Experimentation"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "rr-031",
+      "intent": "comparison",
+      "query": "Compare the craft phase with the completion phase.",
+      "expected_chunk_ids": [
+        "rick-rubin/crafting/001",
+        "rick-rubin/completion/001"
+      ],
+      "expected_sections": [
+        "Crafting",
+        "Completion"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "rr-032",
+      "intent": "comparison",
+      "query": "Compare self-doubt with the critic in your head.",
+      "expected_chunk_ids": [
+        "rick-rubin/self-doubt/001",
+        "rick-rubin/tuning-out-undermining-voices/001",
+        "rick-rubin/tuning-out-undermining-voices/003"
+      ],
+      "expected_sections": [
+        "Self-Doubt",
+        "Tuning Out (Undermining Voices)"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "rr-033",
+      "intent": "comparison",
+      "query": "Compare temporary rules with the idea that every rule is breakable.",
+      "expected_chunk_ids": [
+        "rick-rubin/temporary-rules/001",
+        "rick-rubin/rules/005"
+      ],
+      "expected_sections": [
+        "Temporary Rules",
+        "Rules"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "rr-034",
+      "intent": "comparison",
+      "query": "Compare the abundant mindset with non-competition.",
+      "expected_chunk_ids": [
+        "rick-rubin/the-abundant-mindset/001",
+        "rick-rubin/non-competition/001"
+      ],
+      "expected_sections": [
+        "The Abundant Mindset",
+        "Non-Competition"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "rr-035",
+      "intent": "comparison",
+      "query": "Compare the gatekeeper with the prism of self.",
+      "expected_chunk_ids": [
+        "rick-rubin/the-gatekeeper/001",
+        "rick-rubin/the-prism-of-self/001"
+      ],
+      "expected_sections": [
+        "The Gatekeeper",
+        "The Prism of Self"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "rr-036",
+      "intent": "entity",
+      "query": "What does the book say about the Beatles?",
+      "expected_chunk_ids": [
+        "rick-rubin/point-of-view/004"
+      ],
+      "expected_sections": [
+        "Point of View"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "rr-037",
+      "intent": "entity",
+      "query": "What does the book say about Carl Jung?",
+      "expected_chunk_ids": [
+        "rick-rubin/ending-to-start-anew-regeneration/001"
+      ],
+      "expected_sections": [
+        "Ending to Start Anew (Regeneration)"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "rr-038",
+      "intent": "entity",
+      "query": "What does the book say about Jackson Pollock?",
+      "expected_chunk_ids": [
+        "rick-rubin/spontaneity-special-moments/001",
+        "rick-rubin/spontaneity-special-moments/002"
+      ],
+      "expected_sections": [
+        "Spontaneity (Special Moments)"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "rr-039",
+      "intent": "entity",
+      "query": "What is the story about the old man in Calcutta?",
+      "expected_chunk_ids": [
+        "rick-rubin/intention/001",
+        "rick-rubin/intention/002"
+      ],
+      "expected_sections": [
+        "Intention"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "rr-040",
+      "intent": "entity",
+      "query": "What does the book say about the game of Go?",
+      "expected_chunk_ids": [
+        "rick-rubin/beginner-s-mind/001",
+        "rick-rubin/beginner-s-mind/002"
+      ],
+      "expected_sections": [
+        "Beginner’s Mind"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "rr-041",
+      "intent": "entity",
+      "query": "What does the book say about a favorite artist and writing for someone else?",
+      "expected_chunk_ids": [
+        "rick-rubin/write-for-someone-else/001"
+      ],
+      "expected_sections": [
+        "Write for Someone Else"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "rr-042",
+      "intent": "entity",
+      "query": "What does the book say about Rick Rubin working with artists?",
+      "expected_chunk_ids": [
+        "rick-rubin/cooperation/003"
+      ],
+      "expected_sections": [
+        "Cooperation"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "rr-043",
+      "intent": "entity",
+      "query": "What does the book say about singer-songwriters and inspiration?",
+      "expected_chunk_ids": [
+        "rick-rubin/beginner-s-mind/006"
+      ],
+      "expected_sections": [
+        "Beginner’s Mind"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "rr-044",
+      "intent": "abstention",
+      "query": "What is the capital of Atlantis?",
+      "expected_chunk_ids": [],
+      "expected_sections": [],
+      "expected_no_evidence": true
+    },
+    {
+      "id": "rr-045",
+      "intent": "abstention",
+      "query": "How does the book define quantum entanglement?",
+      "expected_chunk_ids": [],
+      "expected_sections": [],
+      "expected_no_evidence": true
+    },
+    {
+      "id": "rr-046",
+      "intent": "abstention",
+      "query": "What does Rick Rubin say about Def Jam Recordings?",
+      "expected_chunk_ids": [],
+      "expected_sections": [],
+      "expected_no_evidence": true
+    },
+    {
+      "id": "rr-047",
+      "intent": "abstention",
+      "query": "What is the best programming language for machine learning?",
+      "expected_chunk_ids": [],
+      "expected_sections": [],
+      "expected_no_evidence": true
+    },
+    {
+      "id": "rr-048",
+      "intent": "abstention",
+      "query": "How does the book recommend preparing for a marathon?",
+      "expected_chunk_ids": [],
+      "expected_sections": [],
+      "expected_no_evidence": true
+    },
+    {
+      "id": "rr-049",
+      "intent": "abstention",
+      "query": "What is the population of Istanbul?",
+      "expected_chunk_ids": [],
+      "expected_sections": [],
+      "expected_no_evidence": true
+    },
+    {
+      "id": "rr-050",
+      "intent": "abstention",
+      "query": "What does the book say about climate change policy?",
+      "expected_chunk_ids": [],
+      "expected_sections": [],
+      "expected_no_evidence": true
+    },
+    {
+      "id": "rr-051",
+      "intent": "abstention",
+      "query": "How does the book describe the fall of the Roman Empire?",
+      "expected_chunk_ids": [],
+      "expected_sections": [],
+      "expected_no_evidence": true
+    },
+    {
+      "id": "rr-052",
+      "intent": "comparison",
+      "query": "How do awareness and intention differ?",
+      "expected_chunk_ids": [
+        "rick-rubin/awareness/001",
+        "rick-rubin/intention/001",
+        "rick-rubin/intention/002"
+      ],
+      "expected_sections": [
+        "Awareness",
+        "Intention"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "rr-053",
+      "intent": "comparison",
+      "query": "What distinguishes the abundant mindset from non-competition?",
+      "expected_chunk_ids": [
+        "rick-rubin/the-abundant-mindset/001",
+        "rick-rubin/the-abundant-mindset/002",
+        "rick-rubin/non-competition/001",
+        "rick-rubin/non-competition/002"
+      ],
+      "expected_sections": [
+        "The Abundant Mindset",
+        "Non-Competition"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "rr-054",
+      "intent": "comparison",
+      "query": "Explain the difference between the seeds phase and the experimentation phase.",
+      "expected_chunk_ids": [
+        "rick-rubin/seeds/001",
+        "rick-rubin/seeds/002",
+        "rick-rubin/experimentation/001",
+        "rick-rubin/experimentation/002"
+      ],
+      "expected_sections": [
+        "Seeds",
+        "Experimentation"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "rr-055",
+      "intent": "comparison",
+      "query": "Contrast the approaches of temporary rules and breakable rules.",
+      "expected_chunk_ids": [
+        "rick-rubin/temporary-rules/001",
+        "rick-rubin/temporary-rules/002",
+        "rick-rubin/rules/005"
+      ],
+      "expected_sections": [
+        "Temporary Rules",
+        "Rules"
+      ],
+      "expected_no_evidence": false
+    }
+  ]
+}

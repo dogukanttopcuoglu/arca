@@ -202,6 +202,39 @@ func TestAnswerEngine_RealPipeline(t *testing.T) {
 		}
 	})
 
+	t.Run("decomposes comparison queries and merges sub-retrievals", func(t *testing.T) {
+		// Scripted retriever: different results per sub-query text.
+		ret := &scriptedRetriever{
+			byQuery: map[string][]seam.SearchResult{
+				"Everyone Is a Creator": {sr("chk-creator"), sr("chk-creator-2")},
+				"Beginner's Mind.":      {sr("chk-mind"), sr("chk-mind-2")},
+			},
+		}
+		llm := &fakeLLM{content: "Both sides matter [Ref 1] [Ref 2] [Ref 3] [Ref 4]."}
+		engine := newTestEngine(ret, llm, 4000)
+
+		ans, err := engine.Answer(ctx, seam.RetrievalQuery{
+			QueryText: "Compare Everyone Is a Creator with Beginner's Mind.",
+			TopK:      5,
+		})
+		if err != nil {
+			t.Fatalf("unexpected error during Answer execution: %v", err)
+		}
+		if ans.Status != qaverification.StatusVerified {
+			t.Errorf("expected verified answer, got %q", ans.Status)
+		}
+		// Merged order must interleave: creator, mind, creator-2, mind-2.
+		want := []string{"chk-creator", "chk-mind", "chk-creator-2", "chk-mind-2"}
+		if len(ans.Citations) != len(want) {
+			t.Fatalf("expected %d citations, got %d: %+v", len(want), len(ans.Citations), ans.Citations)
+		}
+		for i, w := range want {
+			if ans.Citations[i].ChunkID != w {
+				t.Errorf("citation %d: expected %s, got %s", i, w, ans.Citations[i].ChunkID)
+			}
+		}
+	})
+
 	t.Run("respects the configured context budget at the engine seam", func(t *testing.T) {
 		vecStore := store.NewInMemoryVectorStore()
 		contentStore := store.NewInMemoryContentStore()
@@ -249,6 +282,24 @@ func newTestEngine(retriever seam.Retriever, llm llmprovider.LLMProvider, budget
 		llm,
 		qaverification.NewDefaultVerificationPipeline(),
 	)
+}
+
+// scriptedRetriever returns canned results per query text.
+type scriptedRetriever struct {
+	byQuery map[string][]seam.SearchResult
+	calls   []string
+}
+
+func (s *scriptedRetriever) Retrieve(ctx context.Context, q seam.RetrievalQuery) ([]seam.SearchResult, error) {
+	s.calls = append(s.calls, q.QueryText)
+	return s.byQuery[q.QueryText], nil
+}
+
+func sr(id string) seam.SearchResult {
+	return seam.SearchResult{
+		ChunkID:  id,
+		Metadata: indexingmodel.VectorMetadata{ChunkID: id, DocumentID: "doc-1"},
+	}
 }
 
 // seedChunk embeds and stores one chunk with content for retrieval tests.

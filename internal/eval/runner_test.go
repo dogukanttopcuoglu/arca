@@ -65,6 +65,10 @@ func (f *fakeRetriever) Retrieve(ctx context.Context, q retrievalseam.RetrievalQ
 		ids = []string{"a", "b", "c", "d"}
 	case "entity query two":
 		ids = []string{"x", "y"}
+	case "left":
+		ids = []string{"a", "b", "c"}
+	case "right":
+		ids = []string{"x", "y", "z"}
 	default:
 		ids = nil
 	}
@@ -77,6 +81,46 @@ func (f *fakeRetriever) Retrieve(ctx context.Context, q retrievalseam.RetrievalQ
 		}
 	}
 	return results, nil
+}
+
+func TestRunner_Decomposition(t *testing.T) {
+	gs, err := eval.LoadGoldSet(strings.NewReader(runnerGoldSet))
+	if err != nil {
+		t.Fatalf("failed to load gold set: %v", err)
+	}
+	// Decomposer splits query one into two sub-queries; the fake retriever
+	// returns per-text results.
+	decomposer := func(query string) []string {
+		if query == "concept query one" {
+			return []string{"left", "right"}
+		}
+		return nil
+	}
+	ret := &fakeRetriever{}
+	runner := eval.New(ret, fakeFingerprintSource{
+		hashes: []string{
+			"3333333333333333333333333333333333333333333333333333333333333333",
+			"1111111111111111111111111111111111111111111111111111111111111111",
+			"2222222222222222222222222222222222222222222222222222222222222222",
+		},
+	}, eval.Options{Mode: retrievalseam.RetrievalDense, TopK: 5, Decompose: decomposer})
+
+	report, err := runner.Run(context.Background(), gs)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	q1 := report.PerQuery[0]
+	// Sub-query "left" and "right" return disjoint lists; merged interleaves.
+	want := []string{"a", "x", "b", "y", "c"}
+	if len(q1.RetrievedChunkIDs) != len(want) {
+		t.Fatalf("expected merged %v, got %v", want, q1.RetrievedChunkIDs)
+	}
+	for i := range want {
+		if q1.RetrievedChunkIDs[i] != want[i] {
+			t.Fatalf("expected merged %v, got %v", want, q1.RetrievedChunkIDs)
+		}
+	}
 }
 
 func newRunner(t *testing.T) (*eval.Runner, *eval.GoldSet, *fakeRetriever) {

@@ -69,6 +69,7 @@ func main() {
 		fusionPolicy := fs.String("fusion-policy", "", "hybrid fusion policy: balanced|densebiased")
 		sparseWeight := fs.Float64("sparse-weight", 0, "hybrid sparse stream fusion weight (0 = policy default)")
 		sparseCap := fs.Int("sparse-cap", 0, "hybrid sparse candidate cap (0 = unlimited)")
+		decompose := fs.Bool("decompose", false, "run gold-set queries through rule-based decomposition")
 		if err := fs.Parse(os.Args[2:]); err != nil {
 			fmt.Printf("Error: %v\n", err)
 			os.Exit(1)
@@ -87,6 +88,7 @@ func main() {
 			FusionPolicyName: *fusionPolicy,
 			SparseWeight:     *sparseWeight,
 			SparseCap:        *sparseCap,
+			Decompose:        *decompose,
 		})
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)
