@@ -126,8 +126,10 @@ func TestBM25EncoderEncode(t *testing.T) {
 
 	t.Run("corpus change changes weights", func(t *testing.T) {
 		// Same term "cat": idf differs by corpus. Corpus A: N=3, df=2 ->
-		// ln(1 + 1.5/2.5) = 0.4700036. Corpus B (single doc): N=1, df=1 ->
-		// ln(1 + 0.5/1.5) = 0.2876821.
+		// ln(1 + 1.5/2.5) = 0.4700036. Corpus B (single doc "cat cat cat"):
+		// N=1, df=1 -> idf = ln(1 + 0.5/1.5) = 0.28768207.
+		// Encode("cat") has docLen=1, avgdl=3 -> denomFactor = 0.25+0.75/3 = 0.5
+		// -> weight = idf * 2.5/(1 + 1.5*0.5) = 0.28768207 * 1.42857143 = 0.41097439
 		otherStats, err := BuildCorpusStats([]string{"cat cat cat"})
 		if err != nil {
 			t.Fatalf("failed to build corpus stats: %v", err)
@@ -137,9 +139,9 @@ func TestBM25EncoderEncode(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		wantIDF := math.Log(1 + 0.5/1.5)
-		if len(v.Values) != 1 || math.Abs(float64(v.Values[0])-wantIDF) > 1e-6 {
-			t.Errorf("expected single weight %v for cat in single-doc corpus, got %+v", wantIDF, v)
+		want := math.Log(1+0.5/1.5) * 2.5 / (1 + 1.5*0.5)
+		if len(v.Values) != 1 || math.Abs(float64(v.Values[0])-want) > 1e-6 {
+			t.Errorf("expected single weight %v for cat in single-doc corpus, got %+v", want, v)
 		}
 	})
 
