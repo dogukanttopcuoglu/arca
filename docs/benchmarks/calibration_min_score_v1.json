@@ -1,0 +1,50 @@
+{
+  "title": "RETRIEVAL_MIN_SCORE calibration sweep — dense, top-5, Gold Set v1",
+  "date": "2026-08-03",
+  "git_commit": "7f139bcc",
+  "corpus_fingerprint": "51b1909e1a2639b3114eb4e9afaeeafa58938cbdb0d195392dc65d06ac0b483d",
+  "embedding_provider": "Ollama",
+  "embedding_model": "nomic-embed-text:latest",
+  "collection": "arca_chunks",
+  "gold_set": "internal/eval/testdata/goldset_v1.json",
+  "method": "arc eval --mode dense --topk 5 --min-score <s> for each sweep point; full Gold Set v1 (51 queries, 43 relevance + 8 abstention)",
+  "runs": [
+    {
+      "min_score": 0.0,
+      "recall@5": 0.7403,
+      "precision@5": 0.2884,
+      "mrr": 0.6655,
+      "ndcg@5": 0.6449,
+      "no_evidence_precision": 0.0
+    },
+    {
+      "min_score": 0.5,
+      "recall@5": 0.7403,
+      "precision@5": 0.2884,
+      "mrr": 0.6655,
+      "ndcg@5": 0.6449,
+      "no_evidence_precision": 0.25
+    },
+    {
+      "min_score": 0.6,
+      "recall@5": 0.7403,
+      "precision@5": 0.2884,
+      "mrr": 0.6655,
+      "ndcg@5": 0.6449,
+      "no_evidence_precision": 0.375
+    },
+    {
+      "min_score": 0.7,
+      "recall@5": 0.5853,
+      "precision@5": 0.2233,
+      "mrr": 0.5725,
+      "ndcg@5": 0.5256,
+      "no_evidence_precision": 1.0
+    }
+  ],
+  "selected_operating_point": {
+    "min_score": 0.6,
+    "rationale": "Highest threshold with recall@5 flat vs baseline (0.7403, within the 5% regression budget) while raising no_evidence_precision 0.0 -> 0.375. At 0.7 abstention reaches 1.0 but recall regresses 21% beyond the allowed budget.",
+    "conclusion": "A single global cosine threshold cannot simultaneously maximize recall and abstention precision on a semantically coherent corpus. High-precision abstention is deferred to M4 where richer relevance signals (hybrid retrieval, sparse evidence, reranking, semantic relevance gating) become available."
+  }
+}

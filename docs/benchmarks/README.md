@@ -32,9 +32,30 @@ Known baseline weaknesses (documented, not fixed in M3 baseline):
 - Entity queries against low-frequency names (rr-038 Jackson Pollock, rr-042)
   miss at top-5 — the case for hybrid sparse retrieval (M3 T7–T9).
 - `no_evidence_precision` is 0 by construction: with MinScore=0 the top-k is
-  always returned, so abstention queries never abstain. A calibrated
-  `RETRIEVAL_MIN_SCORE` (T5) is expected to fix this; the value is set from
-  measurement, not invented.
+  always returned, so abstention queries never abstain.
+
+## RETRIEVAL_MIN_SCORE calibration (dense, top-5, Gold Set v1)
+
+Full per-run data: `calibration_min_score_v1.json` (commit 7f139bcc).
+
+| min_score | recall@5 | precision@5 | MRR | nDCG@5 | no_evidence_precision |
+|---|---|---|---|---|---|
+| 0.0 | 0.740 | 0.288 | 0.666 | 0.645 | 0.000 |
+| 0.5 | 0.740 | 0.288 | 0.666 | 0.645 | 0.250 |
+| **0.6** | **0.740** | **0.288** | **0.666** | **0.645** | **0.375** |
+| 0.7 | 0.585 | 0.223 | 0.573 | 0.526 | 1.000 |
+
+**Calibrated operating point: `RETRIEVAL_MIN_SCORE=0.6`** — the highest
+threshold with recall@5 flat vs baseline (within the 5% regression budget)
+while raising no_evidence_precision from 0 to 0.375. At 0.7 abstention
+reaches 1.0 but recall regresses 21%, beyond the allowed budget.
+
+**Conclusion (drives the spec, not the other way around):** a single global
+cosine threshold cannot simultaneously maximize recall and abstention
+precision on a semantically coherent corpus. High-precision abstention is
+deferred to M4, where richer relevance signals (hybrid retrieval, sparse
+evidence, reranking, semantic relevance gating) become available. M3
+establishes the calibrated baseline only.
 
 ## Regression gates (calibration-first, per ADR-0027)
 
