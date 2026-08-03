@@ -55,7 +55,7 @@ func (s *InMemoryVectorStore) SearchVector(ctx context.Context, query VectorSear
 	var results []VectorSearchResult
 
 	for _, pt := range s.points {
-		if !matchesFilter(pt.Metadata, query.Filter) {
+		if !matchesFilter(pt.ID, pt.Metadata, query.Filter) {
 			continue
 		}
 
@@ -92,14 +92,27 @@ func (s *InMemoryVectorStore) Delete(ctx context.Context, filter model.MetadataF
 	defer s.mu.Unlock()
 
 	for id, pt := range s.points {
-		if matchesFilter(pt.Metadata, filter) {
+		if matchesFilter(id, pt.Metadata, filter) {
 			delete(s.points, id)
 		}
 	}
 	return nil
 }
 
-func matchesFilter(meta model.VectorMetadata, filter model.MetadataFilter) bool {
+func matchesFilter(id string, meta model.VectorMetadata, filter model.MetadataFilter) bool {
+	if len(filter.PointIDs) > 0 {
+		found := false
+		for _, ptID := range filter.PointIDs {
+			if id == ptID {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+
 	if len(filter.DocumentIDs) > 0 {
 		found := false
 		for _, docID := range filter.DocumentIDs {

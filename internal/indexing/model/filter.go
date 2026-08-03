@@ -13,6 +13,7 @@ type MetadataFilter struct {
 	KnowledgeSpaceID string     `json:"knowledge_space_id,omitempty"`
 	DocumentIDs       []string   `json:"document_ids,omitempty"`
 	ChunkIDs          []string   `json:"chunk_ids,omitempty"`
+	PointIDs          []string   `json:"point_ids,omitempty"`
 	PageNumbers       []int      `json:"page_numbers,omitempty"`
 	ContentTypes      []string   `json:"content_types,omitempty"`
 	SectionPathPrefix string     `json:"section_path_prefix,omitempty"`

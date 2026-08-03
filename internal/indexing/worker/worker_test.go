@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"arca/internal/indexing/job"
+	indexingmodel "arca/internal/indexing/model"
 	"arca/internal/indexing/provider"
 	"arca/internal/indexing/store"
 	"arca/internal/indexing/worker"
@@ -79,4 +80,70 @@ func TestIndexingWorker_ExecuteSync(t *testing.T) {
 			t.Errorf("expected 0 indexed chunks on re-index, got %d", jobObj.IndexedChunks)
 		}
 	})
+}
+
+func TestIndexingWorker_DeletesRemovedChunkPoints(t *testing.T) {
+	ctx := context.Background()
+
+	mockProvider := provider.NewMockEmbeddingProvider("mock-provider", "mock-model-v1", 1536)
+	storeImpl := store.NewInMemoryVectorStore()
+	w := worker.NewIndexingWorker(mockProvider, storeImpl)
+
+	docID := "doc-deletion-1"
+	threeChunks := []pdfmodel.KnowledgeChunk{
+		{
+			ChunkID:         "chk-a",
+			ChunkOrder:      0,
+			SectionPath:     "Section A",
+			ContentMarkdown: "Alpha content.",
+			ContentHash:     "hash-a",
+		},
+		{
+			ChunkID:         "chk-b",
+			ChunkOrder:      1,
+			SectionPath:     "Section B",
+			ContentMarkdown: "Beta content.",
+			ContentHash:     "hash-b",
+		},
+		{
+			ChunkID:         "chk-c",
+			ChunkOrder:      2,
+			SectionPath:     "Section C",
+			ContentMarkdown: "Gamma content.",
+			ContentHash:     "hash-c",
+		},
+	}
+
+	if _, err := w.ExecuteSync(ctx, docID, threeChunks); err != nil {
+		t.Fatalf("initial index failed: %v", err)
+	}
+
+	// Section C is removed from the document; only A and B remain.
+	remaining := []pdfmodel.KnowledgeChunk{threeChunks[0], threeChunks[1]}
+	jobObj, err := w.ExecuteSync(ctx, docID, remaining)
+	if err != nil {
+		t.Fatalf("re-index failed: %v", err)
+	}
+	if jobObj.DeletedChunks != 1 {
+		t.Errorf("expected 1 deleted chunk, got %d", jobObj.DeletedChunks)
+	}
+
+	results, err := storeImpl.SearchVector(ctx, store.VectorSearchQuery{
+		Vector: make([]float32, 1536),
+		TopK:   10,
+		Filter: indexingmodel.MetadataFilter{DocumentIDs: []string{docID}},
+	})
+	if err != nil {
+		t.Fatalf("search failed: %v", err)
+	}
+	if len(results) != 2 {
+		t.Fatalf("expected 2 remaining points after deletion, got %d", len(results))
+	}
+
+	removedPointID := store.CalculatePointID(docID, "Section C", 2)
+	for _, r := range results {
+		if r.ID == removedPointID {
+			t.Errorf("deleted point %s should not remain in the store", removedPointID)
+		}
+	}
 }

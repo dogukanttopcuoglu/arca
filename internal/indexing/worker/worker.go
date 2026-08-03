@@ -40,11 +40,8 @@ func (w *IndexingWorker) ExecuteSync(ctx context.Context, documentID string, chu
 	jobObj := indexingjob.NewIndexingJob(jobID, documentID, len(chunks))
 
 	caps := w.provider.Capabilities()
-	jobObj.EmbeddingProvider = "MockProvider"
-	if caps.Dimension == 1536 {
-		jobObj.EmbeddingProvider = "OpenAI"
-	}
-	jobObj.EmbeddingModel = "mock-model-v1"
+	jobObj.EmbeddingProvider = w.provider.Provider()
+	jobObj.EmbeddingModel = w.provider.Model()
 
 	if err := jobObj.TransitionTo(indexingjob.StatusRunning); err != nil {
 		return nil, err
@@ -66,14 +63,16 @@ func (w *IndexingWorker) ExecuteSync(ctx context.Context, documentID string, chu
 	}
 
 	// 2. Compute DiffPlan using DiffEngine
-	diffEngine := diff.NewEngine(jobObj.EmbeddingProvider, "mock-model-v1", "1.0.0", "1.0")
+	diffEngine := diff.NewEngine(jobObj.EmbeddingProvider, jobObj.EmbeddingModel, "1.0.0", "1.0")
 	diffPlan := diffEngine.ComputeDiffPlan(documentID, chunks, existingMeta)
 
-	// 3. Process deletions for removed sections
+	// 3. Process deletions for removed sections (DiffPlan.DeletedPointIDs holds
+	// stable point IDs, so deletion must filter by PointIDs, not ChunkIDs).
 	if len(diffPlan.DeletedPointIDs) > 0 {
+		jobObj.SetDeletedChunks(len(diffPlan.DeletedPointIDs))
 		if err := w.store.Delete(ctx, indexingmodel.MetadataFilter{
 			DocumentIDs: []string{documentID},
-			ChunkIDs:    diffPlan.DeletedPointIDs,
+			PointIDs:    diffPlan.DeletedPointIDs,
 		}); err != nil {
 			jobObj.SetError(err)
 			return jobObj, err
@@ -109,7 +108,7 @@ func (w *IndexingWorker) ExecuteSync(ctx context.Context, documentID string, chu
 
 		for bIdx, chk := range batchChunks {
 			ptID := store.CalculatePointID(documentID, chk.SectionPath, chk.ChunkOrder)
-			sig := indexingmodel.CalculateIndexSignature(chk.ContentHash, jobObj.EmbeddingProvider, embRes.Model, "1.0.0", "1.0")
+			sig := indexingmodel.CalculateIndexSignature(chk.ContentHash, jobObj.EmbeddingProvider, jobObj.EmbeddingModel, "1.0.0", "1.0")
 
 			meta := indexingmodel.VectorMetadata{
 				DocumentID:        documentID,

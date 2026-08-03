@@ -14,6 +14,7 @@ type IndexingJob struct {
 	TotalChunks      int            `json:"total_chunks"`
 	IndexedChunks    int            `json:"indexed_chunks"`
 	SkippedChunks    int            `json:"skipped_chunks"`
+	DeletedChunks    int            `json:"deleted_chunks"`
 	ErrorSummary     string         `json:"error_summary,omitempty"`
 	CreatedAt        time.Time      `json:"created_at"`
 	UpdatedAt        time.Time      `json:"updated_at"`
@@ -63,6 +64,15 @@ func (j *IndexingJob) UpdateProgress(indexed, skipped int) {
 
 	j.IndexedChunks = indexed
 	j.SkippedChunks = skipped
+	j.UpdatedAt = time.Now()
+}
+
+// SetDeletedChunks records the number of stale vector points removed during re-indexing.
+func (j *IndexingJob) SetDeletedChunks(deleted int) {
+	j.mu.Lock()
+	defer j.mu.Unlock()
+
+	j.DeletedChunks = deleted
 	j.UpdatedAt = time.Now()
 }
 

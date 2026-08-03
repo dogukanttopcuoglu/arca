@@ -47,6 +47,20 @@ func (m *MockEmbeddingProvider) SetHealthy(healthy bool) {
 	m.healthy = healthy
 }
 
+// Provider returns the canonical provider identifier.
+func (m *MockEmbeddingProvider) Provider() string {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.provider
+}
+
+// Model returns the embedding model identifier.
+func (m *MockEmbeddingProvider) Model() string {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.model
+}
+
 // Capabilities returns mock provider operational bounds.
 func (m *MockEmbeddingProvider) Capabilities() ProviderCapabilities {
 	m.mu.RLock()

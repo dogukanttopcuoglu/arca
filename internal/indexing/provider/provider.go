@@ -35,6 +35,12 @@ type EmbeddingProvider interface {
 	// Capabilities returns provider operational bounds (dimension, batch size, token limits).
 	Capabilities() ProviderCapabilities
 
+	// Provider returns the canonical provider identifier (e.g. "OpenAI", "mock-provider").
+	Provider() string
+
+	// Model returns the embedding model identifier used by this provider.
+	Model() string
+
 	// Health checks provider API connectivity and service health.
 	Health(ctx context.Context) error
 }
