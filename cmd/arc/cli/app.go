@@ -11,6 +11,7 @@ import (
 	agenttool "arca/internal/agent/tool"
 	"arca/internal/pdfinspector/model"
 	"arca/internal/qa"
+	qaverification "arca/internal/qa/verification"
 	retrievalseam "arca/internal/retrieval/seam"
 )
 
@@ -34,9 +35,7 @@ func NewApp() *App {
 // NewAppWithRuntime constructs an App CLI instance with an explicit composition root,
 // allowing tests and alternative entrypoints to inject mock adapters.
 func NewAppWithRuntime(runtime *Runtime) *App {
-	denseRet := runtime.denseRetriever
-
-	ansEng := qa.NewAnswerEngine(nil, denseRet, nil, nil, nil, nil)
+	ansEng := buildAnswerEngine(runtime.cfg, runtime.denseRetriever)
 	agentEng := agent.NewAgentEngine(agent.AgentPolicy{MaxSteps: 5, MaxToolCalls: 10}, []agenttool.Tool{
 		agenttool.NewKnowledgeTool(ansEng),
 	})
@@ -88,41 +87,49 @@ func (a *App) RunInspect(ctx context.Context, filePath string) (string, error) {
 	), nil
 }
 
-// RunAsk executes a synchronous QA question over indexed KnowledgeSpace documents.
+// RunAsk executes a synchronous RAG question over indexed KnowledgeSpace
+// documents and renders the final Answer with its citation sources.
 func (a *App) RunAsk(ctx context.Context, query string) (string, error) {
 	if strings.TrimSpace(query) == "" {
 		return "", fmt.Errorf("query string cannot be empty")
 	}
 
-	results, err := a.runtime.denseRetriever.Retrieve(ctx, retrievalseam.RetrievalQuery{
+	ans, err := a.answerEngine.Answer(ctx, retrievalseam.RetrievalQuery{
 		QueryText: query,
 		TopK:      5,
-		Mode:      retrievalseam.RetrievalDense,
 	})
 	if err != nil {
 		return "", err
 	}
 
-	if len(results) == 0 {
-		return fmt.Sprintf("Q: %s\nA: No matching chunks found for query.", query), nil
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("Q: %s\nA: %s", query, ans.Text))
+
+	if len(ans.Citations) > 0 {
+		sb.WriteString("\n\nSources:\n")
+		for _, c := range ans.Citations {
+			sb.WriteString(fmt.Sprintf("%s document: %s · section: %q · page(s) %s\n",
+				c.CitationKey, c.DocumentID, c.SectionPath, formatPages(c.PageNumbers)))
+		}
 	}
 
-	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("Q: %s\nA: Found %d matching chunks:\n", query, len(results)))
-	for i, res := range results {
-		sb.WriteString(fmt.Sprintf("  [%d] score=%.4f section=%q chunk=%s\n", i+1, res.Score, res.Metadata.SectionPath, res.Metadata.ChunkID))
-		if len(res.Metadata.Citations) > 0 {
-			sb.WriteString(fmt.Sprintf("      citations=%q\n", res.Metadata.Citations))
-		}
-		if res.ContentMarkdown != "" {
-			preview := res.ContentMarkdown
-			if len(preview) > 160 {
-				preview = preview[:160] + "..."
-			}
-			sb.WriteString(fmt.Sprintf("      %s\n", preview))
-		}
+	if ans.Status == qaverification.StatusUnverified {
+		sb.WriteString("\n⚠ answer contains unverified reference(s) — treat with caution\n")
 	}
+
 	return sb.String(), nil
+}
+
+// formatPages renders page numbers as a compact comma-separated list.
+func formatPages(pages []int) string {
+	if len(pages) == 0 {
+		return "unknown"
+	}
+	parts := make([]string, len(pages))
+	for i, p := range pages {
+		parts[i] = fmt.Sprintf("%d", p)
+	}
+	return strings.Join(parts, ", ")
 }
 
 // RunResearch executes multi-step agentic research plan.

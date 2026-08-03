@@ -7,6 +7,7 @@ import (
 	"arca/internal/indexing/provider"
 	"arca/internal/indexing/store"
 	"arca/internal/indexing/worker"
+	llmprovider "arca/internal/llm/provider"
 	"arca/internal/pdfinspector/assets"
 	"arca/internal/pdfinspector/chunking"
 	"arca/internal/pdfinspector/config"
@@ -14,7 +15,12 @@ import (
 	"arca/internal/pdfinspector/firecrawl"
 	"arca/internal/pdfinspector/inspector"
 	"arca/internal/pdfinspector/semantic"
+	"arca/internal/qa"
+	qacontext "arca/internal/qa/context"
+	qaprompt "arca/internal/qa/prompt"
+	qaverification "arca/internal/qa/verification"
 	"arca/internal/retrieval/dense"
+	"arca/internal/retrieval/seam"
 
 	"github.com/spf13/viper"
 )
@@ -52,12 +58,24 @@ type Config struct {
 	VectorStoreURL string `mapstructure:"QDRANT_URL"`
 	// QdrantCollection is the Qdrant collection name to use.
 	QdrantCollection string `mapstructure:"QDRANT_COLLECTION"`
+	// LLMBaseURL is the OpenAI-compatible gateway root (includes any /v1 prefix).
+	LLMBaseURL string `mapstructure:"LLM_BASE_URL"`
+	// LLMAPIKey is the bearer credential for the gateway (empty for keyless endpoints).
+	LLMAPIKey string `mapstructure:"LLM_API_KEY"`
+	// LLMModel is the model identifier, forwarded verbatim; never assumed.
+	LLMModel string `mapstructure:"LLM_MODEL"`
+	// LLMProviderLabel is an observability-only label for AnswerMetadata; it
+	// never affects adapter or pipeline behavior.
+	LLMProviderLabel string `mapstructure:"LLM_PROVIDER"`
+	// LLMContextBudget is the composition-owned ContextWindow token budget.
+	LLMContextBudget int `mapstructure:"LLM_CONTEXT_BUDGET"`
 	// HTTPTimeout is the client timeout for external service calls.
 	HTTPTimeout time.Duration `mapstructure:"HTTP_TIMEOUT"`
 }
 
 // DefaultConfig returns the M1 defaults: real Firecrawl, mock embedding provider,
-// in-memory vector store. Real adapters slot in as they land (Qdrant/Nomic decisions).
+// in-memory vector store, and the ADR-0026 OpenAI-compatible generation gateway.
+// Real adapters slot in as they land (Qdrant/Nomic decisions).
 func DefaultConfig() Config {
 	return Config{
 		FirecrawlBaseURL:      "http://localhost:3002",
@@ -67,6 +85,9 @@ func DefaultConfig() Config {
 		VectorStoreType:       VectorStoreInMemory,
 		VectorStoreURL:        "http://localhost:6334", // gRPC port; the adapter does not speak REST
 		QdrantCollection:      "arca_chunks",
+		LLMBaseURL:            "https://agentrouter.org/v1",
+		LLMProviderLabel:      "agentrouter",
+		LLMContextBudget:      4000,
 		HTTPTimeout:           30 * time.Second,
 	}
 }
@@ -86,6 +107,11 @@ func LoadFromEnv() Config {
 	v.SetDefault("VECTOR_STORE", string(base.VectorStoreType))
 	v.SetDefault("QDRANT_URL", base.VectorStoreURL)
 	v.SetDefault("QDRANT_COLLECTION", base.QdrantCollection)
+	v.SetDefault("LLM_BASE_URL", base.LLMBaseURL)
+	v.SetDefault("LLM_API_KEY", base.LLMAPIKey)
+	v.SetDefault("LLM_MODEL", base.LLMModel)
+	v.SetDefault("LLM_PROVIDER", base.LLMProviderLabel)
+	v.SetDefault("LLM_CONTEXT_BUDGET", base.LLMContextBudget)
 	v.SetDefault("HTTP_TIMEOUT", base.HTTPTimeout)
 
 	return Config{
@@ -96,6 +122,11 @@ func LoadFromEnv() Config {
 		VectorStoreType:       VectorStoreType(v.GetString("VECTOR_STORE")),
 		VectorStoreURL:        v.GetString("QDRANT_URL"),
 		QdrantCollection:      v.GetString("QDRANT_COLLECTION"),
+		LLMBaseURL:            v.GetString("LLM_BASE_URL"),
+		LLMAPIKey:             v.GetString("LLM_API_KEY"),
+		LLMModel:              v.GetString("LLM_MODEL"),
+		LLMProviderLabel:      v.GetString("LLM_PROVIDER"),
+		LLMContextBudget:      v.GetInt("LLM_CONTEXT_BUDGET"),
 		HTTPTimeout:           v.GetDuration("HTTP_TIMEOUT"),
 	}
 }
@@ -103,6 +134,7 @@ func LoadFromEnv() Config {
 // Runtime is the composition root that wires the full inspect -> index -> retrieve pipeline.
 // It is the M1 production entrypoint; tests may construct it directly with mock adapters.
 type Runtime struct {
+	cfg               Config
 	inspector         inspector.Inspector
 	embeddingProvider provider.EmbeddingProvider
 	vectorStore       store.VectorStore
@@ -131,6 +163,7 @@ func NewRuntime(cfg Config) (*Runtime, error) {
 	denseRetriever := dense.NewDenseRetriever(embProvider, vecStore, contentStore)
 
 	rt := &Runtime{
+		cfg:               cfg,
 		inspector:         insp,
 		embeddingProvider: embProvider,
 		vectorStore:       vecStore,
@@ -188,4 +221,30 @@ func buildVectorStore(cfg Config) (store.VectorStore, error) {
 	default:
 		return store.NewInMemoryVectorStore(), nil
 	}
+}
+
+// buildLLMProvider constructs the provider-neutral OpenAI-compatible LLM
+// adapter from configuration. The provider label is observability-only and
+// never affects adapter behavior.
+func buildLLMProvider(cfg Config) llmprovider.LLMProvider {
+	return llmprovider.NewOpenAICompatibleProvider(
+		cfg.LLMBaseURL,
+		cfg.LLMAPIKey,
+		cfg.LLMModel,
+		cfg.LLMProviderLabel,
+	)
+}
+
+// buildAnswerEngine wires the real AnswerEngine seams: ContextBuilder with the
+// configured budget, the RAG PromptBuilder, the OpenAI-compatible LLM adapter,
+// and the default verification pipeline. Retrieval stays on the provided seam.
+func buildAnswerEngine(cfg Config, retriever seam.Retriever) *qa.AnswerEngine {
+	return qa.NewAnswerEngine(
+		nil,
+		retriever,
+		qacontext.NewDefaultContextBuilder(nil, cfg.LLMContextBudget),
+		qaprompt.NewRAGPromptBuilder(),
+		buildLLMProvider(cfg),
+		qaverification.NewDefaultVerificationPipeline(),
+	)
 }

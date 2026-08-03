@@ -38,8 +38,18 @@ func mockExtractionJSON() string {
 }`
 }
 
+// mockLLMResponse returns a minimal OpenAI-compatible chat/completions body
+// whose content carries a valid [Ref 1] marker.
+func mockLLMResponse() string {
+	return `{
+  "choices": [{"message": {"role": "assistant", "content": "Knowledge systems transform raw documents into connected semantic graphs [Ref 1]."}}],
+  "usage": {"prompt_tokens": 12, "completion_tokens": 18, "total_tokens": 30}
+}`
+}
+
 // newTestApp wires the composition root against a mock Firecrawl service and a
-// temporary PDF file, returning the app, the PDF path, and a cleanup function.
+// mock OpenAI-compatible LLM gateway, returning the app, the PDF path, and a
+// cleanup function.
 func newTestApp(t *testing.T) (*arccli.App, string, func()) {
 	t.Helper()
 
@@ -49,8 +59,17 @@ func newTestApp(t *testing.T) (*arccli.App, string, func()) {
 		_, _ = w.Write([]byte(mockExtractionJSON()))
 	}))
 
+	llmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(mockLLMResponse()))
+	}))
+
 	cfg := arccli.DefaultConfig()
 	cfg.FirecrawlBaseURL = mockServer.URL
+	cfg.LLMBaseURL = llmServer.URL
+	cfg.LLMModel = "test-model"
+	cfg.LLMProviderLabel = "test-gateway"
 
 	runtime, err := arccli.NewRuntime(cfg)
 	if err != nil {
@@ -67,6 +86,7 @@ func newTestApp(t *testing.T) (*arccli.App, string, func()) {
 	app := arccli.NewAppWithRuntime(runtime)
 	cleanup := func() {
 		mockServer.Close()
+		llmServer.Close()
 	}
 	return app, pdfPath, cleanup
 }
@@ -89,7 +109,7 @@ func TestCLIToolCommands(t *testing.T) {
 		}
 	})
 
-	t.Run("executes 'ask' CLI command", func(t *testing.T) {
+	t.Run("executes 'ask' CLI command and renders the generated answer", func(t *testing.T) {
 		out, err := app.RunAsk(ctx, "What is a knowledge system?")
 		if err != nil {
 			t.Fatalf("unexpected error running CLI ask: %v", err)
@@ -97,24 +117,30 @@ func TestCLIToolCommands(t *testing.T) {
 		if out == "" {
 			t.Error("expected non-empty output from CLI ask")
 		}
-		if !strings.Contains(out, "Found") {
-			t.Errorf("expected ask output to report found chunks, got: %s", out)
+		if !strings.Contains(out, "A:") {
+			t.Errorf("expected ask output to render an answer, got: %s", out)
+		}
+		if !strings.Contains(out, "Sources:") {
+			t.Errorf("expected ask output to include a Sources section, got: %s", out)
 		}
 	})
 
-	t.Run("ask returns chunks with metadata and citations", func(t *testing.T) {
+	t.Run("ask renders answer with citations and section metadata", func(t *testing.T) {
 		out, err := app.RunAsk(ctx, "semantic boundaries")
 		if err != nil {
 			t.Fatalf("unexpected error running CLI ask: %v", err)
 		}
-		if !strings.Contains(out, "citations=") {
-			t.Errorf("expected ask output to include citations, got: %s", out)
+		if !strings.Contains(out, "[Ref 1]") {
+			t.Errorf("expected ask output to include the citation marker, got: %s", out)
 		}
-		if !strings.Contains(out, "Smith") {
-			t.Errorf("expected ask output to include citation text, got: %s", out)
+		if !strings.Contains(out, "document:") {
+			t.Errorf("expected ask output to include document identity, got: %s", out)
 		}
-		if !strings.Contains(out, "section=") {
+		if !strings.Contains(out, "section:") {
 			t.Errorf("expected ask output to include section metadata, got: %s", out)
+		}
+		if !strings.Contains(out, "page(s)") {
+			t.Errorf("expected ask output to include page numbers, got: %s", out)
 		}
 	})
 
