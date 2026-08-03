@@ -69,6 +69,10 @@ type Config struct {
 	LLMProviderLabel string `mapstructure:"LLM_PROVIDER"`
 	// LLMContextBudget is the composition-owned ContextWindow token budget.
 	LLMContextBudget int `mapstructure:"LLM_CONTEXT_BUDGET"`
+	// RetrievalMinScore is the minimum relevance score for retrieved chunks.
+	// Zero disables the threshold (retrieval returns top-k neighbors). With a
+	// threshold, queries whose results all fall below it abstain (no_evidence).
+	RetrievalMinScore float32 `mapstructure:"RETRIEVAL_MIN_SCORE"`
 	// HTTPTimeout is the client timeout for external service calls.
 	HTTPTimeout time.Duration `mapstructure:"HTTP_TIMEOUT"`
 }
@@ -88,6 +92,7 @@ func DefaultConfig() Config {
 		LLMBaseURL:            "https://agentrouter.org/v1",
 		LLMProviderLabel:      "agentrouter",
 		LLMContextBudget:      4000,
+		RetrievalMinScore:     0,
 		HTTPTimeout:           30 * time.Second,
 	}
 }
@@ -112,6 +117,7 @@ func LoadFromEnv() Config {
 	v.SetDefault("LLM_MODEL", base.LLMModel)
 	v.SetDefault("LLM_PROVIDER", base.LLMProviderLabel)
 	v.SetDefault("LLM_CONTEXT_BUDGET", base.LLMContextBudget)
+	v.SetDefault("RETRIEVAL_MIN_SCORE", base.RetrievalMinScore)
 	v.SetDefault("HTTP_TIMEOUT", base.HTTPTimeout)
 
 	return Config{
@@ -127,6 +133,7 @@ func LoadFromEnv() Config {
 		LLMModel:              v.GetString("LLM_MODEL"),
 		LLMProviderLabel:      v.GetString("LLM_PROVIDER"),
 		LLMContextBudget:      v.GetInt("LLM_CONTEXT_BUDGET"),
+		RetrievalMinScore:     float32(v.GetFloat64("RETRIEVAL_MIN_SCORE")),
 		HTTPTimeout:           v.GetDuration("HTTP_TIMEOUT"),
 	}
 }

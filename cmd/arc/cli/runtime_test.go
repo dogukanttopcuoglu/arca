@@ -30,6 +30,19 @@ func TestDefaultConfig_LLMSettings(t *testing.T) {
 	if cfg.LLMContextBudget != 4000 {
 		t.Errorf("expected default context budget 4000, got %d", cfg.LLMContextBudget)
 	}
+	if cfg.RetrievalMinScore != 0 {
+		t.Errorf("expected default retrieval min score 0 (no threshold), got %v", cfg.RetrievalMinScore)
+	}
+}
+
+func TestLoadFromEnv_RetrievalMinScore(t *testing.T) {
+	t.Setenv("RETRIEVAL_MIN_SCORE", "0.65")
+
+	cfg := LoadFromEnv()
+
+	if cfg.RetrievalMinScore != 0.65 {
+		t.Errorf("expected configured retrieval min score 0.65, got %v", cfg.RetrievalMinScore)
+	}
 }
 
 func TestLoadFromEnv_LLMSettings(t *testing.T) {

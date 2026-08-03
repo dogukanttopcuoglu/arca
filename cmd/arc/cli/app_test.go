@@ -94,6 +94,33 @@ func TestAppRunAsk_RendersAnswer(t *testing.T) {
 			t.Error("expected error for empty query, got nil")
 		}
 	})
+
+	t.Run("abstains when the configured threshold filters all results", func(t *testing.T) {
+		cfg := DefaultConfig()
+		cfg.RetrievalMinScore = 1.1 // above any cosine similarity
+		runtime, err := NewRuntime(cfg)
+		if err != nil {
+			t.Fatalf("failed to construct runtime: %v", err)
+		}
+		vecStore := runtime.vectorStore.(*store.InMemoryVectorStore)
+		seedTestChunk(ctx, t, runtime.embeddingProvider, vecStore, runtime.contentStore.(*store.InMemoryContentStore))
+
+		app := NewAppWithRuntime(runtime)
+		out, err := app.RunAsk(ctx, "What is creativity?")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if !strings.Contains(out, "sources do not cover") {
+			t.Errorf("expected sources-don't-cover message, got:\n%s", out)
+		}
+		if strings.Contains(out, "Sources:") {
+			t.Errorf("expected no Sources section for abstention, got:\n%s", out)
+		}
+		if strings.Contains(out, "⚠") {
+			t.Errorf("expected no warning for abstention, got:\n%s", out)
+		}
+	})
 }
 
 // newTestApp builds an App whose answer engine retrieves from a seeded

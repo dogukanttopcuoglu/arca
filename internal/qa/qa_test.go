@@ -109,6 +109,34 @@ func TestAnswerEngine_RealPipeline(t *testing.T) {
 		}
 	})
 
+	t.Run("abstains when every retrieved result falls below the score threshold", func(t *testing.T) {
+		vecStore := store.NewInMemoryVectorStore()
+		contentStore := store.NewInMemoryContentStore()
+		seedChunk(ctx, t, mockProvider, vecStore, contentStore, "chk-1", "Introduction",
+			"Creativity is a fundamental human quality.")
+
+		retriever := dense.NewDenseRetriever(mockProvider, vecStore, contentStore)
+		llm := &fakeLLM{content: "Should never be generated [Ref 1]."}
+		engine := newTestEngine(retriever, llm, 4000)
+
+		// Cosine similarity can never exceed 1.0, so a threshold above it
+		// filters every result while the store is not empty.
+		ans, err := engine.Answer(ctx, seam.RetrievalQuery{
+			QueryText: "What is creativity?",
+			TopK:      5,
+			MinScore:  1.1,
+		})
+		if err != nil {
+			t.Fatalf("unexpected error during Answer execution: %v", err)
+		}
+		if ans.Status != qaverification.StatusNoEvidence {
+			t.Errorf("expected Status %q with threshold filtering all results, got %q", qaverification.StatusNoEvidence, ans.Status)
+		}
+		if llm.calls != 0 {
+			t.Errorf("expected LLM to never be called when all results are filtered, got %d calls", llm.calls)
+		}
+	})
+
 	t.Run("marks answer unverified when the LLM cites an invalid reference", func(t *testing.T) {
 		vecStore := store.NewInMemoryVectorStore()
 		contentStore := store.NewInMemoryContentStore()

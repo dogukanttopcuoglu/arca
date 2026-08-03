@@ -17,9 +17,10 @@ import (
 
 // App encapsulates CLI tool execution handlers wired through the composition root.
 type App struct {
-	runtime      *Runtime
-	answerEngine *qa.AnswerEngine
-	agentEngine  *agent.AgentEngine
+	runtime           *Runtime
+	answerEngine      *qa.AnswerEngine
+	agentEngine       *agent.AgentEngine
+	retrievalMinScore float32
 }
 
 // NewApp constructs an App CLI instance using the composition root populated from
@@ -41,9 +42,10 @@ func NewAppWithRuntime(runtime *Runtime) *App {
 	})
 
 	return &App{
-		runtime:      runtime,
-		answerEngine: ansEng,
-		agentEngine:  agentEng,
+		runtime:           runtime,
+		answerEngine:      ansEng,
+		agentEngine:       agentEng,
+		retrievalMinScore: runtime.cfg.RetrievalMinScore,
 	}
 }
 
@@ -97,6 +99,7 @@ func (a *App) RunAsk(ctx context.Context, query string) (string, error) {
 	ans, err := a.answerEngine.Answer(ctx, retrievalseam.RetrievalQuery{
 		QueryText: query,
 		TopK:      5,
+		MinScore:  a.retrievalMinScore,
 	})
 	if err != nil {
 		return "", err
