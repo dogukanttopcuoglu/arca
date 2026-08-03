@@ -36,6 +36,10 @@ type RetrievalQuery struct {
 	Mode      RetrievalMode                `json:"mode"`
 	Filter    indexingmodel.MetadataFilter `json:"filter,omitempty"`
 	MinScore  float32                      `json:"min_score,omitempty"`
+	// Stats, when non-nil, is populated with per-retrieval diagnostics
+	// (duration, candidate counts, TopK, MinScore). Nil is the default and
+	// adds no overhead.
+	Stats *RetrievalStats `json:"-"`
 }
 
 // Validate verifies structural invariants for RetrievalQuery.

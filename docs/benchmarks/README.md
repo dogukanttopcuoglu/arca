@@ -26,6 +26,27 @@ File: `baseline_dense_v1.json` (commit 4626be4, corpus fingerprint
 | nDCG@5 | 0.645 |
 | no_evidence_precision | 0.000 |
 
+## Mode comparison — dense vs sparse vs hybrid (M3 T8)
+
+Files: `baseline_dense_v1.json`, `baseline_sparse_v1.json`,
+`baseline_hybrid_v1.json`. All three run on Gold Set v1 with the identical
+corpus fingerprint (`51b1909e…`) and TopK 5.
+
+| Metric | dense | sparse | hybrid |
+|---|---|---|---|
+| recall@5 | 0.740 | 0.682 | 0.734 |
+| precision@5 | 0.288 | 0.247 | 0.279 |
+| MRR | 0.666 | 0.585 | **0.736** |
+| nDCG@5 | 0.645 | 0.577 | **0.668** |
+| duration (51 queries) | ~10.8s | ~1.4s | ~3.8s |
+
+Observations (decision data for T9, not conclusions):
+- Sparse alone underperforms dense on recall/precision but is ~7.6x faster.
+- Hybrid improves MRR (+10.5%) and nDCG@5 (+3.6%) over dense while recall@5
+  (−0.8%) and precision@5 (−3.1%) stay within the 5% regression tolerance.
+- Whether hybrid becomes the default retrieval mode is decided by T9 against
+  these baselines — per-category breakdown and abstention behavior included.
+
 Known baseline weaknesses (documented, not fixed in M3 baseline):
 - Comparison queries (e.g. rr-028 "Everyone Is a Creator vs Beginner's Mind")
   retrieve one side only — recall 0; query decomposition is deferred (M4).

@@ -1,0 +1,1674 @@
+{
+  "git_commit": "568a404aa211df42e34e24db2cdc65fa58dd1c1f",
+  "timestamp": "2026-08-03T22:08:14.1652381Z",
+  "corpus": {
+    "corpus_fingerprint": "51b1909e1a2639b3114eb4e9afaeeafa58938cbdb0d195392dc65d06ac0b483d",
+    "document_id": "rick-rubin",
+    "chunk_count": 196
+  },
+  "retrieval": {
+    "mode": "Sparse",
+    "embedding_provider": "Ollama",
+    "embedding_model": "nomic-embed-text:latest",
+    "top_k": 5,
+    "min_score": 0,
+    "collection": "arca_chunks"
+  },
+  "duration_ms": 1409,
+  "metrics": {
+    "recall_at_k": 0.6821705426356589,
+    "precision_at_k": 0.24651162790697673,
+    "mrr": 0.5848837209302326,
+    "ndcg_at_k": 0.5774400336551236,
+    "no_evidence_precision": 0,
+    "queries": 51
+  },
+  "per_query": [
+    {
+      "id": "rr-001",
+      "intent": "single_fact",
+      "retrieved_chunk_ids": [
+        "rick-rubin/point-of-view/002",
+        "rick-rubin/rules/002",
+        "rick-rubin/submerge-the-great-works/001",
+        "rick-rubin/experimentation/003",
+        "rick-rubin/invite-an-audience/001"
+      ],
+      "retrieved_scores": [
+        8.248883,
+        7.904706,
+        7.7885075,
+        7.249356,
+        7.20615
+      ],
+      "expected_chunk_ids": [
+        "rick-rubin/point-of-view/001",
+        "rick-rubin/point-of-view/002"
+      ],
+      "expected_no_evidence": false,
+      "recall_at_k": 0.5,
+      "precision_at_k": 0.2,
+      "mrr": 1,
+      "ndcg_at_k": 0.6131471927654585,
+      "stats": {
+        "duration_ms": 55,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0
+      }
+    },
+    {
+      "id": "rr-002",
+      "intent": "single_fact",
+      "retrieved_chunk_ids": [
+        "rick-rubin/non-competition/002",
+        "rick-rubin/non-competition/001",
+        "rick-rubin/openness/003",
+        "rick-rubin/success/001",
+        "rick-rubin/success/002"
+      ],
+      "retrieved_scores": [
+        33.408813,
+        28.476646,
+        27.869934,
+        26.989986,
+        26.575201
+      ],
+      "expected_chunk_ids": [
+        "rick-rubin/success/001",
+        "rick-rubin/success/002"
+      ],
+      "expected_no_evidence": false,
+      "recall_at_k": 1,
+      "precision_at_k": 0.4,
+      "mrr": 0.25,
+      "ndcg_at_k": 0.5012658353418872,
+      "stats": {
+        "duration_ms": 46,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0
+      }
+    },
+    {
+      "id": "rr-003",
+      "intent": "single_fact",
+      "retrieved_chunk_ids": [
+        "rick-rubin/the-gatekeeper/002",
+        "rick-rubin/the-gatekeeper/001",
+        "rick-rubin/78-areas-of-thought/001",
+        "rick-rubin/adaptation/003",
+        "rick-rubin/i-was-here/001"
+      ],
+      "retrieved_scores": [
+        53.400192,
+        36.5049,
+        30.353941,
+        24.58828,
+        19.976555
+      ],
+      "expected_chunk_ids": [
+        "rick-rubin/the-gatekeeper/001",
+        "rick-rubin/the-gatekeeper/002"
+      ],
+      "expected_no_evidence": false,
+      "recall_at_k": 1,
+      "precision_at_k": 0.4,
+      "mrr": 1,
+      "ndcg_at_k": 1,
+      "stats": {
+        "duration_ms": 43,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0
+      }
+    },
+    {
+      "id": "rr-004",
+      "intent": "single_fact",
+      "retrieved_chunk_ids": [
+        "rick-rubin/non-competition/001",
+        "rick-rubin/non-competition/002",
+        "rick-rubin/the-ecstatic/002",
+        "rick-rubin/non-competition/003",
+        "rick-rubin/78-areas-of-thought/001"
+      ],
+      "retrieved_scores": [
+        28.757364,
+        27.923744,
+        26.846771,
+        25.50462,
+        23.285877
+      ],
+      "expected_chunk_ids": [
+        "rick-rubin/non-competition/001",
+        "rick-rubin/non-competition/002"
+      ],
+      "expected_no_evidence": false,
+      "recall_at_k": 1,
+      "precision_at_k": 0.4,
+      "mrr": 1,
+      "ndcg_at_k": 1,
+      "stats": {
+        "duration_ms": 2,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0
+      }
+    },
+    {
+      "id": "rr-005",
+      "intent": "single_fact",
+      "retrieved_chunk_ids": [
+        "rick-rubin/temporary-rules/004",
+        "rick-rubin/78-areas-of-thought/001",
+        "rick-rubin/temporary-rules/001",
+        "rick-rubin/surrounding-the-lightning-bolt/003",
+        "rick-rubin/rules/004"
+      ],
+      "retrieved_scores": [
+        37.212006,
+        34.64344,
+        31.401098,
+        22.476522,
+        22.027483
+      ],
+      "expected_chunk_ids": [
+        "rick-rubin/temporary-rules/001",
+        "rick-rubin/temporary-rules/002",
+        "rick-rubin/temporary-rules/003"
+      ],
+      "expected_no_evidence": false,
+      "recall_at_k": 0.3333333333333333,
+      "precision_at_k": 0.2,
+      "mrr": 0.3333333333333333,
+      "ndcg_at_k": 0.23463936301137828,
+      "stats": {
+        "duration_ms": 44,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0
+      }
+    },
+    {
+      "id": "rr-006",
+      "intent": "single_fact",
+      "retrieved_chunk_ids": [
+        "rick-rubin/the-abundant-mindset/002",
+        "rick-rubin/the-abundant-mindset/001",
+        "rick-rubin/78-areas-of-thought/001",
+        "rick-rubin/memories-and-the-subconscious/002",
+        "rick-rubin/tuning-out-undermining-voices/002"
+      ],
+      "retrieved_scores": [
+        67.87957,
+        51.46312,
+        41.4413,
+        28.176338,
+        20.309788
+      ],
+      "expected_chunk_ids": [
+        "rick-rubin/the-abundant-mindset/001",
+        "rick-rubin/the-abundant-mindset/002"
+      ],
+      "expected_no_evidence": false,
+      "recall_at_k": 1,
+      "precision_at_k": 0.4,
+      "mrr": 1,
+      "ndcg_at_k": 1,
+      "stats": {
+        "duration_ms": 43,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0
+      }
+    },
+    {
+      "id": "rr-007",
+      "intent": "single_fact",
+      "retrieved_chunk_ids": [
+        "rick-rubin/the-ecstatic/001",
+        "rick-rubin/the-ecstatic/002",
+        "rick-rubin/the-ecstatic/004",
+        "rick-rubin/how-to-choose/003",
+        "rick-rubin/the-ecstatic/003"
+      ],
+      "retrieved_scores": [
+        31.148499,
+        31.02626,
+        29.947742,
+        26.10355,
+        21.856052
+      ],
+      "expected_chunk_ids": [
+        "rick-rubin/the-ecstatic/001",
+        "rick-rubin/the-ecstatic/002"
+      ],
+      "expected_no_evidence": false,
+      "recall_at_k": 1,
+      "precision_at_k": 0.4,
+      "mrr": 1,
+      "ndcg_at_k": 1,
+      "stats": {
+        "duration_ms": 44,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0
+      }
+    },
+    {
+      "id": "rr-008",
+      "intent": "single_fact",
+      "retrieved_chunk_ids": [
+        "rick-rubin/essence/001",
+        "rick-rubin/essence/002",
+        "rick-rubin/the-gatekeeper/003",
+        "rick-rubin/essence/003",
+        "rick-rubin/the-gatekeeper/001"
+      ],
+      "retrieved_scores": [
+        35.3053,
+        34.597424,
+        33.64469,
+        32.84734,
+        27.939655
+      ],
+      "expected_chunk_ids": [
+        "rick-rubin/essence/001",
+        "rick-rubin/essence/002"
+      ],
+      "expected_no_evidence": false,
+      "recall_at_k": 1,
+      "precision_at_k": 0.4,
+      "mrr": 1,
+      "ndcg_at_k": 1,
+      "stats": {
+        "duration_ms": 2,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0
+      }
+    },
+    {
+      "id": "rr-009",
+      "intent": "single_fact",
+      "retrieved_chunk_ids": [
+        "rick-rubin/cooperation/005",
+        "rick-rubin/cooperation/001",
+        "rick-rubin/limit-the-information/001",
+        "rick-rubin/completion/003",
+        "rick-rubin/surrounding-the-lightning-bolt/002"
+      ],
+      "retrieved_scores": [
+        52.186687,
+        42.48654,
+        36.777744,
+        35.215843,
+        27.43943
+      ],
+      "expected_chunk_ids": [
+        "rick-rubin/cooperation/005"
+      ],
+      "expected_no_evidence": false,
+      "recall_at_k": 1,
+      "precision_at_k": 0.2,
+      "mrr": 1,
+      "ndcg_at_k": 1,
+      "stats": {
+        "duration_ms": 3,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0
+      }
+    },
+    {
+      "id": "rr-010",
+      "intent": "concept",
+      "retrieved_chunk_ids": [
+        "rick-rubin/why-make-art/001",
+        "rick-rubin/intention/002",
+        "rick-rubin/tuning-in/003",
+        "rick-rubin/intention/001",
+        "rick-rubin/tuning-in/001"
+      ],
+      "retrieved_scores": [
+        14.529552,
+        12.092675,
+        11.8353,
+        10.967794,
+        10.288045
+      ],
+      "expected_chunk_ids": [
+        "rick-rubin/tuning-in/001",
+        "rick-rubin/why-make-art/001",
+        "rick-rubin/everyone-is-a-creator/001"
+      ],
+      "expected_no_evidence": false,
+      "recall_at_k": 0.6666666666666666,
+      "precision_at_k": 0.4,
+      "mrr": 1,
+      "ndcg_at_k": 0.6508205185601093,
+      "stats": {
+        "duration_ms": 1,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0
+      }
+    },
+    {
+      "id": "rr-011",
+      "intent": "concept",
+      "retrieved_chunk_ids": [
+        "rick-rubin/beginner-s-mind/004",
+        "rick-rubin/78-areas-of-thought/001",
+        "rick-rubin/play/003",
+        "rick-rubin/beginner-s-mind/001",
+        "rick-rubin/play/001"
+      ],
+      "retrieved_scores": [
+        39.092354,
+        27.475676,
+        25.71583,
+        21.03739,
+        20.604158
+      ],
+      "expected_chunk_ids": [
+        "rick-rubin/beginner-s-mind/001",
+        "rick-rubin/beginner-s-mind/002",
+        "rick-rubin/beginner-s-mind/004"
+      ],
+      "expected_no_evidence": false,
+      "recall_at_k": 0.6666666666666666,
+      "precision_at_k": 0.4,
+      "mrr": 1,
+      "ndcg_at_k": 0.6713860725233042,
+      "stats": {
+        "duration_ms": 1,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0
+      }
+    },
+    {
+      "id": "rr-012",
+      "intent": "concept",
+      "retrieved_chunk_ids": [
+        "rick-rubin/the-vessel-and-the-filter/001",
+        "rick-rubin/the-ecstatic/002",
+        "rick-rubin/the-source-of-creativity/001",
+        "rick-rubin/78-areas-of-thought/001",
+        "rick-rubin/document-overview/001"
+      ],
+      "retrieved_scores": [
+        27.896187,
+        26.791481,
+        26.123749,
+        25.426067,
+        22.088707
+      ],
+      "expected_chunk_ids": [
+        "rick-rubin/the-source-of-creativity/001"
+      ],
+      "expected_no_evidence": false,
+      "recall_at_k": 1,
+      "precision_at_k": 0.2,
+      "mrr": 0.3333333333333333,
+      "ndcg_at_k": 0.5,
+      "stats": {
+        "duration_ms": 1,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0
+      }
+    },
+    {
+      "id": "rr-013",
+      "intent": "concept",
+      "retrieved_chunk_ids": [
+        "rick-rubin/the-vessel-and-the-filter/001",
+        "rick-rubin/78-areas-of-thought/001",
+        "rick-rubin/openness/002",
+        "rick-rubin/openness/001",
+        "rick-rubin/point-of-view/003"
+      ],
+      "retrieved_scores": [
+        67.34724,
+        37.834538,
+        35.478813,
+        28.896404,
+        14.611954
+      ],
+      "expected_chunk_ids": [
+        "rick-rubin/the-vessel-and-the-filter/001"
+      ],
+      "expected_no_evidence": false,
+      "recall_at_k": 1,
+      "precision_at_k": 0.2,
+      "mrr": 1,
+      "ndcg_at_k": 1,
+      "stats": {
+        "duration_ms": 1,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0
+      }
+    },
+    {
+      "id": "rr-014",
+      "intent": "concept",
+      "retrieved_chunk_ids": [
+        "rick-rubin/the-ecstatic/002",
+        "rick-rubin/listening/002",
+        "rick-rubin/listening/001",
+        "rick-rubin/the-ecstatic/001",
+        "rick-rubin/patience/002"
+      ],
+      "retrieved_scores": [
+        37.76353,
+        27.119816,
+        26.478323,
+        24.351555,
+        22.139256
+      ],
+      "expected_chunk_ids": [
+        "rick-rubin/listening/001",
+        "rick-rubin/listening/002",
+        "rick-rubin/listening/003"
+      ],
+      "expected_no_evidence": false,
+      "recall_at_k": 0.6666666666666666,
+      "precision_at_k": 0.4,
+      "mrr": 0.5,
+      "ndcg_at_k": 0.5307212739772434,
+      "stats": {
+        "duration_ms": 44,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0
+      }
+    },
+    {
+      "id": "rr-015",
+      "intent": "concept",
+      "retrieved_chunk_ids": [
+        "rick-rubin/the-prism-of-self/001",
+        "rick-rubin/cooperation/002",
+        "rick-rubin/what-we-tell-ourselves/001",
+        "rick-rubin/78-areas-of-thought/001",
+        "rick-rubin/cooperation/001"
+      ],
+      "retrieved_scores": [
+        50.002274,
+        41.04379,
+        33.27951,
+        31.887367,
+        23.260872
+      ],
+      "expected_chunk_ids": [
+        "rick-rubin/the-prism-of-self/001"
+      ],
+      "expected_no_evidence": false,
+      "recall_at_k": 1,
+      "precision_at_k": 0.2,
+      "mrr": 1,
+      "ndcg_at_k": 1,
+      "stats": {
+        "duration_ms": 44,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0
+      }
+    },
+    {
+      "id": "rr-016",
+      "intent": "concept",
+      "retrieved_chunk_ids": [
+        "rick-rubin/the-ecstatic/002",
+        "rick-rubin/expect-a-surprise/001",
+        "rick-rubin/look-for-clues/001",
+        "rick-rubin/look-for-clues/002",
+        "rick-rubin/more-real-more-human/001"
+      ],
+      "retrieved_scores": [
+        30.399612,
+        24.14762,
+        24.03449,
+        21.869041,
+        21.523342
+      ],
+      "expected_chunk_ids": [
+        "rick-rubin/play/001",
+        "rick-rubin/play/002",
+        "rick-rubin/play/003"
+      ],
+      "expected_no_evidence": false,
+      "stats": {
+        "duration_ms": 3,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0
+      }
+    },
+    {
+      "id": "rr-017",
+      "intent": "concept",
+      "retrieved_chunk_ids": [
+        "rick-rubin/78-areas-of-thought/001",
+        "rick-rubin/the-opposite-is-true/001",
+        "rick-rubin/try-everything/002",
+        "rick-rubin/cooperation/005",
+        "rick-rubin/more-real-more-human/001"
+      ],
+      "retrieved_scores": [
+        88.82908,
+        0.47369736,
+        0.47040138,
+        0.46975744,
+        0.4643969
+      ],
+      "expected_chunk_ids": [
+        "rick-rubin/the-experimenter-and-the-finisher/001"
+      ],
+      "expected_no_evidence": false,
+      "stats": {
+        "duration_ms": 44,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0
+      }
+    },
+    {
+      "id": "rr-018",
+      "intent": "concept",
+      "retrieved_chunk_ids": [
+        "rick-rubin/translation/002",
+        "rick-rubin/78-areas-of-thought/001",
+        "rick-rubin/translation/001",
+        "rick-rubin/crafting/001",
+        "rick-rubin/crafting/004"
+      ],
+      "retrieved_scores": [
+        37.361614,
+        31.405033,
+        28.703758,
+        14.31528,
+        14.138459
+      ],
+      "expected_chunk_ids": [
+        "rick-rubin/translation/001",
+        "rick-rubin/translation/002"
+      ],
+      "expected_no_evidence": false,
+      "recall_at_k": 1,
+      "precision_at_k": 0.4,
+      "mrr": 1,
+      "ndcg_at_k": 0.9197207891481877,
+      "stats": {
+        "duration_ms": 2,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0
+      }
+    },
+    {
+      "id": "rr-019",
+      "intent": "concept",
+      "retrieved_chunk_ids": [
+        "rick-rubin/document-overview/001",
+        "rick-rubin/about-the-author/001",
+        "rick-rubin/beginner-s-mind/002",
+        "rick-rubin/beginner-s-mind/001",
+        "rick-rubin/the-vessel-and-the-filter/001"
+      ],
+      "retrieved_scores": [
+        133.25752,
+        109.30859,
+        75.87767,
+        44.73499,
+        25.758755
+      ],
+      "expected_chunk_ids": [
+        "rick-rubin/beginner-s-mind/001",
+        "rick-rubin/beginner-s-mind/002"
+      ],
+      "expected_no_evidence": false,
+      "recall_at_k": 1,
+      "precision_at_k": 0.4,
+      "mrr": 0.3333333333333333,
+      "ndcg_at_k": 0.5706417189553201,
+      "stats": {
+        "duration_ms": 2,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0
+      }
+    },
+    {
+      "id": "rr-020",
+      "intent": "procedural",
+      "retrieved_chunk_ids": [
+        "rick-rubin/inspiration/003",
+        "rick-rubin/point-of-view/004",
+        "rick-rubin/inspiration/001",
+        "rick-rubin/point-of-view/001",
+        "rick-rubin/everyone-is-a-creator/001"
+      ],
+      "retrieved_scores": [
+        38.081,
+        34.87881,
+        22.906136,
+        21.497425,
+        14.794464
+      ],
+      "expected_chunk_ids": [
+        "rick-rubin/practice/001",
+        "rick-rubin/practice/002",
+        "rick-rubin/practice/003"
+      ],
+      "expected_no_evidence": false,
+      "stats": {
+        "duration_ms": 42,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0
+      }
+    },
+    {
+      "id": "rr-021",
+      "intent": "procedural",
+      "retrieved_chunk_ids": [
+        "rick-rubin/completion/004",
+        "rick-rubin/self-doubt/002",
+        "rick-rubin/78-areas-of-thought/001",
+        "rick-rubin/make-it-up/001",
+        "rick-rubin/make-it-up/002"
+      ],
+      "retrieved_scores": [
+        45.462902,
+        25.900726,
+        23.90791,
+        22.970547,
+        22.561417
+      ],
+      "expected_chunk_ids": [
+        "rick-rubin/self-doubt/001",
+        "rick-rubin/make-it-up/001",
+        "rick-rubin/make-it-up/002",
+        "rick-rubin/make-it-up/003"
+      ],
+      "expected_no_evidence": false,
+      "recall_at_k": 0.5,
+      "precision_at_k": 0.4,
+      "mrr": 0.25,
+      "ndcg_at_k": 0.3191471544989228,
+      "stats": {
+        "duration_ms": 43,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0
+      }
+    },
+    {
+      "id": "rr-022",
+      "intent": "procedural",
+      "retrieved_chunk_ids": [
+        "rick-rubin/beginner-s-mind/003",
+        "rick-rubin/beginner-s-mind/001",
+        "rick-rubin/habits/004",
+        "rick-rubin/it-s-always-there/001",
+        "rick-rubin/apocrypha/001"
+      ],
+      "retrieved_scores": [
+        42.59257,
+        16.830862,
+        4.4205585,
+        4.196665,
+        4.1468086
+      ],
+      "expected_chunk_ids": [
+        "rick-rubin/breaking-the-sameness/001",
+        "rick-rubin/small-steps/001"
+      ],
+      "expected_no_evidence": false,
+      "stats": {
+        "duration_ms": 1,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0
+      }
+    },
+    {
+      "id": "rr-023",
+      "intent": "procedural",
+      "retrieved_chunk_ids": [
+        "rick-rubin/momentum/004",
+        "rick-rubin/momentum/001",
+        "rick-rubin/breaking-the-sameness/001",
+        "rick-rubin/tuning-in/002",
+        "rick-rubin/completion/005"
+      ],
+      "retrieved_scores": [
+        38.898083,
+        37.15371,
+        34.371685,
+        24.578407,
+        23.60114
+      ],
+      "expected_chunk_ids": [
+        "rick-rubin/momentum/001",
+        "rick-rubin/momentum/002",
+        "rick-rubin/momentum/003"
+      ],
+      "expected_no_evidence": false,
+      "recall_at_k": 0.3333333333333333,
+      "precision_at_k": 0.2,
+      "mrr": 0.5,
+      "ndcg_at_k": 0.2960819109658653,
+      "stats": {
+        "duration_ms": 2,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0
+      }
+    },
+    {
+      "id": "rr-024",
+      "intent": "procedural",
+      "retrieved_chunk_ids": [
+        "rick-rubin/small-steps/001",
+        "rick-rubin/the-experimenter-and-the-finisher/001",
+        "rick-rubin/write-for-someone-else/001",
+        "rick-rubin/expect-a-surprise/001",
+        "rick-rubin/breaking-the-sameness/001"
+      ],
+      "retrieved_scores": [
+        61.66722,
+        52.785347,
+        47.079124,
+        37.214844,
+        34.06159
+      ],
+      "expected_chunk_ids": [
+        "rick-rubin/small-steps/001",
+        "rick-rubin/write-for-someone-else/001"
+      ],
+      "expected_no_evidence": false,
+      "recall_at_k": 1,
+      "precision_at_k": 0.4,
+      "mrr": 1,
+      "ndcg_at_k": 0.9197207891481877,
+      "stats": {
+        "duration_ms": 1,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0
+      }
+    },
+    {
+      "id": "rr-025",
+      "intent": "procedural",
+      "retrieved_chunk_ids": [
+        "rick-rubin/seeds/001",
+        "rick-rubin/seeds/002",
+        "rick-rubin/shades-and-degrees/001",
+        "rick-rubin/seeds/003",
+        "rick-rubin/78-areas-of-thought/001"
+      ],
+      "retrieved_scores": [
+        39.550896,
+        38.239628,
+        34.512154,
+        33.338753,
+        28.612207
+      ],
+      "expected_chunk_ids": [
+        "rick-rubin/experimentation/005",
+        "rick-rubin/how-to-choose/001",
+        "rick-rubin/how-to-choose/002"
+      ],
+      "expected_no_evidence": false,
+      "stats": {
+        "duration_ms": 42,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0
+      }
+    },
+    {
+      "id": "rr-026",
+      "intent": "procedural",
+      "retrieved_chunk_ids": [
+        "rick-rubin/change-the-stakes/001",
+        "rick-rubin/change-the-environment/001",
+        "rick-rubin/thoughts-and-habits-not-conducive-to-the-work/001",
+        "rick-rubin/try-everything/001",
+        "rick-rubin/setting/001"
+      ],
+      "retrieved_scores": [
+        26.720678,
+        25.404625,
+        22.143793,
+        20.636524,
+        19.71928
+      ],
+      "expected_chunk_ids": [
+        "rick-rubin/setting/001"
+      ],
+      "expected_no_evidence": false,
+      "recall_at_k": 1,
+      "precision_at_k": 0.2,
+      "mrr": 0.2,
+      "ndcg_at_k": 0.38685280723454163,
+      "stats": {
+        "duration_ms": 44,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0
+      }
+    },
+    {
+      "id": "rr-027",
+      "intent": "procedural",
+      "retrieved_chunk_ids": [
+        "rick-rubin/surrounding-the-lightning-bolt/002",
+        "rick-rubin/surrounding-the-lightning-bolt/001",
+        "rick-rubin/make-it-up/003",
+        "rick-rubin/experimentation/002",
+        "rick-rubin/intention/003"
+      ],
+      "retrieved_scores": [
+        59.235485,
+        57.05861,
+        29.294561,
+        28.715553,
+        25.81421
+      ],
+      "expected_chunk_ids": [
+        "rick-rubin/inspiration/001",
+        "rick-rubin/inspiration/002",
+        "rick-rubin/inspiration/004"
+      ],
+      "expected_no_evidence": false,
+      "stats": {
+        "duration_ms": 43,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0
+      }
+    },
+    {
+      "id": "rr-028",
+      "intent": "comparison",
+      "retrieved_chunk_ids": [
+        "rick-rubin/78-areas-of-thought/001",
+        "rick-rubin/how-to-choose/002",
+        "rick-rubin/how-to-choose/001",
+        "rick-rubin/beginner-s-mind/004",
+        "rick-rubin/self-doubt/003"
+      ],
+      "retrieved_scores": [
+        55.01792,
+        54.382545,
+        42.269283,
+        38.45881,
+        28.108408
+      ],
+      "expected_chunk_ids": [
+        "rick-rubin/everyone-is-a-creator/001",
+        "rick-rubin/beginner-s-mind/001"
+      ],
+      "expected_no_evidence": false,
+      "stats": {
+        "duration_ms": 3,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0
+      }
+    },
+    {
+      "id": "rr-029",
+      "intent": "comparison",
+      "retrieved_chunk_ids": [
+        "rick-rubin/the-experimenter-and-the-finisher/001",
+        "rick-rubin/how-to-choose/002",
+        "rick-rubin/how-to-choose/001",
+        "rick-rubin/collaboration/001",
+        "rick-rubin/openness/003"
+      ],
+      "retrieved_scores": [
+        157.54222,
+        54.904247,
+        40.330658,
+        0.14154197,
+        0.13988838
+      ],
+      "expected_chunk_ids": [
+        "rick-rubin/the-experimenter-and-the-finisher/001"
+      ],
+      "expected_no_evidence": false,
+      "recall_at_k": 1,
+      "precision_at_k": 0.2,
+      "mrr": 1,
+      "ndcg_at_k": 1,
+      "stats": {
+        "duration_ms": 45,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0
+      }
+    },
+    {
+      "id": "rr-030",
+      "intent": "comparison",
+      "retrieved_chunk_ids": [
+        "rick-rubin/how-to-choose/002",
+        "rick-rubin/experimentation/002",
+        "rick-rubin/experimentation/001",
+        "rick-rubin/seeds/001",
+        "rick-rubin/seeds/003"
+      ],
+      "retrieved_scores": [
+        54.47417,
+        48.459282,
+        46.262207,
+        41.263527,
+        40.20729
+      ],
+      "expected_chunk_ids": [
+        "rick-rubin/seeds/001",
+        "rick-rubin/experimentation/001"
+      ],
+      "expected_no_evidence": false,
+      "recall_at_k": 1,
+      "precision_at_k": 0.4,
+      "mrr": 0.3333333333333333,
+      "ndcg_at_k": 0.5706417189553201,
+      "stats": {
+        "duration_ms": 43,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0
+      }
+    },
+    {
+      "id": "rr-031",
+      "intent": "comparison",
+      "retrieved_chunk_ids": [
+        "rick-rubin/how-to-choose/002",
+        "rick-rubin/completion/002",
+        "rick-rubin/momentum/002",
+        "rick-rubin/how-to-choose/001",
+        "rick-rubin/completion/001"
+      ],
+      "retrieved_scores": [
+        54.47417,
+        49.636074,
+        43.81005,
+        40.01483,
+        35.848347
+      ],
+      "expected_chunk_ids": [
+        "rick-rubin/crafting/001",
+        "rick-rubin/completion/001"
+      ],
+      "expected_no_evidence": false,
+      "recall_at_k": 0.5,
+      "precision_at_k": 0.2,
+      "mrr": 0.2,
+      "ndcg_at_k": 0.23719771276929624,
+      "stats": {
+        "duration_ms": 44,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0
+      }
+    },
+    {
+      "id": "rr-032",
+      "intent": "comparison",
+      "retrieved_chunk_ids": [
+        "rick-rubin/how-to-choose/002",
+        "rick-rubin/tuning-out-undermining-voices/003",
+        "rick-rubin/tuning-out-undermining-voices/001",
+        "rick-rubin/how-to-choose/001",
+        "rick-rubin/the-gatekeeper/002"
+      ],
+      "retrieved_scores": [
+        54.371693,
+        48.88291,
+        45.824497,
+        43.64025,
+        39.764153
+      ],
+      "expected_chunk_ids": [
+        "rick-rubin/self-doubt/001",
+        "rick-rubin/tuning-out-undermining-voices/001",
+        "rick-rubin/tuning-out-undermining-voices/003"
+      ],
+      "expected_no_evidence": false,
+      "recall_at_k": 0.6666666666666666,
+      "precision_at_k": 0.4,
+      "mrr": 0.5,
+      "ndcg_at_k": 0.5307212739772434,
+      "stats": {
+        "duration_ms": 1,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0
+      }
+    },
+    {
+      "id": "rr-033",
+      "intent": "comparison",
+      "retrieved_chunk_ids": [
+        "rick-rubin/rules/005",
+        "rick-rubin/how-to-choose/002",
+        "rick-rubin/patience/003",
+        "rick-rubin/rules/001",
+        "rick-rubin/how-to-choose/001"
+      ],
+      "retrieved_scores": [
+        64.477295,
+        59.663548,
+        45.299103,
+        43.56079,
+        43.42517
+      ],
+      "expected_chunk_ids": [
+        "rick-rubin/temporary-rules/001",
+        "rick-rubin/rules/005"
+      ],
+      "expected_no_evidence": false,
+      "recall_at_k": 0.5,
+      "precision_at_k": 0.2,
+      "mrr": 1,
+      "ndcg_at_k": 0.6131471927654585,
+      "stats": {
+        "duration_ms": 46,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0
+      }
+    },
+    {
+      "id": "rr-034",
+      "intent": "comparison",
+      "retrieved_chunk_ids": [
+        "rick-rubin/78-areas-of-thought/001",
+        "rick-rubin/the-abundant-mindset/002",
+        "rick-rubin/how-to-choose/002",
+        "rick-rubin/the-abundant-mindset/001",
+        "rick-rubin/invite-an-audience/001"
+      ],
+      "retrieved_scores": [
+        89.66825,
+        67.71601,
+        54.581085,
+        51.370697,
+        51.129864
+      ],
+      "expected_chunk_ids": [
+        "rick-rubin/the-abundant-mindset/001",
+        "rick-rubin/non-competition/001"
+      ],
+      "expected_no_evidence": false,
+      "recall_at_k": 0.5,
+      "precision_at_k": 0.2,
+      "mrr": 0.25,
+      "ndcg_at_k": 0.2640681225725909,
+      "stats": {
+        "duration_ms": 1,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0
+      }
+    },
+    {
+      "id": "rr-035",
+      "intent": "comparison",
+      "retrieved_chunk_ids": [
+        "rick-rubin/78-areas-of-thought/001",
+        "rick-rubin/how-to-choose/002",
+        "rick-rubin/the-prism-of-self/001",
+        "rick-rubin/how-to-choose/001",
+        "rick-rubin/cooperation/002"
+      ],
+      "retrieved_scores": [
+        61.491077,
+        54.475475,
+        49.924953,
+        43.43518,
+        40.952354
+      ],
+      "expected_chunk_ids": [
+        "rick-rubin/the-gatekeeper/001",
+        "rick-rubin/the-prism-of-self/001"
+      ],
+      "expected_no_evidence": false,
+      "recall_at_k": 0.5,
+      "precision_at_k": 0.2,
+      "mrr": 0.3333333333333333,
+      "ndcg_at_k": 0.30657359638272924,
+      "stats": {
+        "duration_ms": 2,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0
+      }
+    },
+    {
+      "id": "rr-036",
+      "intent": "entity",
+      "retrieved_chunk_ids": [
+        "rick-rubin/non-competition/002",
+        "rick-rubin/non-competition/001",
+        "rick-rubin/point-of-view/004",
+        "rick-rubin/the-ecstatic/002",
+        "rick-rubin/expect-a-surprise/001"
+      ],
+      "retrieved_scores": [
+        44.569256,
+        40.556255,
+        28.486671,
+        26.895176,
+        20.649456
+      ],
+      "expected_chunk_ids": [
+        "rick-rubin/point-of-view/004"
+      ],
+      "expected_no_evidence": false,
+      "recall_at_k": 1,
+      "precision_at_k": 0.2,
+      "mrr": 0.3333333333333333,
+      "ndcg_at_k": 0.5,
+      "stats": {
+        "duration_ms": 1,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0
+      }
+    },
+    {
+      "id": "rr-037",
+      "intent": "entity",
+      "retrieved_chunk_ids": [
+        "rick-rubin/ending-to-start-anew-regeneration/001",
+        "rick-rubin/point-of-view/002",
+        "rick-rubin/the-ecstatic/002",
+        "rick-rubin/point-of-view/001",
+        "rick-rubin/expect-a-surprise/001"
+      ],
+      "retrieved_scores": [
+        82.909195,
+        33.5113,
+        26.895134,
+        22.036198,
+        20.649414
+      ],
+      "expected_chunk_ids": [
+        "rick-rubin/ending-to-start-anew-regeneration/001"
+      ],
+      "expected_no_evidence": false,
+      "recall_at_k": 1,
+      "precision_at_k": 0.2,
+      "mrr": 1,
+      "ndcg_at_k": 1,
+      "stats": {
+        "duration_ms": 2,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0
+      }
+    },
+    {
+      "id": "rr-038",
+      "intent": "entity",
+      "retrieved_chunk_ids": [
+        "rick-rubin/spontaneity-special-moments/002",
+        "rick-rubin/spontaneity-special-moments/001",
+        "rick-rubin/the-ecstatic/002",
+        "rick-rubin/expect-a-surprise/001",
+        "rick-rubin/more-real-more-human/001"
+      ],
+      "retrieved_scores": [
+        82.9631,
+        55.164894,
+        26.895134,
+        20.649414,
+        19.37782
+      ],
+      "expected_chunk_ids": [
+        "rick-rubin/spontaneity-special-moments/001",
+        "rick-rubin/spontaneity-special-moments/002"
+      ],
+      "expected_no_evidence": false,
+      "recall_at_k": 1,
+      "precision_at_k": 0.4,
+      "mrr": 1,
+      "ndcg_at_k": 1,
+      "stats": {
+        "duration_ms": 44,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0
+      }
+    },
+    {
+      "id": "rr-039",
+      "intent": "entity",
+      "retrieved_chunk_ids": [
+        "rick-rubin/intention/002",
+        "rick-rubin/intention/001",
+        "rick-rubin/harmony/002",
+        "rick-rubin/the-abundant-mindset/003",
+        "rick-rubin/setting/001"
+      ],
+      "retrieved_scores": [
+        96.077965,
+        83.34276,
+        28.058624,
+        24.799335,
+        22.517347
+      ],
+      "expected_chunk_ids": [
+        "rick-rubin/intention/001",
+        "rick-rubin/intention/002"
+      ],
+      "expected_no_evidence": false,
+      "recall_at_k": 1,
+      "precision_at_k": 0.4,
+      "mrr": 1,
+      "ndcg_at_k": 1,
+      "stats": {
+        "duration_ms": 1,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0
+      }
+    },
+    {
+      "id": "rr-040",
+      "intent": "entity",
+      "retrieved_chunk_ids": [
+        "rick-rubin/beginner-s-mind/003",
+        "rick-rubin/beginner-s-mind/002",
+        "rick-rubin/beginner-s-mind/001",
+        "rick-rubin/habits/002",
+        "rick-rubin/the-ecstatic/002"
+      ],
+      "retrieved_scores": [
+        51.39,
+        44.389328,
+        44.061443,
+        35.528267,
+        29.409443
+      ],
+      "expected_chunk_ids": [
+        "rick-rubin/beginner-s-mind/001",
+        "rick-rubin/beginner-s-mind/002"
+      ],
+      "expected_no_evidence": false,
+      "recall_at_k": 1,
+      "precision_at_k": 0.4,
+      "mrr": 0.5,
+      "ndcg_at_k": 0.6934264036172708,
+      "stats": {
+        "duration_ms": 46,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0
+      }
+    },
+    {
+      "id": "rr-041",
+      "intent": "entity",
+      "retrieved_chunk_ids": [
+        "rick-rubin/write-for-someone-else/001",
+        "rick-rubin/invite-an-audience/001",
+        "rick-rubin/rules/002",
+        "rick-rubin/expect-a-surprise/001",
+        "rick-rubin/non-competition/002"
+      ],
+      "retrieved_scores": [
+        47.777184,
+        33.812134,
+        32.32086,
+        30.530205,
+        30.279325
+      ],
+      "expected_chunk_ids": [
+        "rick-rubin/write-for-someone-else/001"
+      ],
+      "expected_no_evidence": false,
+      "recall_at_k": 1,
+      "precision_at_k": 0.2,
+      "mrr": 1,
+      "ndcg_at_k": 1,
+      "stats": {
+        "duration_ms": 43,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0
+      }
+    },
+    {
+      "id": "rr-042",
+      "intent": "entity",
+      "retrieved_chunk_ids": [
+        "rick-rubin/document-overview/001",
+        "rick-rubin/about-the-author/001",
+        "rick-rubin/the-ecstatic/002",
+        "rick-rubin/expect-a-surprise/001",
+        "rick-rubin/look-for-clues/002"
+      ],
+      "retrieved_scores": [
+        147.83765,
+        111.622665,
+        31.260197,
+        22.548365,
+        21.919449
+      ],
+      "expected_chunk_ids": [
+        "rick-rubin/cooperation/003"
+      ],
+      "expected_no_evidence": false,
+      "stats": {
+        "duration_ms": 43,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0
+      }
+    },
+    {
+      "id": "rr-043",
+      "intent": "entity",
+      "retrieved_chunk_ids": [
+        "rick-rubin/beginner-s-mind/006",
+        "rick-rubin/beginner-s-mind/001",
+        "rick-rubin/limit-the-information/001",
+        "rick-rubin/the-ecstatic/002",
+        "rick-rubin/change-the-environment/001"
+      ],
+      "retrieved_scores": [
+        67.94388,
+        30.953022,
+        27.391598,
+        26.793152,
+        25.186232
+      ],
+      "expected_chunk_ids": [
+        "rick-rubin/beginner-s-mind/006"
+      ],
+      "expected_no_evidence": false,
+      "recall_at_k": 1,
+      "precision_at_k": 0.2,
+      "mrr": 1,
+      "ndcg_at_k": 1,
+      "stats": {
+        "duration_ms": 44,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0
+      }
+    },
+    {
+      "id": "rr-044",
+      "intent": "abstention",
+      "retrieved_chunk_ids": [
+        "rick-rubin/the-opposite-is-true/001",
+        "rick-rubin/try-everything/002",
+        "rick-rubin/cooperation/005",
+        "rick-rubin/more-real-more-human/001",
+        "rick-rubin/collaboration/001"
+      ],
+      "retrieved_scores": [
+        0.47267386,
+        0.4691054,
+        0.4688743,
+        0.4634967,
+        0.46077284
+      ],
+      "expected_chunk_ids": [],
+      "expected_no_evidence": true,
+      "stats": {
+        "duration_ms": 44,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0
+      }
+    },
+    {
+      "id": "rr-045",
+      "intent": "abstention",
+      "retrieved_chunk_ids": [
+        "rick-rubin/temporary-rules/002",
+        "rick-rubin/temporary-rules/001",
+        "rick-rubin/temporary-rules/003",
+        "rick-rubin/shades-and-degrees/001",
+        "rick-rubin/make-it-up/002"
+      ],
+      "retrieved_scores": [
+        28.040707,
+        22.931625,
+        20.753471,
+        20.120651,
+        17.538868
+      ],
+      "expected_chunk_ids": [],
+      "expected_no_evidence": true,
+      "stats": {
+        "duration_ms": 2,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0
+      }
+    },
+    {
+      "id": "rr-046",
+      "intent": "abstention",
+      "retrieved_chunk_ids": [
+        "rick-rubin/document-overview/001",
+        "rick-rubin/about-the-author/001",
+        "rick-rubin/everyone-is-a-creator/001",
+        "rick-rubin/more-real-more-human/001",
+        "rick-rubin/freedom/001"
+      ],
+      "retrieved_scores": [
+        132.99692,
+        109.09482,
+        43.166183,
+        19.339684,
+        17.246614
+      ],
+      "expected_chunk_ids": [],
+      "expected_no_evidence": true,
+      "stats": {
+        "duration_ms": 46,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0
+      }
+    },
+    {
+      "id": "rr-047",
+      "intent": "abstention",
+      "retrieved_chunk_ids": [
+        "rick-rubin/translation/001",
+        "rick-rubin/translation/002",
+        "rick-rubin/beginner-s-mind/003",
+        "rick-rubin/beginner-s-mind/002",
+        "rick-rubin/rules/004"
+      ],
+      "retrieved_scores": [
+        49.27716,
+        49.093925,
+        41.8006,
+        38.271267,
+        35.87661
+      ],
+      "expected_chunk_ids": [],
+      "expected_no_evidence": true,
+      "stats": {
+        "duration_ms": 2,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0
+      }
+    },
+    {
+      "id": "rr-048",
+      "intent": "abstention",
+      "retrieved_chunk_ids": [
+        "rick-rubin/believing/001",
+        "rick-rubin/listening/003",
+        "rick-rubin/surrounding-the-lightning-bolt/002",
+        "rick-rubin/completion/002",
+        "rick-rubin/surrounding-the-lightning-bolt/001"
+      ],
+      "retrieved_scores": [
+        46.97268,
+        30.704367,
+        29.545427,
+        29.230526,
+        26.11138
+      ],
+      "expected_chunk_ids": [],
+      "expected_no_evidence": true,
+      "stats": {
+        "duration_ms": 45,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0
+      }
+    },
+    {
+      "id": "rr-049",
+      "intent": "abstention",
+      "retrieved_chunk_ids": [
+        "rick-rubin/the-opposite-is-true/001",
+        "rick-rubin/try-everything/002",
+        "rick-rubin/cooperation/005",
+        "rick-rubin/more-real-more-human/001",
+        "rick-rubin/collaboration/001"
+      ],
+      "retrieved_scores": [
+        0.47267386,
+        0.4691054,
+        0.4688743,
+        0.4634967,
+        0.46077284
+      ],
+      "expected_chunk_ids": [],
+      "expected_no_evidence": true,
+      "stats": {
+        "duration_ms": 43,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0
+      }
+    },
+    {
+      "id": "rr-050",
+      "intent": "abstention",
+      "retrieved_chunk_ids": [
+        "rick-rubin/the-ecstatic/002",
+        "rick-rubin/freedom/001",
+        "rick-rubin/expect-a-surprise/001",
+        "rick-rubin/the-gatekeeper/003",
+        "rick-rubin/the-ecstatic/001"
+      ],
+      "retrieved_scores": [
+        34.466045,
+        22.957792,
+        20.60903,
+        20.171139,
+        19.750462
+      ],
+      "expected_chunk_ids": [],
+      "expected_no_evidence": true,
+      "stats": {
+        "duration_ms": 44,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0
+      }
+    },
+    {
+      "id": "rr-051",
+      "intent": "abstention",
+      "retrieved_chunk_ids": [
+        "rick-rubin/rules/002",
+        "rick-rubin/rules/001",
+        "rick-rubin/rules/004",
+        "rick-rubin/look-for-clues/003",
+        "rick-rubin/the-gatekeeper/003"
+      ],
+      "retrieved_scores": [
+        58.14531,
+        38.061035,
+        36.71666,
+        31.137867,
+        30.179838
+      ],
+      "expected_chunk_ids": [],
+      "expected_no_evidence": true,
+      "stats": {
+        "duration_ms": 44,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0
+      }
+    }
+  ]
+}

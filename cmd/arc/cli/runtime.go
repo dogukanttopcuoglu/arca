@@ -2,7 +2,9 @@ package cli
 
 import (
 	"context"
+	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	indexingmodel "arca/internal/indexing/model"
@@ -23,7 +25,9 @@ import (
 	qaprompt "arca/internal/qa/prompt"
 	qaverification "arca/internal/qa/verification"
 	"arca/internal/retrieval/dense"
-	"arca/internal/retrieval/seam"
+	"arca/internal/retrieval/hybrid"
+	retrievalseam "arca/internal/retrieval/seam"
+	retrievalsparse "arca/internal/retrieval/sparse"
 
 	"github.com/spf13/viper"
 )
@@ -80,6 +84,9 @@ type Config struct {
 	// sparse field and indexing produces sparse vectors. Explicit opt-in;
 	// existing dense-only collections remain untouched.
 	SparseIndex bool `mapstructure:"SPARSE_INDEX"`
+	// RetrievalMode selects the retriever used by arc ask: dense (default),
+	// sparse, or hybrid. Sparse and hybrid require SparseIndex.
+	RetrievalMode retrievalseam.RetrievalMode `mapstructure:"RETRIEVAL_MODE"`
 	// HTTPTimeout is the client timeout for external service calls.
 	HTTPTimeout time.Duration `mapstructure:"HTTP_TIMEOUT"`
 }
@@ -101,6 +108,7 @@ func DefaultConfig() Config {
 		LLMContextBudget:      4000,
 		RetrievalMinScore:     0,
 		SparseIndex:           false,
+		RetrievalMode:         retrievalseam.RetrievalDense,
 		HTTPTimeout:           30 * time.Second,
 	}
 }
@@ -127,6 +135,7 @@ func LoadFromEnv() Config {
 	v.SetDefault("LLM_CONTEXT_BUDGET", base.LLMContextBudget)
 	v.SetDefault("RETRIEVAL_MIN_SCORE", base.RetrievalMinScore)
 	v.SetDefault("SPARSE_INDEX", base.SparseIndex)
+	v.SetDefault("RETRIEVAL_MODE", base.RetrievalMode.String())
 	v.SetDefault("HTTP_TIMEOUT", base.HTTPTimeout)
 
 	return Config{
@@ -144,7 +153,21 @@ func LoadFromEnv() Config {
 		LLMContextBudget:      v.GetInt("LLM_CONTEXT_BUDGET"),
 		RetrievalMinScore:     float32(v.GetFloat64("RETRIEVAL_MIN_SCORE")),
 		SparseIndex:           v.GetBool("SPARSE_INDEX"),
+		RetrievalMode:         parseRetrievalMode(v.GetString("RETRIEVAL_MODE")),
 		HTTPTimeout:           v.GetDuration("HTTP_TIMEOUT"),
+	}
+}
+
+// parseRetrievalMode maps a configured mode string to the retrieval mode
+// enum, defaulting to dense for unknown values.
+func parseRetrievalMode(s string) retrievalseam.RetrievalMode {
+	switch strings.ToLower(strings.TrimSpace(s)) {
+	case "sparse":
+		return retrievalseam.RetrievalSparse
+	case "hybrid":
+		return retrievalseam.RetrievalHybrid
+	default:
+		return retrievalseam.RetrievalDense
 	}
 }
 
@@ -159,6 +182,52 @@ type Runtime struct {
 	contentStore      store.ContentStore
 	indexingWorker    *worker.IndexingWorker
 	denseRetriever    *dense.DenseRetriever
+
+	// Sparse retrieval components are built lazily: the query encoder needs
+	// the indexed corpus, which does not exist yet on a fresh collection.
+	sparseOnce      sync.Once
+	sparseEncoder   sparse.SparseEncoder
+	sparseErr       error
+	sparseRetriever retrievalseam.Retriever
+	hybridRetriever retrievalseam.Retriever
+}
+
+// sparseQueryEncoder builds the corpus-bound query encoder once.
+func (r *Runtime) sparseQueryEncoder() (sparse.SparseEncoder, error) {
+	r.sparseOnce.Do(func() {
+		provider := sparse.NewBM25EncoderProvider(corpusSource{store: r.vectorStore})
+		r.sparseEncoder, r.sparseErr = provider.EncoderForCorpus(context.Background())
+	})
+	return r.sparseEncoder, r.sparseErr
+}
+
+// RetrieverForMode returns the retriever for the given retrieval mode. Sparse
+// and hybrid require an indexed corpus (the query encoder is corpus-bound).
+func (r *Runtime) RetrieverForMode(mode retrievalseam.RetrievalMode) (retrievalseam.Retriever, error) {
+	switch mode {
+	case retrievalseam.RetrievalDense:
+		return r.denseRetriever, nil
+	case retrievalseam.RetrievalSparse:
+		if r.sparseRetriever == nil {
+			enc, err := r.sparseQueryEncoder()
+			if err != nil {
+				return nil, fmt.Errorf("sparse retrieval requires an indexed corpus: %w", err)
+			}
+			r.sparseRetriever = retrievalsparse.NewSparseRetriever(enc, r.vectorStore, r.contentStore)
+		}
+		return r.sparseRetriever, nil
+	case retrievalseam.RetrievalHybrid:
+		if r.hybridRetriever == nil {
+			sparseRet, err := r.RetrieverForMode(retrievalseam.RetrievalSparse)
+			if err != nil {
+				return nil, err
+			}
+			r.hybridRetriever = hybrid.NewHybridRetriever(r.denseRetriever, sparseRet)
+		}
+		return r.hybridRetriever, nil
+	default:
+		return nil, fmt.Errorf("unknown retrieval mode %v", mode)
+	}
 }
 
 // NewRuntime constructs the composition root from Config.
@@ -285,7 +354,7 @@ func buildLLMProvider(cfg Config) llmprovider.LLMProvider {
 // buildAnswerEngine wires the real AnswerEngine seams: ContextBuilder with the
 // configured budget, the RAG PromptBuilder, the OpenAI-compatible LLM adapter,
 // and the default verification pipeline. Retrieval stays on the provided seam.
-func buildAnswerEngine(cfg Config, retriever seam.Retriever) *qa.AnswerEngine {
+func buildAnswerEngine(cfg Config, retriever retrievalseam.Retriever) *qa.AnswerEngine {
 	return qa.NewAnswerEngine(
 		nil,
 		retriever,

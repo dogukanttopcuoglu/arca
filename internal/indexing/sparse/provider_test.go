@@ -60,4 +60,31 @@ func TestBM25EncoderProvider(t *testing.T) {
 			t.Error("expected error for empty corpus")
 		}
 	})
+
+	t.Run("encoder for corpus uses the persisted corpus alone", func(t *testing.T) {
+		// Persisted: ["the cat sat", "the dog ran"] -> N=2, cat df=1, dog df=1.
+		// Encode("cat cat dog"): idf(cat) = idf(dog) = ln(1 + 1.5/1.5) = ln(2).
+		// cat tf=2, docLen=3, avgdl=3 -> denomFactor 1.0 -> ln(2)*5/3.5.
+		// dog tf=1 -> ln(2)*2.5/2.5 = ln(2).
+		provider := NewBM25EncoderProvider(fakeCorpusSource{texts: []string{
+			"the cat sat",
+			"the dog ran",
+		}})
+
+		enc, err := provider.EncoderForCorpus(context.Background())
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		vec, err := enc.Encode(context.Background(), "cat cat dog")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		wantCat := math.Log(2) * 5 / 3.5
+		wantDog := math.Log(2)
+		if len(vec.Values) != 2 || math.Abs(float64(vec.Values[0])-wantCat) > 1e-6 || math.Abs(float64(vec.Values[1])-wantDog) > 1e-6 {
+			t.Errorf("expected weights [%v %v], got %+v", wantCat, wantDog, vec)
+		}
+	})
 }

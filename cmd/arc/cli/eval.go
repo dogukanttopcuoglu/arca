@@ -30,11 +30,13 @@ func (a *App) RunEval(ctx context.Context, opts EvalOptions) (string, error) {
 	if strings.TrimSpace(opts.GoldSetPath) == "" {
 		return "", fmt.Errorf("gold set path cannot be empty")
 	}
-	if opts.Mode != retrievalseam.RetrievalDense {
-		return "", fmt.Errorf("retrieval mode %q not implemented yet", opts.Mode)
-	}
 	if opts.TopK <= 0 {
 		opts.TopK = 5
+	}
+
+	retriever, err := a.runtime.RetrieverForMode(opts.Mode)
+	if err != nil {
+		return "", fmt.Errorf("retrieval mode %q unavailable: %w", opts.Mode, err)
 	}
 
 	gsFile, err := os.Open(opts.GoldSetPath)
@@ -48,7 +50,7 @@ func (a *App) RunEval(ctx context.Context, opts EvalOptions) (string, error) {
 	}
 
 	runner := eval.New(
-		a.runtime.denseRetriever,
+		retriever,
 		listPointsSource{store: a.runtime.vectorStore},
 		eval.Options{
 			Mode:              opts.Mode,

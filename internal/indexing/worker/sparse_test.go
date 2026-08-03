@@ -34,9 +34,17 @@ type fakeSparseProvider struct {
 }
 
 func (p *fakeSparseProvider) Encoder(ctx context.Context, chunks []sparse.DocumentChunk) (sparse.SparseEncoder, error) {
+	return p.encoderFor(chunks), nil
+}
+
+func (p *fakeSparseProvider) EncoderForCorpus(ctx context.Context) (sparse.SparseEncoder, error) {
+	return p.encoderFor(nil), nil
+}
+
+func (p *fakeSparseProvider) encoderFor(chunks []sparse.DocumentChunk) sparse.SparseEncoder {
 	p.chunks = chunks
 	p.encoder = &fakeSparseEncoder{}
-	return p.encoder, nil
+	return p.encoder
 }
 
 // sparseRecordingStore captures the last upserted points.

@@ -53,6 +53,10 @@ type CorpusSource interface {
 type EncoderProvider interface {
 	// Encoder returns a SparseEncoder bound to the given document chunks.
 	Encoder(ctx context.Context, chunks []DocumentChunk) (SparseEncoder, error)
+
+	// EncoderForCorpus returns a SparseEncoder bound to the persisted corpus
+	// alone — the query-side encoder, symmetric to the document encoder.
+	EncoderForCorpus(ctx context.Context) (SparseEncoder, error)
 }
 
 // tokenPattern matches lowercase alphanumeric tokens.
@@ -204,6 +208,20 @@ func (p *BM25EncoderProvider) Encoder(ctx context.Context, chunks []DocumentChun
 		corpus = append(corpus, ch.Content)
 	}
 
+	return p.buildEncoder(corpus)
+}
+
+// EncoderForCorpus builds statistics over the persisted corpus alone and
+// returns the query-side encoder.
+func (p *BM25EncoderProvider) EncoderForCorpus(ctx context.Context) (SparseEncoder, error) {
+	corpus, err := p.source.CorpusTexts(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read corpus content: %w", err)
+	}
+	return p.buildEncoder(corpus)
+}
+
+func (p *BM25EncoderProvider) buildEncoder(corpus []string) (SparseEncoder, error) {
 	stats, err := BuildCorpusStats(corpus)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build corpus statistics: %w", err)

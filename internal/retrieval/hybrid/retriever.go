@@ -3,6 +3,7 @@ package hybrid
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"arca/internal/retrieval/seam"
 )
@@ -31,12 +32,21 @@ func (h *HybridRetriever) SetRRFConstant(k float64) {
 }
 
 // Retrieve executes parallel/composite retrieval across sub-retrievers and fuses results via RRF.
+// The hybrid retriever is a pure composition layer: no scoring logic beyond RRF, no tokenizer,
+// no query preprocessing — dense and sparse streams are orchestrated as-is.
 func (h *HybridRetriever) Retrieve(ctx context.Context, query seam.RetrievalQuery) ([]seam.SearchResult, error) {
+	start := time.Now()
+
 	if err := query.Validate(); err != nil {
 		return nil, fmt.Errorf("invalid retrieval query: %w", err)
 	}
-
 	query.Normalize()
+
+	stats := query.Stats
+	if stats != nil {
+		stats.TopKRequested = query.TopK
+		stats.MinScore = query.MinScore
+	}
 
 	var streams [][]seam.SearchResult
 
@@ -48,6 +58,9 @@ func (h *HybridRetriever) Retrieve(ctx context.Context, query seam.RetrievalQuer
 		if err == nil && len(denseResults) > 0 {
 			streams = append(streams, denseResults)
 		}
+		if stats != nil {
+			stats.DenseCandidates = len(denseResults)
+		}
 	}
 
 	// Execute Sparse search
@@ -58,17 +71,30 @@ func (h *HybridRetriever) Retrieve(ctx context.Context, query seam.RetrievalQuer
 		if err == nil && len(sparseResults) > 0 {
 			streams = append(streams, sparseResults)
 		}
+		if stats != nil {
+			stats.SparseCandidates = len(sparseResults)
+		}
 	}
 
 	if len(streams) == 0 {
+		if stats != nil {
+			stats.DurationMs = time.Since(start).Milliseconds()
+		}
 		return []seam.SearchResult{}, nil
 	}
 
-	// Fuse streams via Reciprocal Rank Fusion
+	// Fuse streams via Reciprocal Rank Fusion (deterministic: score desc,
+	// ChunkID asc on ties via the shared sort).
 	fused := ReciprocalRankFusion(streams, h.rrfKConst)
 
 	if len(fused) > query.TopK {
 		fused = fused[:query.TopK]
+	}
+
+	if stats != nil {
+		stats.FusedCandidates = len(fused)
+		stats.TopKReturned = len(fused)
+		stats.DurationMs = time.Since(start).Milliseconds()
 	}
 
 	return fused, nil

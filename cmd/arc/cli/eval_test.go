@@ -141,11 +141,21 @@ func TestAppRunEval(t *testing.T) {
 		}
 	})
 
-	t.Run("rejects unsupported modes before running", func(t *testing.T) {
+	t.Run("runs sparse and hybrid modes against the same gold set", func(t *testing.T) {
 		app, goldsetPath := evalFixture(t)
-		_, err := app.RunEval(ctx, EvalOptions{GoldSetPath: goldsetPath, Mode: retrievalseam.RetrievalHybrid, TopK: 5})
-		if err == nil || !strings.Contains(err.Error(), "not implemented") {
-			t.Fatalf("expected unsupported mode error, got %v", err)
+
+		for _, mode := range []retrievalseam.RetrievalMode{retrievalseam.RetrievalSparse, retrievalseam.RetrievalHybrid} {
+			out, err := app.RunEval(ctx, EvalOptions{
+				GoldSetPath: goldsetPath,
+				Mode:        mode,
+				TopK:        5,
+			})
+			if err != nil {
+				t.Fatalf("mode %s failed: %v", mode, err)
+			}
+			if !strings.Contains(out, "AGGREGATE") {
+				t.Errorf("expected aggregate output for mode %s, got:\n%s", mode, out)
+			}
 		}
 	})
 }

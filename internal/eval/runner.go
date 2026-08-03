@@ -84,6 +84,7 @@ func (r *Runner) Run(ctx context.Context, gs *GoldSet) (*Report, error) {
 			TopK:      r.opts.TopK,
 			Mode:      r.opts.Mode,
 			MinScore:  r.opts.MinScore,
+			Stats:     &retrievalseam.RetrievalStats{},
 		}
 		results, err := r.retriever.Retrieve(ctx, query)
 		if err != nil {
@@ -104,6 +105,7 @@ func (r *Runner) Run(ctx context.Context, gs *GoldSet) (*Report, error) {
 			RetrievedScores:    scores,
 			ExpectedChunkIDs:   q.ExpectedChunkIDs,
 			ExpectedNoEvidence: q.ExpectedNoEvidence,
+			Stats:              query.Stats,
 		}
 
 		if q.ExpectedNoEvidence {

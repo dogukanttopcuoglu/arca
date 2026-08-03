@@ -2,6 +2,8 @@ package eval
 
 import (
 	"encoding/json"
+
+	retrievalseam "arca/internal/retrieval/seam"
 	"time"
 )
 
@@ -50,16 +52,17 @@ type Metrics struct {
 
 // QueryResult records one query's retrieved set and per-query metrics.
 type QueryResult struct {
-	ID                 string    `json:"id"`
-	Intent             string    `json:"intent"`
-	RetrievedChunkIDs  []string  `json:"retrieved_chunk_ids"`
-	RetrievedScores    []float32 `json:"retrieved_scores"`
-	ExpectedChunkIDs   []string  `json:"expected_chunk_ids"`
-	ExpectedNoEvidence bool      `json:"expected_no_evidence"`
-	RecallAtK          float64   `json:"recall_at_k,omitempty"`
-	PrecisionAtK       float64   `json:"precision_at_k,omitempty"`
-	MRR                float64   `json:"mrr,omitempty"`
-	NDCGAtK            float64   `json:"ndcg_at_k,omitempty"`
+	ID                 string                        `json:"id"`
+	Intent             string                        `json:"intent"`
+	RetrievedChunkIDs  []string                      `json:"retrieved_chunk_ids"`
+	RetrievedScores    []float32                     `json:"retrieved_scores"`
+	ExpectedChunkIDs   []string                      `json:"expected_chunk_ids"`
+	ExpectedNoEvidence bool                          `json:"expected_no_evidence"`
+	RecallAtK          float64                       `json:"recall_at_k,omitempty"`
+	PrecisionAtK       float64                       `json:"precision_at_k,omitempty"`
+	MRR                float64                       `json:"mrr,omitempty"`
+	NDCGAtK            float64                       `json:"ndcg_at_k,omitempty"`
+	Stats              *retrievalseam.RetrievalStats `json:"stats,omitempty"`
 }
 
 // JSON renders the report as indented JSON.

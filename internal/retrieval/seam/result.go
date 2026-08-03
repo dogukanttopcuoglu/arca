@@ -26,9 +26,14 @@ func (r SearchResult) Validate() error {
 	return nil
 }
 
-// SortResultsByScore sorts SearchResults in descending order by relevance score.
+// SortResultsByScore sorts SearchResults in descending order by relevance
+// score, breaking ties deterministically by ChunkID so retrieval ordering is
+// reproducible across runs.
 func SortResultsByScore(results []SearchResult) {
 	sort.Slice(results, func(i, j int) bool {
-		return results[i].Score > results[j].Score
+		if results[i].Score != results[j].Score {
+			return results[i].Score > results[j].Score
+		}
+		return results[i].ChunkID < results[j].ChunkID
 	})
 }

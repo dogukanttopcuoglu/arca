@@ -1,6 +1,6 @@
 {
-  "git_commit": "4626be4bf6687c133935926074529b9dcdf3fd20",
-  "timestamp": "2026-08-03T21:13:08.2233935Z",
+  "git_commit": "568a404aa211df42e34e24db2cdc65fa58dd1c1f",
+  "timestamp": "2026-08-03T22:08:11.1163092Z",
   "corpus": {
     "corpus_fingerprint": "51b1909e1a2639b3114eb4e9afaeeafa58938cbdb0d195392dc65d06ac0b483d",
     "document_id": "rick-rubin",
@@ -14,7 +14,7 @@
     "min_score": 0,
     "collection": "arca_chunks"
   },
-  "duration_ms": 10408,
+  "duration_ms": 10788,
   "metrics": {
     "recall_at_k": 0.7403100775193799,
     "precision_at_k": 0.28837209302325567,
@@ -49,7 +49,14 @@
       "recall_at_k": 1,
       "precision_at_k": 0.4,
       "mrr": 1,
-      "ndcg_at_k": 1
+      "ndcg_at_k": 1,
+      "stats": {
+        "duration_ms": 0,
+        "candidates": 0,
+        "top_k_requested": 0,
+        "top_k_returned": 0,
+        "min_score": 0
+      }
     },
     {
       "id": "rr-002",
@@ -76,7 +83,14 @@
       "recall_at_k": 1,
       "precision_at_k": 0.4,
       "mrr": 1,
-      "ndcg_at_k": 1
+      "ndcg_at_k": 1,
+      "stats": {
+        "duration_ms": 0,
+        "candidates": 0,
+        "top_k_requested": 0,
+        "top_k_returned": 0,
+        "min_score": 0
+      }
     },
     {
       "id": "rr-003",
@@ -103,7 +117,14 @@
       "recall_at_k": 1,
       "precision_at_k": 0.4,
       "mrr": 1,
-      "ndcg_at_k": 1
+      "ndcg_at_k": 1,
+      "stats": {
+        "duration_ms": 0,
+        "candidates": 0,
+        "top_k_requested": 0,
+        "top_k_returned": 0,
+        "min_score": 0
+      }
     },
     {
       "id": "rr-004",
@@ -130,7 +151,14 @@
       "recall_at_k": 1,
       "precision_at_k": 0.4,
       "mrr": 1,
-      "ndcg_at_k": 0.9197207891481877
+      "ndcg_at_k": 0.9197207891481877,
+      "stats": {
+        "duration_ms": 0,
+        "candidates": 0,
+        "top_k_requested": 0,
+        "top_k_returned": 0,
+        "min_score": 0
+      }
     },
     {
       "id": "rr-005",
@@ -158,7 +186,14 @@
       "recall_at_k": 0.6666666666666666,
       "precision_at_k": 0.4,
       "mrr": 0.5,
-      "ndcg_at_k": 0.5307212739772434
+      "ndcg_at_k": 0.5307212739772434,
+      "stats": {
+        "duration_ms": 0,
+        "candidates": 0,
+        "top_k_requested": 0,
+        "top_k_returned": 0,
+        "min_score": 0
+      }
     },
     {
       "id": "rr-006",
@@ -185,7 +220,14 @@
       "recall_at_k": 1,
       "precision_at_k": 0.4,
       "mrr": 1,
-      "ndcg_at_k": 1
+      "ndcg_at_k": 1,
+      "stats": {
+        "duration_ms": 0,
+        "candidates": 0,
+        "top_k_requested": 0,
+        "top_k_returned": 0,
+        "min_score": 0
+      }
     },
     {
       "id": "rr-007",
@@ -212,7 +254,14 @@
       "recall_at_k": 1,
       "precision_at_k": 0.4,
       "mrr": 0.5,
-      "ndcg_at_k": 0.6934264036172708
+      "ndcg_at_k": 0.6934264036172708,
+      "stats": {
+        "duration_ms": 0,
+        "candidates": 0,
+        "top_k_requested": 0,
+        "top_k_returned": 0,
+        "min_score": 0
+      }
     },
     {
       "id": "rr-008",
@@ -239,7 +288,14 @@
       "recall_at_k": 1,
       "precision_at_k": 0.4,
       "mrr": 1,
-      "ndcg_at_k": 1
+      "ndcg_at_k": 1,
+      "stats": {
+        "duration_ms": 0,
+        "candidates": 0,
+        "top_k_requested": 0,
+        "top_k_returned": 0,
+        "min_score": 0
+      }
     },
     {
       "id": "rr-009",
@@ -265,7 +321,14 @@
       "recall_at_k": 1,
       "precision_at_k": 0.2,
       "mrr": 0.3333333333333333,
-      "ndcg_at_k": 0.5
+      "ndcg_at_k": 0.5,
+      "stats": {
+        "duration_ms": 0,
+        "candidates": 0,
+        "top_k_requested": 0,
+        "top_k_returned": 0,
+        "min_score": 0
+      }
     },
     {
       "id": "rr-010",
@@ -293,7 +356,14 @@
       "recall_at_k": 0.6666666666666666,
       "precision_at_k": 0.4,
       "mrr": 1,
-      "ndcg_at_k": 0.7653606369886218
+      "ndcg_at_k": 0.7653606369886218,
+      "stats": {
+        "duration_ms": 0,
+        "candidates": 0,
+        "top_k_requested": 0,
+        "top_k_returned": 0,
+        "min_score": 0
+      }
     },
     {
       "id": "rr-011",
@@ -321,7 +391,14 @@
       "recall_at_k": 0.3333333333333333,
       "precision_at_k": 0.2,
       "mrr": 1,
-      "ndcg_at_k": 0.46927872602275655
+      "ndcg_at_k": 0.46927872602275655,
+      "stats": {
+        "duration_ms": 0,
+        "candidates": 0,
+        "top_k_requested": 0,
+        "top_k_returned": 0,
+        "min_score": 0
+      }
     },
     {
       "id": "rr-012",
@@ -343,7 +420,14 @@
       "expected_chunk_ids": [
         "rick-rubin/the-source-of-creativity/001"
       ],
-      "expected_no_evidence": false
+      "expected_no_evidence": false,
+      "stats": {
+        "duration_ms": 0,
+        "candidates": 0,
+        "top_k_requested": 0,
+        "top_k_returned": 0,
+        "min_score": 0
+      }
     },
     {
       "id": "rr-013",
@@ -369,7 +453,14 @@
       "recall_at_k": 1,
       "precision_at_k": 0.2,
       "mrr": 1,
-      "ndcg_at_k": 1
+      "ndcg_at_k": 1,
+      "stats": {
+        "duration_ms": 0,
+        "candidates": 0,
+        "top_k_requested": 0,
+        "top_k_returned": 0,
+        "min_score": 0
+      }
     },
     {
       "id": "rr-014",
@@ -397,7 +488,14 @@
       "recall_at_k": 1,
       "precision_at_k": 0.6,
       "mrr": 1,
-      "ndcg_at_k": 0.9674679834891693
+      "ndcg_at_k": 0.9674679834891693,
+      "stats": {
+        "duration_ms": 0,
+        "candidates": 0,
+        "top_k_requested": 0,
+        "top_k_returned": 0,
+        "min_score": 0
+      }
     },
     {
       "id": "rr-015",
@@ -423,7 +521,14 @@
       "recall_at_k": 1,
       "precision_at_k": 0.2,
       "mrr": 0.5,
-      "ndcg_at_k": 0.6309297535714574
+      "ndcg_at_k": 0.6309297535714574,
+      "stats": {
+        "duration_ms": 0,
+        "candidates": 0,
+        "top_k_requested": 0,
+        "top_k_returned": 0,
+        "min_score": 0
+      }
     },
     {
       "id": "rr-016",
@@ -451,7 +556,14 @@
       "recall_at_k": 1,
       "precision_at_k": 0.6,
       "mrr": 0.5,
-      "ndcg_at_k": 0.7328286204777911
+      "ndcg_at_k": 0.7328286204777911,
+      "stats": {
+        "duration_ms": 0,
+        "candidates": 0,
+        "top_k_requested": 0,
+        "top_k_returned": 0,
+        "min_score": 0
+      }
     },
     {
       "id": "rr-017",
@@ -477,7 +589,14 @@
       "recall_at_k": 1,
       "precision_at_k": 0.2,
       "mrr": 1,
-      "ndcg_at_k": 1
+      "ndcg_at_k": 1,
+      "stats": {
+        "duration_ms": 0,
+        "candidates": 0,
+        "top_k_requested": 0,
+        "top_k_returned": 0,
+        "min_score": 0
+      }
     },
     {
       "id": "rr-018",
@@ -504,7 +623,14 @@
       "recall_at_k": 0.5,
       "precision_at_k": 0.2,
       "mrr": 0.25,
-      "ndcg_at_k": 0.2640681225725909
+      "ndcg_at_k": 0.2640681225725909,
+      "stats": {
+        "duration_ms": 0,
+        "candidates": 0,
+        "top_k_requested": 0,
+        "top_k_returned": 0,
+        "min_score": 0
+      }
     },
     {
       "id": "rr-019",
@@ -531,7 +657,14 @@
       "recall_at_k": 0.5,
       "precision_at_k": 0.2,
       "mrr": 0.3333333333333333,
-      "ndcg_at_k": 0.30657359638272924
+      "ndcg_at_k": 0.30657359638272924,
+      "stats": {
+        "duration_ms": 0,
+        "candidates": 0,
+        "top_k_requested": 0,
+        "top_k_returned": 0,
+        "min_score": 0
+      }
     },
     {
       "id": "rr-020",
@@ -559,7 +692,14 @@
       "recall_at_k": 0.6666666666666666,
       "precision_at_k": 0.4,
       "mrr": 1,
-      "ndcg_at_k": 0.7653606369886218
+      "ndcg_at_k": 0.7653606369886218,
+      "stats": {
+        "duration_ms": 0,
+        "candidates": 0,
+        "top_k_requested": 0,
+        "top_k_returned": 0,
+        "min_score": 0
+      }
     },
     {
       "id": "rr-021",
@@ -588,7 +728,14 @@
       "recall_at_k": 1,
       "precision_at_k": 0.8,
       "mrr": 1,
-      "ndcg_at_k": 0.9558295932317544
+      "ndcg_at_k": 0.9558295932317544,
+      "stats": {
+        "duration_ms": 0,
+        "candidates": 0,
+        "top_k_requested": 0,
+        "top_k_returned": 0,
+        "min_score": 0
+      }
     },
     {
       "id": "rr-022",
@@ -615,7 +762,14 @@
       "recall_at_k": 0.5,
       "precision_at_k": 0.2,
       "mrr": 0.5,
-      "ndcg_at_k": 0.38685280723454163
+      "ndcg_at_k": 0.38685280723454163,
+      "stats": {
+        "duration_ms": 0,
+        "candidates": 0,
+        "top_k_requested": 0,
+        "top_k_returned": 0,
+        "min_score": 0
+      }
     },
     {
       "id": "rr-023",
@@ -643,7 +797,14 @@
       "recall_at_k": 0.6666666666666666,
       "precision_at_k": 0.4,
       "mrr": 0.3333333333333333,
-      "ndcg_at_k": 0.416181155548731
+      "ndcg_at_k": 0.416181155548731,
+      "stats": {
+        "duration_ms": 0,
+        "candidates": 0,
+        "top_k_requested": 0,
+        "top_k_returned": 0,
+        "min_score": 0
+      }
     },
     {
       "id": "rr-024",
@@ -670,7 +831,14 @@
       "recall_at_k": 0.5,
       "precision_at_k": 0.2,
       "mrr": 1,
-      "ndcg_at_k": 0.6131471927654585
+      "ndcg_at_k": 0.6131471927654585,
+      "stats": {
+        "duration_ms": 0,
+        "candidates": 0,
+        "top_k_requested": 0,
+        "top_k_returned": 0,
+        "min_score": 0
+      }
     },
     {
       "id": "rr-025",
@@ -694,7 +862,14 @@
         "rick-rubin/how-to-choose/001",
         "rick-rubin/how-to-choose/002"
       ],
-      "expected_no_evidence": false
+      "expected_no_evidence": false,
+      "stats": {
+        "duration_ms": 0,
+        "candidates": 0,
+        "top_k_requested": 0,
+        "top_k_returned": 0,
+        "min_score": 0
+      }
     },
     {
       "id": "rr-026",
@@ -720,7 +895,14 @@
       "recall_at_k": 1,
       "precision_at_k": 0.2,
       "mrr": 1,
-      "ndcg_at_k": 1
+      "ndcg_at_k": 1,
+      "stats": {
+        "duration_ms": 0,
+        "candidates": 0,
+        "top_k_requested": 0,
+        "top_k_returned": 0,
+        "min_score": 0
+      }
     },
     {
       "id": "rr-027",
@@ -748,7 +930,14 @@
       "recall_at_k": 0.6666666666666666,
       "precision_at_k": 0.4,
       "mrr": 1,
-      "ndcg_at_k": 0.7039180890341348
+      "ndcg_at_k": 0.7039180890341348,
+      "stats": {
+        "duration_ms": 0,
+        "candidates": 0,
+        "top_k_requested": 0,
+        "top_k_returned": 0,
+        "min_score": 0
+      }
     },
     {
       "id": "rr-028",
@@ -771,7 +960,14 @@
         "rick-rubin/everyone-is-a-creator/001",
         "rick-rubin/beginner-s-mind/001"
       ],
-      "expected_no_evidence": false
+      "expected_no_evidence": false,
+      "stats": {
+        "duration_ms": 0,
+        "candidates": 0,
+        "top_k_requested": 0,
+        "top_k_returned": 0,
+        "min_score": 0
+      }
     },
     {
       "id": "rr-029",
@@ -797,7 +993,14 @@
       "recall_at_k": 1,
       "precision_at_k": 0.2,
       "mrr": 1,
-      "ndcg_at_k": 1
+      "ndcg_at_k": 1,
+      "stats": {
+        "duration_ms": 0,
+        "candidates": 0,
+        "top_k_requested": 0,
+        "top_k_returned": 0,
+        "min_score": 0
+      }
     },
     {
       "id": "rr-030",
@@ -824,7 +1027,14 @@
       "recall_at_k": 0.5,
       "precision_at_k": 0.2,
       "mrr": 0.5,
-      "ndcg_at_k": 0.38685280723454163
+      "ndcg_at_k": 0.38685280723454163,
+      "stats": {
+        "duration_ms": 0,
+        "candidates": 0,
+        "top_k_requested": 0,
+        "top_k_returned": 0,
+        "min_score": 0
+      }
     },
     {
       "id": "rr-031",
@@ -851,7 +1061,14 @@
       "recall_at_k": 0.5,
       "precision_at_k": 0.2,
       "mrr": 0.2,
-      "ndcg_at_k": 0.23719771276929624
+      "ndcg_at_k": 0.23719771276929624,
+      "stats": {
+        "duration_ms": 0,
+        "candidates": 0,
+        "top_k_requested": 0,
+        "top_k_returned": 0,
+        "min_score": 0
+      }
     },
     {
       "id": "rr-032",
@@ -879,7 +1096,14 @@
       "recall_at_k": 0.6666666666666666,
       "precision_at_k": 0.4,
       "mrr": 0.3333333333333333,
-      "ndcg_at_k": 0.416181155548731
+      "ndcg_at_k": 0.416181155548731,
+      "stats": {
+        "duration_ms": 0,
+        "candidates": 0,
+        "top_k_requested": 0,
+        "top_k_returned": 0,
+        "min_score": 0
+      }
     },
     {
       "id": "rr-033",
@@ -906,7 +1130,14 @@
       "recall_at_k": 1,
       "precision_at_k": 0.4,
       "mrr": 1,
-      "ndcg_at_k": 0.8772153153380494
+      "ndcg_at_k": 0.8772153153380494,
+      "stats": {
+        "duration_ms": 0,
+        "candidates": 0,
+        "top_k_requested": 0,
+        "top_k_returned": 0,
+        "min_score": 0
+      }
     },
     {
       "id": "rr-034",
@@ -933,7 +1164,14 @@
       "recall_at_k": 0.5,
       "precision_at_k": 0.2,
       "mrr": 0.3333333333333333,
-      "ndcg_at_k": 0.30657359638272924
+      "ndcg_at_k": 0.30657359638272924,
+      "stats": {
+        "duration_ms": 0,
+        "candidates": 0,
+        "top_k_requested": 0,
+        "top_k_returned": 0,
+        "min_score": 0
+      }
     },
     {
       "id": "rr-035",
@@ -960,7 +1198,14 @@
       "recall_at_k": 1,
       "precision_at_k": 0.4,
       "mrr": 0.5,
-      "ndcg_at_k": 0.6240505200038378
+      "ndcg_at_k": 0.6240505200038378,
+      "stats": {
+        "duration_ms": 0,
+        "candidates": 0,
+        "top_k_requested": 0,
+        "top_k_returned": 0,
+        "min_score": 0
+      }
     },
     {
       "id": "rr-036",
@@ -986,7 +1231,14 @@
       "recall_at_k": 1,
       "precision_at_k": 0.2,
       "mrr": 1,
-      "ndcg_at_k": 1
+      "ndcg_at_k": 1,
+      "stats": {
+        "duration_ms": 0,
+        "candidates": 0,
+        "top_k_requested": 0,
+        "top_k_returned": 0,
+        "min_score": 0
+      }
     },
     {
       "id": "rr-037",
@@ -1012,7 +1264,14 @@
       "recall_at_k": 1,
       "precision_at_k": 0.2,
       "mrr": 1,
-      "ndcg_at_k": 1
+      "ndcg_at_k": 1,
+      "stats": {
+        "duration_ms": 0,
+        "candidates": 0,
+        "top_k_requested": 0,
+        "top_k_returned": 0,
+        "min_score": 0
+      }
     },
     {
       "id": "rr-038",
@@ -1035,7 +1294,14 @@
         "rick-rubin/spontaneity-special-moments/001",
         "rick-rubin/spontaneity-special-moments/002"
       ],
-      "expected_no_evidence": false
+      "expected_no_evidence": false,
+      "stats": {
+        "duration_ms": 0,
+        "candidates": 0,
+        "top_k_requested": 0,
+        "top_k_returned": 0,
+        "min_score": 0
+      }
     },
     {
       "id": "rr-039",
@@ -1062,7 +1328,14 @@
       "recall_at_k": 1,
       "precision_at_k": 0.4,
       "mrr": 1,
-      "ndcg_at_k": 1
+      "ndcg_at_k": 1,
+      "stats": {
+        "duration_ms": 0,
+        "candidates": 0,
+        "top_k_requested": 0,
+        "top_k_returned": 0,
+        "min_score": 0
+      }
     },
     {
       "id": "rr-040",
@@ -1089,7 +1362,14 @@
       "recall_at_k": 1,
       "precision_at_k": 0.4,
       "mrr": 1,
-      "ndcg_at_k": 1
+      "ndcg_at_k": 1,
+      "stats": {
+        "duration_ms": 0,
+        "candidates": 0,
+        "top_k_requested": 0,
+        "top_k_returned": 0,
+        "min_score": 0
+      }
     },
     {
       "id": "rr-041",
@@ -1115,7 +1395,14 @@
       "recall_at_k": 1,
       "precision_at_k": 0.2,
       "mrr": 0.5,
-      "ndcg_at_k": 0.6309297535714574
+      "ndcg_at_k": 0.6309297535714574,
+      "stats": {
+        "duration_ms": 0,
+        "candidates": 0,
+        "top_k_requested": 0,
+        "top_k_returned": 0,
+        "min_score": 0
+      }
     },
     {
       "id": "rr-042",
@@ -1137,7 +1424,14 @@
       "expected_chunk_ids": [
         "rick-rubin/cooperation/003"
       ],
-      "expected_no_evidence": false
+      "expected_no_evidence": false,
+      "stats": {
+        "duration_ms": 0,
+        "candidates": 0,
+        "top_k_requested": 0,
+        "top_k_returned": 0,
+        "min_score": 0
+      }
     },
     {
       "id": "rr-043",
@@ -1163,7 +1457,14 @@
       "recall_at_k": 1,
       "precision_at_k": 0.2,
       "mrr": 0.5,
-      "ndcg_at_k": 0.6309297535714574
+      "ndcg_at_k": 0.6309297535714574,
+      "stats": {
+        "duration_ms": 0,
+        "candidates": 0,
+        "top_k_requested": 0,
+        "top_k_returned": 0,
+        "min_score": 0
+      }
     },
     {
       "id": "rr-044",
@@ -1183,7 +1484,14 @@
         0.4685564
       ],
       "expected_chunk_ids": [],
-      "expected_no_evidence": true
+      "expected_no_evidence": true,
+      "stats": {
+        "duration_ms": 0,
+        "candidates": 0,
+        "top_k_requested": 0,
+        "top_k_returned": 0,
+        "min_score": 0
+      }
     },
     {
       "id": "rr-045",
@@ -1203,7 +1511,14 @@
         0.586357
       ],
       "expected_chunk_ids": [],
-      "expected_no_evidence": true
+      "expected_no_evidence": true,
+      "stats": {
+        "duration_ms": 0,
+        "candidates": 0,
+        "top_k_requested": 0,
+        "top_k_returned": 0,
+        "min_score": 0
+      }
     },
     {
       "id": "rr-046",
@@ -1223,7 +1538,14 @@
         0.57323253
       ],
       "expected_chunk_ids": [],
-      "expected_no_evidence": true
+      "expected_no_evidence": true,
+      "stats": {
+        "duration_ms": 0,
+        "candidates": 0,
+        "top_k_requested": 0,
+        "top_k_returned": 0,
+        "min_score": 0
+      }
     },
     {
       "id": "rr-047",
@@ -1243,7 +1565,14 @@
         0.53888685
       ],
       "expected_chunk_ids": [],
-      "expected_no_evidence": true
+      "expected_no_evidence": true,
+      "stats": {
+        "duration_ms": 0,
+        "candidates": 0,
+        "top_k_requested": 0,
+        "top_k_returned": 0,
+        "min_score": 0
+      }
     },
     {
       "id": "rr-048",
@@ -1263,7 +1592,14 @@
         0.62492937
       ],
       "expected_chunk_ids": [],
-      "expected_no_evidence": true
+      "expected_no_evidence": true,
+      "stats": {
+        "duration_ms": 0,
+        "candidates": 0,
+        "top_k_requested": 0,
+        "top_k_returned": 0,
+        "min_score": 0
+      }
     },
     {
       "id": "rr-049",
@@ -1283,7 +1619,14 @@
         0.4313666
       ],
       "expected_chunk_ids": [],
-      "expected_no_evidence": true
+      "expected_no_evidence": true,
+      "stats": {
+        "duration_ms": 0,
+        "candidates": 0,
+        "top_k_requested": 0,
+        "top_k_returned": 0,
+        "min_score": 0
+      }
     },
     {
       "id": "rr-050",
@@ -1303,7 +1646,14 @@
         0.59046996
       ],
       "expected_chunk_ids": [],
-      "expected_no_evidence": true
+      "expected_no_evidence": true,
+      "stats": {
+        "duration_ms": 0,
+        "candidates": 0,
+        "top_k_requested": 0,
+        "top_k_returned": 0,
+        "min_score": 0
+      }
     },
     {
       "id": "rr-051",
@@ -1323,7 +1673,14 @@
         0.56529546
       ],
       "expected_chunk_ids": [],
-      "expected_no_evidence": true
+      "expected_no_evidence": true,
+      "stats": {
+        "duration_ms": 0,
+        "candidates": 0,
+        "top_k_requested": 0,
+        "top_k_returned": 0,
+        "min_score": 0
+      }
     }
   ]
 }
