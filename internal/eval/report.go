@@ -53,6 +53,7 @@ type Metrics struct {
 
 // QueryResult records one query's retrieved set and per-query metrics.
 type QueryResult struct {
+	Signals            *AbstentionSignals            `json:"abstention_signals,omitempty"`
 	ID                 string                        `json:"id"`
 	Intent             string                        `json:"intent"`
 	RetrievedChunkIDs  []string                      `json:"retrieved_chunk_ids"`

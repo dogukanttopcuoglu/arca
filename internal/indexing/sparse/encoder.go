@@ -68,6 +68,12 @@ func tokenize(text string) []string {
 	return tokenPattern.FindAllString(strings.ToLower(text), -1)
 }
 
+// Tokenize exposes the canonical tokenizer for downstream signal
+// computation (e.g. abstention lexical coverage).
+func Tokenize(text string) []string {
+	return tokenize(text)
+}
+
 // CorpusStats holds the corpus-wide statistics required for BM25: document
 // frequency per term, document count, average document length, and the
 // deterministic term-id vocabulary (sorted terms).

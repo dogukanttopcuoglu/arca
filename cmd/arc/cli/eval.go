@@ -95,6 +95,9 @@ func (a *App) RunEval(ctx context.Context, opts EvalOptions) (string, error) {
 			Collection:        a.runtime.cfg.QdrantCollection,
 			GitCommit:         gitHead(),
 			Decompose:         decomposeFunc(opts.Decompose),
+			CorpusTexts: func() ([]string, error) {
+				return corpusSource{store: a.runtime.vectorStore}.CorpusTexts(context.Background())
+			},
 		},
 	)
 

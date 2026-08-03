@@ -3,8 +3,10 @@ package eval
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
+	"arca/internal/indexing/sparse"
 	"arca/internal/retrieval/hybrid"
 	retrievalseam "arca/internal/retrieval/seam"
 )
@@ -25,6 +27,12 @@ type Options struct {
 	// sub-queries before retrieval; sub-results are merged via the shared
 	// MergeRankedLists seam — the same path the AnswerEngine uses.
 	Decompose func(query string) []string
+	// CorpusTexts, when non-nil, provides the indexed corpus content so the
+	// runner can compute lexical abstention signals (distinctive-term DF).
+	CorpusTexts func() ([]string, error)
+	// DistinctiveMaxDF is the maximum document frequency for a query term to
+	// count as distinctive in the lexical coverage signal (default 3).
+	DistinctiveMaxDF int
 }
 
 // Runner executes a gold set against a Retriever and produces a Report.
@@ -83,6 +91,23 @@ func (r *Runner) Run(ctx context.Context, gs *GoldSet) (*Report, error) {
 	relRecallSum, relPrecisionSum, relMRRSum, relNDCGSum := 0.0, 0.0, 0.0, 0.0
 	relCount := 0
 
+	// Corpus term frequencies for the lexical coverage signal.
+	var corpusDF *sparse.CorpusStats
+	if r.opts.CorpusTexts != nil {
+		texts, err := r.opts.CorpusTexts()
+		if err != nil {
+			return nil, fmt.Errorf("failed to read corpus texts: %w", err)
+		}
+		corpusDF, err = sparse.BuildCorpusStats(texts)
+		if err != nil {
+			return nil, fmt.Errorf("failed to build corpus statistics: %w", err)
+		}
+	}
+	maxDF := r.opts.DistinctiveMaxDF
+	if maxDF <= 0 {
+		maxDF = 3
+	}
+
 	for _, q := range gs.Queries {
 		query := retrievalseam.RetrievalQuery{
 			QueryText: q.Query,
@@ -123,9 +148,12 @@ func (r *Runner) Run(ctx context.Context, gs *GoldSet) (*Report, error) {
 
 		retrieved := make([]string, len(results))
 		scores := make([]float32, len(results))
+		var content strings.Builder
 		for i, res := range results {
 			retrieved[i] = res.ChunkID
 			scores[i] = res.Score
+			content.WriteString(res.ContentMarkdown)
+			content.WriteString(" ")
 		}
 
 		qres := QueryResult{
@@ -136,6 +164,9 @@ func (r *Runner) Run(ctx context.Context, gs *GoldSet) (*Report, error) {
 			ExpectedChunkIDs:   q.ExpectedChunkIDs,
 			ExpectedNoEvidence: q.ExpectedNoEvidence,
 			Stats:              query.Stats,
+		}
+		if corpusDF != nil {
+			qres.Signals = abstentionSignals(q.Query, content.String(), scores, corpusDF, maxDF)
 		}
 
 		if q.ExpectedNoEvidence {
