@@ -102,6 +102,22 @@ func TestDenseRetriever(t *testing.T) {
 			t.Errorf("expected chk-2, got %s", results[0].ChunkID)
 		}
 	})
+
+	t.Run("populates retrieval statistics when requested", func(t *testing.T) {
+		stats := &seam.RetrievalStats{}
+		_, err := denseRetriever.Retrieve(ctx, seam.RetrievalQuery{
+			QueryText: "Clean architecture principles",
+			TopK:      5,
+			Mode:      seam.RetrievalDense,
+			Stats:     stats,
+		})
+		if err != nil {
+			t.Fatalf("unexpected error during retrieval: %v", err)
+		}
+		if stats.Candidates != 2 || stats.TopKRequested != 5 || stats.TopKReturned != 2 || stats.MinScore != 0 {
+			t.Errorf("unexpected stats: %+v", stats)
+		}
+	})
 }
 
 func TestDenseRetrieverContentFromVectorPoints(t *testing.T) {

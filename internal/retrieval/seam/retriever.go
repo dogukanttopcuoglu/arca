@@ -15,11 +15,11 @@ type Retriever interface {
 // RetrievalQuery.Stats; nil leaves retrieval behavior unchanged.
 type RetrievalStats struct {
 	DurationMs       int64   `json:"duration_ms"`
-	Candidates       int     `json:"candidates"`         // results received from the store before final truncation
-	TopKRequested    int     `json:"top_k_requested"`    // TopK after normalization
-	TopKReturned     int     `json:"top_k_returned"`     // final result count
-	MinScore         float32 `json:"min_score"`          // threshold applied
-	DenseCandidates  int     `json:"dense_candidates,omitempty"`   // hybrid only
-	SparseCandidates int     `json:"sparse_candidates,omitempty"`  // hybrid only
-	FusedCandidates  int     `json:"fused_candidates,omitempty"`   // hybrid only
+	Candidates       int     `json:"candidates"`                  // results received from the store before final truncation
+	TopKRequested    int     `json:"top_k_requested"`             // TopK after normalization
+	TopKReturned     int     `json:"top_k_returned"`              // final result count
+	MinScore         float32 `json:"min_score"`                   // threshold applied
+	DenseCandidates  int     `json:"dense_candidates,omitempty"`  // hybrid only
+	SparseCandidates int     `json:"sparse_candidates,omitempty"` // hybrid only
+	FusedCandidates  int     `json:"fused_candidates,omitempty"`  // hybrid only
 }

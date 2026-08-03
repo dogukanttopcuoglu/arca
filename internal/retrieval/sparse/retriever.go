@@ -24,7 +24,7 @@ type SparseRetriever struct {
 
 // NewSparseRetriever constructs a SparseRetriever. The encoder must be bound
 // to the same corpus statistics used at indexing time so query term ids
-// align with stored sparse vectors.
+// assumption, per ADR-0028) so query term ids align with stored sparse vectors.
 func NewSparseRetriever(enc sparse.SparseEncoder, s store.VectorStore, c store.ContentStore) *SparseRetriever {
 	return &SparseRetriever{
 		encoder:      enc,

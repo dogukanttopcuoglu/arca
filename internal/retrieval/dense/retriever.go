@@ -3,6 +3,7 @@ package dense
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"arca/internal/indexing/provider"
 	"arca/internal/indexing/store"
@@ -27,11 +28,19 @@ func NewDenseRetriever(p provider.EmbeddingProvider, s store.VectorStore, c stor
 
 // Retrieve embeds query text and performs nearest-neighbor vector search via VectorStore.
 func (r *DenseRetriever) Retrieve(ctx context.Context, query seam.RetrievalQuery) ([]seam.SearchResult, error) {
+	start := time.Now()
+
 	if err := query.Validate(); err != nil {
 		return nil, fmt.Errorf("invalid retrieval query: %w", err)
 	}
 
 	query.Normalize()
+
+	stats := query.Stats
+	if stats != nil {
+		stats.TopKRequested = query.TopK
+		stats.MinScore = query.MinScore
+	}
 
 	// 1. Generate query text embedding vector
 	queryVector, err := r.provider.EmbedQuery(ctx, query.QueryText)
@@ -85,6 +94,12 @@ func (r *DenseRetriever) Retrieve(ctx context.Context, query seam.RetrievalQuery
 	}
 
 	seam.SortResultsByScore(searchResults)
+
+	if stats != nil {
+		stats.Candidates = len(searchResults)
+		stats.TopKReturned = len(searchResults)
+		stats.DurationMs = time.Since(start).Milliseconds()
+	}
 
 	return searchResults, nil
 }

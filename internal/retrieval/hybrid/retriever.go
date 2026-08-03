@@ -50,10 +50,13 @@ func (h *HybridRetriever) Retrieve(ctx context.Context, query seam.RetrievalQuer
 
 	var streams [][]seam.SearchResult
 
-	// Execute Dense search
+	// Execute Dense search. Sub-retrievers receive detached stats: they must
+	// never write into the shared aggregate (the hybrid counts stream lengths
+	// itself).
 	if h.denseRetriever != nil {
 		denseQuery := query
 		denseQuery.Mode = seam.RetrievalDense
+		denseQuery.Stats = nil
 		denseResults, err := h.denseRetriever.Retrieve(ctx, denseQuery)
 		if err == nil && len(denseResults) > 0 {
 			streams = append(streams, denseResults)
@@ -67,6 +70,7 @@ func (h *HybridRetriever) Retrieve(ctx context.Context, query seam.RetrievalQuer
 	if h.sparseRetriever != nil {
 		sparseQuery := query
 		sparseQuery.Mode = seam.RetrievalSparse
+		sparseQuery.Stats = nil
 		sparseResults, err := h.sparseRetriever.Retrieve(ctx, sparseQuery)
 		if err == nil && len(sparseResults) > 0 {
 			streams = append(streams, sparseResults)

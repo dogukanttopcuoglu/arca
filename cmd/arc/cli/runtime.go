@@ -192,12 +192,17 @@ type Runtime struct {
 	hybridRetriever retrievalseam.Retriever
 }
 
-// sparseQueryEncoder builds the corpus-bound query encoder once.
+// sparseQueryEncoder builds the corpus-bound query encoder. A failed build is
+// not cached: on a fresh collection the corpus does not exist yet, so the
+// next call after indexing retries.
 func (r *Runtime) sparseQueryEncoder() (sparse.SparseEncoder, error) {
 	r.sparseOnce.Do(func() {
 		provider := sparse.NewBM25EncoderProvider(corpusSource{store: r.vectorStore})
 		r.sparseEncoder, r.sparseErr = provider.EncoderForCorpus(context.Background())
 	})
+	if r.sparseErr != nil {
+		r.sparseOnce = sync.Once{}
+	}
 	return r.sparseEncoder, r.sparseErr
 }
 
