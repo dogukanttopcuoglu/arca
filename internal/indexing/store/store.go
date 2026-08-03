@@ -4,11 +4,15 @@ import (
 	"context"
 
 	"arca/internal/indexing/model"
+	"arca/internal/indexing/sparse"
 )
 
 // VectorSearchQuery encapsulates parameters for nearest-neighbor vector similarity queries.
+// Exactly one of Vector (dense) or Sparse must be set; the store executes whichever
+// representation is present — it has no retrieval-mode logic.
 type VectorSearchQuery struct {
 	Vector   []float32            `json:"vector"`
+	Sparse   *sparse.SparseVector `json:"sparse,omitempty"`
 	TopK     int                  `json:"top_k"`
 	Filter   model.MetadataFilter `json:"filter,omitempty"`
 	MinScore float32              `json:"min_score,omitempty"`

@@ -1,10 +1,13 @@
 package cli
 
 import (
+	"context"
 	"strings"
 	"time"
 
+	indexingmodel "arca/internal/indexing/model"
 	"arca/internal/indexing/provider"
+	"arca/internal/indexing/sparse"
 	"arca/internal/indexing/store"
 	"arca/internal/indexing/worker"
 	llmprovider "arca/internal/llm/provider"
@@ -73,6 +76,10 @@ type Config struct {
 	// Zero disables the threshold (retrieval returns top-k neighbors). With a
 	// threshold, queries whose results all fall below it abstain (no_evidence).
 	RetrievalMinScore float32 `mapstructure:"RETRIEVAL_MIN_SCORE"`
+	// SparseIndex enables sparse vectors: collections are created with a named
+	// sparse field and indexing produces sparse vectors. Explicit opt-in;
+	// existing dense-only collections remain untouched.
+	SparseIndex bool `mapstructure:"SPARSE_INDEX"`
 	// HTTPTimeout is the client timeout for external service calls.
 	HTTPTimeout time.Duration `mapstructure:"HTTP_TIMEOUT"`
 }
@@ -93,6 +100,7 @@ func DefaultConfig() Config {
 		LLMProviderLabel:      "agentrouter",
 		LLMContextBudget:      4000,
 		RetrievalMinScore:     0,
+		SparseIndex:           false,
 		HTTPTimeout:           30 * time.Second,
 	}
 }
@@ -118,6 +126,7 @@ func LoadFromEnv() Config {
 	v.SetDefault("LLM_PROVIDER", base.LLMProviderLabel)
 	v.SetDefault("LLM_CONTEXT_BUDGET", base.LLMContextBudget)
 	v.SetDefault("RETRIEVAL_MIN_SCORE", base.RetrievalMinScore)
+	v.SetDefault("SPARSE_INDEX", base.SparseIndex)
 	v.SetDefault("HTTP_TIMEOUT", base.HTTPTimeout)
 
 	return Config{
@@ -134,6 +143,7 @@ func LoadFromEnv() Config {
 		LLMProviderLabel:      v.GetString("LLM_PROVIDER"),
 		LLMContextBudget:      v.GetInt("LLM_CONTEXT_BUDGET"),
 		RetrievalMinScore:     float32(v.GetFloat64("RETRIEVAL_MIN_SCORE")),
+		SparseIndex:           v.GetBool("SPARSE_INDEX"),
 		HTTPTimeout:           v.GetDuration("HTTP_TIMEOUT"),
 	}
 }
@@ -166,7 +176,12 @@ func NewRuntime(cfg Config) (*Runtime, error) {
 	}
 
 	contentStore := store.NewInMemoryContentStore()
-	indexingWorker := worker.NewIndexingWorker(embProvider, vecStore, contentStore)
+	indexingOpts := []worker.IndexingWorkerOption{}
+	if cfg.SparseIndex {
+		sparseProvider := sparse.NewBM25EncoderProvider(corpusSource{store: vecStore})
+		indexingOpts = append(indexingOpts, worker.WithSparseEncoderProvider(sparseProvider))
+	}
+	indexingWorker := worker.NewIndexingWorker(embProvider, vecStore, contentStore, indexingOpts...)
 	denseRetriever := dense.NewDenseRetriever(embProvider, vecStore, contentStore)
 
 	rt := &Runtime{
@@ -220,7 +235,11 @@ func buildVectorStore(cfg Config) (store.VectorStore, error) {
 		// Real Qdrant adapter backed by the official Go client. Vector storage only;
 		// chunk content lives in the ContentStore seam, not the vector payload.
 		host := strings.TrimPrefix(strings.TrimPrefix(cfg.VectorStoreURL, "http://"), "https://")
-		qstore, err := store.NewQdrantVectorStore(host, cfg.QdrantCollection)
+		opts := []store.QdrantOption{}
+		if cfg.SparseIndex {
+			opts = append(opts, store.WithSparseVectors())
+		}
+		qstore, err := store.NewQdrantVectorStore(host, cfg.QdrantCollection, opts...)
 		if err != nil {
 			return nil, err
 		}
@@ -228,6 +247,27 @@ func buildVectorStore(cfg Config) (store.VectorStore, error) {
 	default:
 		return store.NewInMemoryVectorStore(), nil
 	}
+}
+
+// corpusSource implements sparse.CorpusSource over the real vector store,
+// returning the markdown content of every indexed chunk.
+type corpusSource struct {
+	store store.VectorStore
+}
+
+// CorpusTexts returns the content of every indexed chunk in the collection.
+func (s corpusSource) CorpusTexts(ctx context.Context) ([]string, error) {
+	points, err := s.store.ListPoints(ctx, indexingmodel.MetadataFilter{})
+	if err != nil {
+		return nil, err
+	}
+	texts := make([]string, 0, len(points))
+	for _, p := range points {
+		if p.ContentMarkdown != "" {
+			texts = append(texts, p.ContentMarkdown)
+		}
+	}
+	return texts, nil
 }
 
 // buildLLMProvider constructs the provider-neutral OpenAI-compatible LLM

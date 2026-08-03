@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"arca/internal/indexing/model"
+	"arca/internal/indexing/sparse"
 )
 
 // InMemoryVectorStore is a thread-safe in-memory adapter for VectorStore using exact Cosine Similarity.
@@ -67,7 +68,12 @@ func (s *InMemoryVectorStore) SearchVector(ctx context.Context, query VectorSear
 		}
 
 		score := float32(0.0)
-		if len(query.Vector) > 0 {
+		switch {
+		case query.Sparse != nil:
+			if pt.Sparse != nil {
+				score = sparseDotProduct(query.Sparse, pt.Sparse)
+			}
+		case len(query.Vector) > 0:
 			score = cosineSimilarity(query.Vector, pt.Vector)
 		}
 		if query.MinScore > 0 && score < query.MinScore {
@@ -206,4 +212,24 @@ func cosineSimilarity(a, b []float32) float32 {
 
 	similarity := dotProduct / (math.Sqrt(normA) * math.Sqrt(normB))
 	return float32(similarity)
+}
+
+// sparseDotProduct computes the dot product over shared sparse indices.
+func sparseDotProduct(a, b *sparse.SparseVector) float32 {
+	// Both vectors are index-sorted by construction; merge linearly.
+	i, j := 0, 0
+	var sum float64
+	for i < len(a.Indices) && j < len(b.Indices) {
+		switch {
+		case a.Indices[i] < b.Indices[j]:
+			i++
+		case a.Indices[i] > b.Indices[j]:
+			j++
+		default:
+			sum += float64(a.Values[i]) * float64(b.Values[j])
+			i++
+			j++
+		}
+	}
+	return float32(sum)
 }

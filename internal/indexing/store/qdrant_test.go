@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"arca/internal/indexing/model"
+	"arca/internal/indexing/sparse"
 	"arca/internal/indexing/store"
 	qdrant "github.com/qdrant/go-client/qdrant"
 	"github.com/stretchr/testify/assert"
@@ -53,6 +54,7 @@ type fakePointsServer struct {
 type storedPoint struct {
 	id      *qdrant.PointId
 	vector  []float32
+	sparse  *sparse.SparseVector
 	payload map[string]*qdrant.Value
 }
 
@@ -79,10 +81,11 @@ func (f *fakePointsServer) Upsert(ctx context.Context, req *qdrant.UpsertPoints)
 		if key == "" {
 			continue
 		}
-		vec := extractPointVector(p)
+		vec, sp := extractPointVectors(p)
 		f.points[key] = &storedPoint{
 			id:      p.GetId(),
 			vector:  vec,
+			sparse:  sp,
 			payload: p.GetPayload(),
 		}
 		f.upserted++
@@ -90,33 +93,48 @@ func (f *fakePointsServer) Upsert(ctx context.Context, req *qdrant.UpsertPoints)
 	return &qdrant.PointsOperationResponse{Result: &qdrant.UpdateResult{Status: qdrant.UpdateStatus_Completed}}, nil
 }
 
-// extractPointVector pulls the dense vector data from a PointStruct, handling
-// both the legacy flat Data field and the newer DenseVector oneof.
-func extractPointVector(p *qdrant.PointStruct) []float32 {
+// extractPointVectors pulls the dense vector data and the named sparse vector
+// from a PointStruct, handling both the legacy flat Data field and the newer
+// DenseVector/Dense oneofs plus NamedVectors.
+func extractPointVectors(p *qdrant.PointStruct) ([]float32, *sparse.SparseVector) {
 	if p == nil || p.GetVectors() == nil {
-		return nil
+		return nil, nil
 	}
 	switch v := p.GetVectors().GetVectorsOptions().(type) {
 	case *qdrant.Vectors_Vector:
 		if v.Vector != nil {
 			if dense := v.Vector.GetDense(); dense != nil {
-				return dense.GetData()
+				return dense.GetData(), nil
 			}
-			return v.Vector.GetData()
+			return v.Vector.GetData(), nil
 		}
 	case *qdrant.Vectors_Vectors:
 		if v.Vectors != nil {
-			for _, vec := range v.Vectors.GetVectors() {
-				if vec != nil {
-					if dense := vec.GetDense(); dense != nil {
-						return dense.GetData()
+			var dense []float32
+			for name, vec := range v.Vectors.GetVectors() {
+				if vec == nil {
+					continue
+				}
+				if name == "" {
+					if d := vec.GetDense(); d != nil {
+						dense = d.GetData()
+					} else {
+						dense = vec.GetData()
 					}
-					return vec.GetData()
+				}
+				if name == store.SparseVectorName {
+					if sv := vec.GetSparse(); sv != nil {
+						return dense, &sparse.SparseVector{
+							Indices: sv.GetIndices(),
+							Values:  sv.GetValues(),
+						}
+					}
 				}
 			}
+			return dense, nil
 		}
 	}
-	return nil
+	return nil, nil
 }
 
 func (f *fakePointsServer) Search(ctx context.Context, req *qdrant.SearchPoints) (*qdrant.SearchResponse, error) {
@@ -146,6 +164,67 @@ func (f *fakePointsServer) Search(ctx context.Context, req *qdrant.SearchPoints)
 	return &qdrant.SearchResponse{Result: results}, nil
 }
 
+// Query implements the query API used for sparse search: it computes the dot
+// product of the nearest sparse input against stored sparse vectors.
+func (f *fakePointsServer) Query(ctx context.Context, req *qdrant.QueryPoints) (*qdrant.QueryResponse, error) {
+	nearest, ok := req.GetQuery().GetVariant().(*qdrant.Query_Nearest)
+	if !ok || nearest.Nearest == nil {
+		return &qdrant.QueryResponse{}, nil
+	}
+	sp := nearest.Nearest.GetSparse()
+	if sp == nil {
+		return &qdrant.QueryResponse{}, nil
+	}
+
+	var results []*qdrant.ScoredPoint
+	for _, pt := range f.points {
+		if !matchesFakeFilter(pt, req.GetFilter()) {
+			continue
+		}
+		if pt.sparse == nil {
+			continue
+		}
+		score := sparseDotTest(sp, pt.sparse)
+		if req.GetScoreThreshold() != nil && score < req.GetScoreThreshold().GetValue() {
+			continue
+		}
+		results = append(results, &qdrant.ScoredPoint{
+			Id:      pt.id,
+			Payload: pt.payload,
+			Score:   score,
+		})
+	}
+	sort.Slice(results, func(i, j int) bool {
+		if results[i].Score != results[j].Score {
+			return results[i].Score > results[j].Score
+		}
+		return testPointID(results[i].Id) < testPointID(results[j].Id)
+	})
+	if req.GetLimit() != nil && uint64(len(results)) > req.GetLimit().GetValue() {
+		results = results[:req.GetLimit().GetValue()]
+	}
+	return &qdrant.QueryResponse{Result: results}, nil
+}
+
+// sparseDotTest computes the dot product over shared sparse indices.
+func sparseDotTest(a *qdrant.SparseVector, b *sparse.SparseVector) float32 {
+	i, j := 0, 0
+	var sum float64
+	for i < len(a.GetIndices()) && j < len(b.Indices) {
+		switch {
+		case a.GetIndices()[i] < b.Indices[j]:
+			i++
+		case a.GetIndices()[i] > b.Indices[j]:
+			j++
+		default:
+			sum += float64(a.GetValues()[i]) * float64(b.Values[j])
+			i++
+			j++
+		}
+	}
+	return float32(sum)
+}
+
 // testPointID renders a PointId as its string form for deterministic ordering.
 func testPointID(id *qdrant.PointId) string {
 	if id == nil {
@@ -163,18 +242,42 @@ func (f *fakePointsServer) Scroll(ctx context.Context, req *qdrant.ScrollPoints)
 		if !matchesFakeFilter(pt, req.GetFilter()) {
 			continue
 		}
-		results = append(results, &qdrant.RetrievedPoint{
-			Id:      pt.id,
-			Payload: pt.payload,
-			Vectors: &qdrant.VectorsOutput{
-				VectorsOptions: &qdrant.VectorsOutput_Vector{
-					Vector: &qdrant.VectorOutput{
-						Vector: &qdrant.VectorOutput_Dense{
-							Dense: &qdrant.DenseVector{Data: pt.vector},
-						},
+		vo := &qdrant.VectorsOutput{
+			VectorsOptions: &qdrant.VectorsOutput_Vector{
+				Vector: &qdrant.VectorOutput{
+					Vector: &qdrant.VectorOutput_Dense{
+						Dense: &qdrant.DenseVector{Data: pt.vector},
 					},
 				},
 			},
+		}
+		if pt.sparse != nil {
+			vo = &qdrant.VectorsOutput{
+				VectorsOptions: &qdrant.VectorsOutput_Vectors{
+					Vectors: &qdrant.NamedVectorsOutput{
+						Vectors: map[string]*qdrant.VectorOutput{
+							"": {
+								Vector: &qdrant.VectorOutput_Dense{
+									Dense: &qdrant.DenseVector{Data: pt.vector},
+								},
+							},
+							store.SparseVectorName: {
+								Vector: &qdrant.VectorOutput_Sparse{
+									Sparse: &qdrant.SparseVector{
+										Indices: pt.sparse.Indices,
+										Values:  pt.sparse.Values,
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+		}
+		results = append(results, &qdrant.RetrievedPoint{
+			Id:      pt.id,
+			Payload: pt.payload,
+			Vectors: vo,
 		})
 	}
 	limit := int(req.GetLimit())

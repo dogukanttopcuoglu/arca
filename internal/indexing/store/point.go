@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"arca/internal/indexing/model"
+	"arca/internal/indexing/sparse"
 )
 
 // CalculatePointID generates a deterministic, stable Point ID across content revisions: SHA256(DocumentID:SectionPath:ChunkOrder).
@@ -19,11 +20,12 @@ func CalculatePointID(documentID, sectionPath string, chunkOrder int) string {
 	return hexstr[0:8] + "-" + hexstr[8:12] + "-" + hexstr[12:16] + "-" + hexstr[16:20] + "-" + hexstr[20:32]
 }
 
-// VectorPoint represents a stored vector point containing stable Point ID, embedding vector,
-// chunk markdown content, and typed VectorMetadata.
+// VectorPoint represents a stored vector point containing stable Point ID, dense embedding
+// vector, optional sparse vector, chunk markdown content, and typed VectorMetadata.
 type VectorPoint struct {
 	ID              string               `json:"id"`
 	Vector          []float32            `json:"vector"`
+	Sparse          *sparse.SparseVector `json:"sparse,omitempty"`
 	ContentMarkdown string               `json:"content_markdown,omitempty"`
 	Metadata        model.VectorMetadata `json:"metadata"`
 }

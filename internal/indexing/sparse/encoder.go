@@ -22,12 +22,40 @@ type SparseVector struct {
 
 // SparseEncoder converts text (chunk markdown) into a sparse vector
 // representation. It is independent of the dense embedding provider and
-// swappable (BM25 in M3; SPLADE/learned sparse later). Corpus context (IDF,
-// vocabulary) is bound at construction — never process-global state.
+// swappable (BM25 in M3; SPLADE/learned sparse later). The interface
+// expresses capability, not implementation — callers never know which
+// algorithm backs it.
 type SparseEncoder interface {
 	// Encode converts a chunk's text into its sparse vector.
 	Encode(ctx context.Context, text string) (SparseVector, error)
-} // tokenPattern matches lowercase alphanumeric tokens.
+}
+
+// DocumentChunk is the minimal chunk carrier handed to an EncoderProvider.
+// Providers may need the full document to build corpus-wide statistics.
+type DocumentChunk struct {
+	ID      string
+	Content string
+}
+
+// CorpusSource provides the current corpus content so providers can build
+// corpus-wide statistics (e.g. BM25 IDF). Implementations read from the
+// vector store's persisted content; tests inject fakes.
+type CorpusSource interface {
+	// CorpusTexts returns the markdown content of every indexed chunk.
+	CorpusTexts(ctx context.Context) ([]string, error)
+}
+
+// EncoderProvider owns the entire lifecycle of sparse encoders and their
+// corpus statistics: whether to build BM25 statistics, reuse cached
+// statistics, load persisted statistics, or delegate to another
+// implementation is an internal concern of the provider — never the
+// orchestration layer's.
+type EncoderProvider interface {
+	// Encoder returns a SparseEncoder bound to the given document chunks.
+	Encoder(ctx context.Context, chunks []DocumentChunk) (SparseEncoder, error)
+}
+
+// tokenPattern matches lowercase alphanumeric tokens.
 var tokenPattern = regexp.MustCompile(`[a-z0-9]+`)
 
 // tokenize normalizes text (lowercase) and splits it into alphanumeric
@@ -142,6 +170,45 @@ func NewBM25Encoder(stats *CorpusStats, opts ...BM25Option) *BM25Encoder {
 		opt(e)
 	}
 	return e
+}
+
+// BM25EncoderProvider implements EncoderProvider for the BM25 encoder. It
+// builds corpus statistics from the persisted corpus content plus the
+// incoming document chunks — the provider owns corpus construction, not the
+// worker.
+//
+// IDF limitation (deliberate, M3): statistics are computed at index time.
+// Determinism is guaranteed for a static corpus (the benchmark's corpus
+// fingerprint enforces this between indexing and evaluation); incremental
+// corpus growth intentionally accepts stale sparse weights for previously
+// indexed chunks. Corpus-wide sparse recomputation is an M4 concern.
+type BM25EncoderProvider struct {
+	source CorpusSource
+}
+
+// NewBM25EncoderProvider constructs a BM25 provider over the given corpus
+// source. BM25 parameters use the encoder defaults (k1=1.5, b=0.75); tuning
+// follows the benchmark.
+func NewBM25EncoderProvider(source CorpusSource) *BM25EncoderProvider {
+	return &BM25EncoderProvider{source: source}
+}
+
+// Encoder builds BM25 statistics over the persisted corpus plus the incoming
+// chunks and returns a corpus-bound encoder.
+func (p *BM25EncoderProvider) Encoder(ctx context.Context, chunks []DocumentChunk) (SparseEncoder, error) {
+	corpus, err := p.source.CorpusTexts(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read corpus content: %w", err)
+	}
+	for _, ch := range chunks {
+		corpus = append(corpus, ch.Content)
+	}
+
+	stats, err := BuildCorpusStats(corpus)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build corpus statistics: %w", err)
+	}
+	return NewBM25Encoder(stats), nil
 }
 
 // Encode converts text into its BM25-weighted sparse vector. Terms absent

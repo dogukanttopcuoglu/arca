@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"arca/internal/indexing/model"
+	"arca/internal/indexing/sparse"
 	qdrant "github.com/qdrant/go-client/qdrant"
 )
 
@@ -13,17 +14,24 @@ import (
 const (
 	defaultQdrantPort = 6334
 	scrollBatchSize   = 100
+
+	// SparseVectorName is the named sparse vector field in Qdrant collections.
+	// Single configuration point: never scatter the literal elsewhere.
+	SparseVectorName = "sparse"
 )
 
 // QdrantVectorStore implements VectorStore against a Qdrant cluster via the
 // official Go gRPC client. The collection stores 768-dimension vectors with
-// Cosine distance; VectorMetadata is stored as the point payload.
+// Cosine distance; VectorMetadata is stored as the point payload. When
+// constructed WithSparseVectors, the collection additionally carries a named
+// sparse vector field for BM25-style retrieval.
 type QdrantVectorStore struct {
-	points      qdrant.PointsClient
-	collections qdrant.CollectionsClient
-	collection  string
-	dimension   uint64
-	closeFn     func() error
+	points        qdrant.PointsClient
+	collections   qdrant.CollectionsClient
+	collection    string
+	dimension     uint64
+	sparseEnabled bool
+	closeFn       func() error
 }
 
 // QdrantOption configures a QdrantVectorStore instance.
@@ -35,6 +43,15 @@ func WithQdrantDimension(d uint64) QdrantOption {
 		if d > 0 {
 			s.dimension = d
 		}
+	}
+}
+
+// WithSparseVectors enables the named sparse vector field on collection
+// creation. Explicit opt-in: without it, collections are created dense-only
+// and remain fully backward compatible.
+func WithSparseVectors() QdrantOption {
+	return func(s *QdrantVectorStore) {
+		s.sparseEnabled = true
 	}
 }
 
@@ -127,6 +144,11 @@ func (s *QdrantVectorStore) ensureCollection(ctx context.Context) error {
 			Distance: qdrant.Distance_Cosine,
 		}),
 	}
+	if s.sparseEnabled {
+		req.SparseVectorsConfig = qdrant.NewSparseVectorsConfig(map[string]*qdrant.SparseVectorParams{
+			SparseVectorName: {},
+		})
+	}
 	if _, err := s.collections.Create(ctx, req); err != nil {
 		return fmt.Errorf("failed to create qdrant collection %q: %w", s.collection, err)
 	}
@@ -183,7 +205,7 @@ func (s *QdrantVectorStore) UpsertPoints(ctx context.Context, points []VectorPoi
 
 		pointStructs = append(pointStructs, &qdrant.PointStruct{
 			Id:      qdrant.NewID(pt.ID),
-			Vectors: qdrant.NewVectorsDense(pt.Vector),
+			Vectors: s.pointVectors(pt),
 			Payload: payload,
 		})
 	}
@@ -197,7 +219,28 @@ func (s *QdrantVectorStore) UpsertPoints(ctx context.Context, points []VectorPoi
 	return nil
 }
 
+// pointVectors builds the point's vectors: dense by default; when the store
+// is sparse-enabled and the point carries a sparse vector, both are sent as
+// named vectors ("" for dense, SparseVectorName for sparse).
+func (s *QdrantVectorStore) pointVectors(pt VectorPoint) *qdrant.Vectors {
+	if s.sparseEnabled && pt.Sparse != nil {
+		return &qdrant.Vectors{
+			VectorsOptions: &qdrant.Vectors_Vectors{
+				Vectors: &qdrant.NamedVectors{
+					Vectors: map[string]*qdrant.Vector{
+						"":               qdrant.NewVectorDense(pt.Vector),
+						SparseVectorName: qdrant.NewVectorSparse(pt.Sparse.Indices, pt.Sparse.Values),
+					},
+				},
+			},
+		}
+	}
+	return qdrant.NewVectorsDense(pt.Vector)
+}
+
 // SearchVector executes nearest-neighbor Cosine similarity search with MetadataFilter.
+// Exactly one of query.Vector (dense) or query.Sparse must be set; the adapter
+// executes whichever representation is present — it has no retrieval-mode logic.
 func (s *QdrantVectorStore) SearchVector(ctx context.Context, query VectorSearchQuery) ([]VectorSearchResult, error) {
 	if err := s.ensureCollection(ctx); err != nil {
 		return nil, err
@@ -210,11 +253,40 @@ func (s *QdrantVectorStore) SearchVector(ctx context.Context, query VectorSearch
 
 	req := &qdrant.SearchPoints{
 		CollectionName: s.collection,
-		Vector:         query.Vector,
 		Limit:          uint64(query.TopK),
 		Filter:         filter,
 		WithPayload:    qdrant.NewWithPayload(true),
 	}
+	if query.Sparse != nil {
+		// Sparse search uses the query API: VectorInputSparse carries the
+		// index/value pairs, Using selects the named sparse vector field.
+		limit := uint64(query.TopK)
+		qreq := &qdrant.QueryPoints{
+			CollectionName: s.collection,
+			Query: &qdrant.Query{
+				Variant: &qdrant.Query_Nearest{
+					Nearest: qdrant.NewVectorInputSparse(query.Sparse.Indices, query.Sparse.Values),
+				},
+			},
+			Using:       stringPtr(SparseVectorName),
+			Filter:      filter,
+			Limit:       &limit,
+			WithPayload: qdrant.NewWithPayload(true),
+		}
+		if query.MinScore > 0 {
+			score := query.MinScore
+			qreq.ScoreThreshold = &score
+		}
+		if query.TopK <= 0 {
+			limit = 10
+		}
+		qresp, err := s.points.Query(ctx, qreq)
+		if err != nil {
+			return nil, fmt.Errorf("qdrant sparse search failed: %w", err)
+		}
+		return scoredToResults(qresp.GetResult())
+	}
+	req.Vector = query.Vector
 	if query.MinScore > 0 {
 		score := query.MinScore
 		req.ScoreThreshold = &score
@@ -227,9 +299,13 @@ func (s *QdrantVectorStore) SearchVector(ctx context.Context, query VectorSearch
 	if err != nil {
 		return nil, fmt.Errorf("qdrant search failed: %w", err)
 	}
+	return scoredToResults(scored.Result)
+}
 
-	results := make([]VectorSearchResult, 0, len(scored.Result))
-	for _, sp := range scored.Result {
+// scoredToResults maps ScoredPoints to VectorSearchResults with payload content.
+func scoredToResults(scored []*qdrant.ScoredPoint) ([]VectorSearchResult, error) {
+	results := make([]VectorSearchResult, 0, len(scored))
+	for _, sp := range scored {
 		meta, err := payloadToMetadata(sp.Payload)
 		if err != nil {
 			return nil, err
@@ -243,6 +319,9 @@ func (s *QdrantVectorStore) SearchVector(ctx context.Context, query VectorSearch
 	}
 	return results, nil
 }
+
+// ptr returns a pointer to the given value (proto string field helper).
+func stringPtr(s string) *string { return &s }
 
 // ListPoints enumerates all stored points matching the filter via the Qdrant
 // scroll API. This is a read operation for differential indexing, not a
@@ -284,6 +363,7 @@ func (s *QdrantVectorStore) ListPoints(ctx context.Context, filter model.Metadat
 			points = append(points, VectorPoint{
 				ID:              pointIDToString(rp.Id),
 				Vector:          vectorsOutputToSlice(rp.Vectors),
+				Sparse:          vectorsOutputToSparse(rp.Vectors),
 				ContentMarkdown: payloadToContent(rp.Payload),
 				Metadata:        meta,
 			})
@@ -508,7 +588,8 @@ func pointIDToString(id *qdrant.PointId) string {
 	}
 }
 
-// vectorsOutputToSlice extracts the default dense vector from a VectorsOutput.
+// vectorsOutputToSlice extracts the default dense vector from a VectorsOutput,
+// preferring the unnamed "" vector when named vectors are present.
 func vectorsOutputToSlice(vo *qdrant.VectorsOutput) []float32 {
 	if vo == nil {
 		return nil
@@ -520,9 +601,14 @@ func vectorsOutputToSlice(vo *qdrant.VectorsOutput) []float32 {
 		if v.Vectors == nil {
 			return nil
 		}
+		if vec := v.Vectors.GetVectors()[""]; vec != nil {
+			return vectorOutputToSlice(vec)
+		}
 		for _, vec := range v.Vectors.GetVectors() {
 			if vec != nil {
-				return vectorOutputToSlice(vec)
+				if dense := vectorOutputToSlice(vec); dense != nil {
+					return dense
+				}
 			}
 		}
 	}
@@ -538,6 +624,28 @@ func vectorOutputToSlice(v *qdrant.VectorOutput) []float32 {
 		return dense.GetData()
 	}
 	return v.GetData()
+}
+
+// vectorsOutputToSparse extracts the named sparse vector from a VectorsOutput.
+func vectorsOutputToSparse(vo *qdrant.VectorsOutput) *sparse.SparseVector {
+	if vo == nil {
+		return nil
+	}
+	switch v := vo.VectorsOptions.(type) {
+	case *qdrant.VectorsOutput_Vectors:
+		if v.Vectors == nil {
+			return nil
+		}
+		if vec := v.Vectors.GetVectors()[SparseVectorName]; vec != nil {
+			if sv := vec.GetSparse(); sv != nil {
+				return &sparse.SparseVector{
+					Indices: sv.GetIndices(),
+					Values:  sv.GetValues(),
+				}
+			}
+		}
+	}
+	return nil
 }
 
 // compile-time interface assertion.
