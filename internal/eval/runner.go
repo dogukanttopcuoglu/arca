@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"arca/internal/retrieval/hybrid"
 	retrievalseam "arca/internal/retrieval/seam"
 )
 
@@ -16,7 +17,7 @@ type Options struct {
 	MinScore          float32
 	EmbeddingProvider string
 	EmbeddingModel    string
-	RRFK              float64
+	FusionPolicy      *hybrid.FusionPolicy
 	Reranker          string
 	Collection        string
 	GitCommit         string
@@ -68,7 +69,7 @@ func (r *Runner) Run(ctx context.Context, gs *GoldSet) (*Report, error) {
 			EmbeddingModel:    r.opts.EmbeddingModel,
 			TopK:              r.opts.TopK,
 			MinScore:          r.opts.MinScore,
-			RRFK:              r.opts.RRFK,
+			FusionPolicy:      r.opts.FusionPolicy,
 			Reranker:          r.opts.Reranker,
 			Collection:        r.opts.Collection,
 		},

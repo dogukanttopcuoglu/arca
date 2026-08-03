@@ -4,9 +4,12 @@ import (
 	"arca/internal/retrieval/seam"
 )
 
-// ReciprocalRankFusion combines multiple ranked SearchResult lists using the Reciprocal Rank Fusion (RRF) formula:
-// RRF_score(d) = \sum_{m \in M} \frac{1}{k + r_m(d)} where k is standard constant (default 60).
-func ReciprocalRankFusion(streams [][]seam.SearchResult, k float64) []seam.SearchResult {
+// ReciprocalRankFusion combines multiple ranked SearchResult lists using the
+// weighted Reciprocal Rank Fusion (RRF) formula:
+// score(d) = sum over streams m of weight_m / (k + rank_m(d)).
+// weights is optional and aligned with streams; missing or non-positive
+// weights default to 1.0 (balanced RRF). k defaults to 60.
+func ReciprocalRankFusion(streams [][]seam.SearchResult, k float64, weights ...float64) []seam.SearchResult {
 	if k <= 0 {
 		k = 60.0
 	}
@@ -14,10 +17,14 @@ func ReciprocalRankFusion(streams [][]seam.SearchResult, k float64) []seam.Searc
 	scoreMap := make(map[string]float64)
 	resultMap := make(map[string]seam.SearchResult)
 
-	for _, stream := range streams {
+	for si, stream := range streams {
+		w := 1.0
+		if si < len(weights) && weights[si] > 0 {
+			w = weights[si]
+		}
 		for rank, res := range stream {
 			r := rank + 1 // 1-indexed rank
-			rrfScore := 1.0 / (k + float64(r))
+			rrfScore := w / (k + float64(r))
 
 			scoreMap[res.ChunkID] += rrfScore
 			if existing, exists := resultMap[res.ChunkID]; !exists || res.ContentMarkdown != "" {

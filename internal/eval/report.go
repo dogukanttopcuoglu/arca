@@ -2,9 +2,10 @@ package eval
 
 import (
 	"encoding/json"
-
-	retrievalseam "arca/internal/retrieval/seam"
 	"time"
+
+	"arca/internal/retrieval/hybrid"
+	retrievalseam "arca/internal/retrieval/seam"
 )
 
 // Report is the fully reproducible benchmark output (ADR-0027). It carries
@@ -28,14 +29,14 @@ type CorpusResult struct {
 
 // RetrievalConfig records the retrieval configuration of the run.
 type RetrievalConfig struct {
-	Mode              string  `json:"mode"`
-	EmbeddingProvider string  `json:"embedding_provider"`
-	EmbeddingModel    string  `json:"embedding_model"`
-	TopK              int     `json:"top_k"`
-	MinScore          float32 `json:"min_score"`
-	RRFK              float64 `json:"rrf_k,omitempty"`
-	Reranker          string  `json:"reranker,omitempty"`
-	Collection        string  `json:"collection"`
+	Mode              string               `json:"mode"`
+	EmbeddingProvider string               `json:"embedding_provider"`
+	EmbeddingModel    string               `json:"embedding_model"`
+	TopK              int                  `json:"top_k"`
+	MinScore          float32              `json:"min_score"`
+	FusionPolicy      *hybrid.FusionPolicy `json:"fusion_policy,omitempty"`
+	Reranker          string               `json:"reranker,omitempty"`
+	Collection        string               `json:"collection"`
 }
 
 // Metrics aggregates retrieval quality over the gold set. Recall, precision,

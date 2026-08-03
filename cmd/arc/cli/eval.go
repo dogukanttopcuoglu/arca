@@ -10,16 +10,19 @@ import (
 	"arca/internal/eval"
 	indexingmodel "arca/internal/indexing/model"
 	"arca/internal/indexing/store"
+	"arca/internal/retrieval/hybrid"
 	retrievalseam "arca/internal/retrieval/seam"
 )
 
 // EvalOptions configures an arc eval benchmark run.
 type EvalOptions struct {
-	GoldSetPath string
-	Mode        retrievalseam.RetrievalMode
-	TopK        int
-	MinScore    float32
-	ReportPath  string
+	GoldSetPath  string
+	Mode         retrievalseam.RetrievalMode
+	TopK         int
+	MinScore     float32
+	ReportPath   string
+	SparseWeight float64
+	SparseCap    int
 }
 
 // RunEval executes the retrieval benchmark against the real composition root:
@@ -37,6 +40,25 @@ func (a *App) RunEval(ctx context.Context, opts EvalOptions) (string, error) {
 	retriever, err := a.runtime.RetrieverForMode(opts.Mode)
 	if err != nil {
 		return "", fmt.Errorf("retrieval mode %q unavailable: %w", opts.Mode, err)
+	}
+
+	// Apply the fusion policy for hybrid sweeps. The retriever owns the
+	// policy; eval only records it in the manifest.
+	var fusionPolicy *hybrid.FusionPolicy
+	if opts.Mode == retrievalseam.RetrievalHybrid {
+		hr, ok := retriever.(*hybrid.HybridRetriever)
+		if !ok {
+			return "", fmt.Errorf("hybrid mode requires the hybrid retriever, got %T", retriever)
+		}
+		p := hr.FusionPolicy()
+		if opts.SparseWeight > 0 {
+			p.SparseWeight = opts.SparseWeight
+		}
+		if opts.SparseCap > 0 {
+			p.SparseCap = opts.SparseCap
+		}
+		hr.SetFusionPolicy(p)
+		fusionPolicy = &p
 	}
 
 	gsFile, err := os.Open(opts.GoldSetPath)
@@ -58,6 +80,7 @@ func (a *App) RunEval(ctx context.Context, opts EvalOptions) (string, error) {
 			MinScore:          opts.MinScore,
 			EmbeddingProvider: a.runtime.embeddingProvider.Provider(),
 			EmbeddingModel:    a.runtime.embeddingProvider.Model(),
+			FusionPolicy:      fusionPolicy,
 			Collection:        a.runtime.cfg.QdrantCollection,
 			GitCommit:         gitHead(),
 		},

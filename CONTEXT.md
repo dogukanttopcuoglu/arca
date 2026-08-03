@@ -52,7 +52,19 @@ The strongly-typed, canonical filtering structure allowing domain queries by doc
 The top-level search abstraction encapsulating Dense Vector, Sparse Lexical (BM25), and Hybrid (RRF) retrieval strategies behind a clean query interface.
 
 ## AnswerEngine
-The high-level RAG orchestration engine combining Query Understanding, Retrieval, Context Assembly, Prompt Engineering, and Evidence Verification via modular pipeline composition.
+The high-level RAG orchestration engine combining Query Understanding, Retrieval, Context Assembly, Prompt Engineering, and Evidence Verification via modular pipeline composition, emitting provider-agnostic `Answer` objects.
+
+## Answer
+The final generated, evidence-verified response to a user query. An `Answer` carries the answer text, verified `AnswerCitation`s, a `VerificationReport`, and provider-agnostic `AnswerMetadata`; it never carries provider-specific fields directly.
+_Avoid_: Response, Completion, Reply
+
+## AnswerDraft
+The intermediate pre-generation payload (analyzed query, retrieved search results, and assembled context window) produced by the early stages of the `AnswerEngine` pipeline. A draft is not an answer until it has been generated and verified.
+_Avoid_: IntermediateAnswer
+
+## AnswerMetadata
+The provider-neutral metadata attached to an `Answer` (provider name, model identifier, token usage), keeping the domain model independent of any specific LLM provider.
+_Avoid_: ProviderInfo, ProviderDetails
 
 ## QueryAnalyzer
 The domain seam responsible for extracting user intent, named entities, and structural metadata filters from natural language queries.
@@ -74,6 +86,9 @@ The verification component that parses inline reference markers (`[Ref N]`) from
 
 ## VerificationPipeline
 The evidence verification pipeline enforcing structural reference existence (Phase 1) and semantic NLI entailment scoring (Phase 2).
+
+## VerificationStatus
+The explicit evidence state of an `Answer` (`verified`, `unverified`, `no_evidence`), carried on the answer itself rather than inferred from citation counts. `no_evidence` marks answers produced without any retrieved sources.
 
 ## QAJob
 The asynchronous state machine (`Pending` -> `Planning` -> `Retrieving` -> `Generating` -> `Verifying` -> `Completed`) managing long-running multi-document deep research tasks.
@@ -161,3 +176,25 @@ The compiler-pass stage running `SummaryExtractor` strategies to attach executiv
 
 
 
+
+## Gold Set
+The versioned, human-curated, chunk-level evaluation dataset for retrieval benchmarks. Queries are built exclusively from the real indexed corpus — no synthetic chunks, no injected facts, no LLM-generated documents — and each query declares its expectations explicitly (`expected_chunk_ids`, `expected_sections`, `expected_no_evidence`).
+_Avoid_: Test corpus, benchmark dataset, eval fixture
+
+## Abstention Query
+A Gold Set query expected to match zero relevant chunks, declaring `expected_no_evidence: true`. It measures whether the pipeline correctly abstains (no LLM call, `no_evidence` answer) instead of forcing an answer from nearest neighbors.
+
+## Corpus Fingerprint
+A deterministic digest of the indexed corpus used to prove benchmark validity: SHA-256 over the sorted `ContentHash` values of the indexed chunks of the gold document(s). The Gold Set declares the expected fingerprint and the benchmark runner hard-fails on mismatch before evaluating any query.
+
+## SparseEncoder
+The indexing-stage seam, symmetric to the dense embedding provider, that converts a `KnowledgeChunk` into a sparse vector representation (BM25 term weights in M3; SPLADE/learned sparse later). Sparse vectors share the same Qdrant collection and lifecycle as dense vectors — retrieval state is never process-local.
+
+## IntentHint
+A confidence-scored signal emitted by query understanding (e.g. `Type: Comparison, Confidence: 0.93`). A hint never decides retrieval behavior — the Retrieval Orchestrator holds policy and may ignore, partially use, or combine hints with other signals. Keeps classification replaceable and decoupled from the retrieval pipeline.
+
+## Retrieval Orchestrator
+The single policy-deciding component that selects and parameterizes the retrieval strategy from IntentHints and other signals. It is the only place where hints translate into behavior; the classifier stays infrastructure. Benchmark results decide whether classification exists at all.
+
+## FusionPolicy
+A frozen, calibrated retrieval fusion configuration (`DenseWeight`, `SparseWeight`, `SparseCap`) produced by offline benchmark calibration — not raw tuned parameters. Named policies (e.g. `Balanced`, `DenseBiased`, `LexicalBiased`) are the only fusion variants an orchestrator may select; numerical optimization ends at calibration (M4), runtime selection is orchestration (M5).
