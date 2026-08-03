@@ -39,7 +39,7 @@ Detailed background information about knowledge parsing.`
 		},
 	}
 
-	chunks, err := eng.ChunkDocument(context.Background(), tree, md)
+	chunks, err := eng.ChunkDocument(context.Background(), "doc-test-101", tree, md, nil)
 	require.NoError(t, err)
 	require.NotEmpty(t, chunks)
 
@@ -65,7 +65,7 @@ func TestChunkDocument_BoundaryPreservation(t *testing.T) {
 	eng := chunking.NewEngine(chunking.WithDocumentID("doc-boundary-1"))
 	md := "# Technical Overview\n\nBelow is sample code:\n\n```go\nfunc main() {\n\tfmt.Println(\"Hello ARC\")\n}\n```\n\nBelow is a table:\n\n| Parameter | Type | Description |\n|-----------|------|-------------|\n| Timeout   | int  | Milliseconds|\n\nBelow is an equation:\n\n$$\nE = mc^2\n$$\n\nBelow is a list:\n\n- Step 1: Parse\n- Step 2: Chunk\n- Step 3: Index"
 
-	chunks, err := eng.ChunkDocument(context.Background(), nil, md)
+	chunks, err := eng.ChunkDocument(context.Background(), "doc-boundary-1", nil, md, nil)
 	require.NoError(t, err)
 	require.NotEmpty(t, chunks)
 
@@ -116,7 +116,7 @@ Second block of content for section one with additional details to force chunkin
 
 Third block of content for section one to ensure parent chunk is constructed.`
 
-	chunks, err := eng.ChunkDocument(context.Background(), nil, md)
+	chunks, err := eng.ChunkDocument(context.Background(), "doc-parent-child", nil, md, nil)
 	require.NoError(t, err)
 
 	res := model.NewPDFInspectionResult()
@@ -158,7 +158,7 @@ Paragraph 2.
 # Section 3
 Paragraph 3.`
 
-	chunks, err := eng.ChunkDocument(context.Background(), nil, md)
+	chunks, err := eng.ChunkDocument(context.Background(), "doc-seq", nil, md, nil)
 	require.NoError(t, err)
 	require.Len(t, chunks, 3)
 
@@ -186,7 +186,7 @@ func TestChunkDocument_OversizedElementWarning(t *testing.T) {
 	longCode := "```go\n" + strings.Repeat("fmt.Println(\"very long line of code\"); ", 20) + "\n```"
 	md := "# Code Section\n\n" + longCode
 
-	chunks, err := eng.ChunkDocument(context.Background(), nil, md)
+	chunks, err := eng.ChunkDocument(context.Background(), "doc-oversized", nil, md, nil)
 	require.NoError(t, err)
 	require.NotEmpty(t, chunks)
 
@@ -209,6 +209,41 @@ func TestChunkDocument_OversizedElementWarning(t *testing.T) {
 		}
 	}
 	assert.True(t, codeChunkFound, "code chunk should exist and retain boundary")
+}
+
+func TestChunkDocument_RequiresDocumentID(t *testing.T) {
+	eng := chunking.NewEngine()
+	md := "# Section\n\nSome content."
+	tree := &model.SemanticTree{
+		RootNodes: []model.SemanticNode{
+			{ID: "sec-1", Heading: "Section", Level: 1, PageNumbers: []int{1}},
+		},
+	}
+
+	t.Run("empty document id fails loudly instead of defaulting", func(t *testing.T) {
+		_, err := eng.ChunkDocument(context.Background(), "", tree, md, nil)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "document id")
+	})
+
+	t.Run("per-call document id overrides construction-time default", func(t *testing.T) {
+		engWithDefault := chunking.NewEngine(chunking.WithDocumentID("doc-from-option"))
+
+		chunks, err := engWithDefault.ChunkDocument(context.Background(), "doc-per-call", tree, md, nil)
+		require.NoError(t, err)
+		require.NotEmpty(t, chunks)
+		assert.Equal(t, "doc-per-call", chunks[0].DocumentID)
+		assert.True(t, strings.HasPrefix(chunks[0].ChunkID, "doc-per-call/"))
+	})
+
+	t.Run("construction-time default used when per-call id empty", func(t *testing.T) {
+		engWithDefault := chunking.NewEngine(chunking.WithDocumentID("doc-from-option"))
+
+		chunks, err := engWithDefault.ChunkDocument(context.Background(), "", tree, md, nil)
+		require.NoError(t, err)
+		require.NotEmpty(t, chunks)
+		assert.Equal(t, "doc-from-option", chunks[0].DocumentID)
+	})
 }
 
 func TestSlugifyAndHash(t *testing.T) {
@@ -236,7 +271,7 @@ First page paragraph [1].
 # Page Two Section
 Second page paragraph referencing [Smith et al., 2020].`
 
-	chunks, err := eng.ChunkDocument(context.Background(), nil, md)
+	chunks, err := eng.ChunkDocument(context.Background(), "doc-pages", nil, md, nil)
 	require.NoError(t, err)
 	require.NotEmpty(t, chunks)
 
@@ -258,4 +293,46 @@ Second page paragraph referencing [Smith et al., 2020].`
 	require.NotNil(t, p2Chunk)
 	require.NotEmpty(t, p2Chunk.Citations)
 	assert.Equal(t, "[Smith et al., 2020]", p2Chunk.Citations[0].RawText)
+}
+
+func TestChunkDocument_PageMapResolvesChunkPages(t *testing.T) {
+	eng := chunking.NewEngine()
+	// The bundled service emits no page markers; json_layout.pages is authoritative.
+	md := `# Chapter One
+First chapter content paragraph.
+
+# Chapter Two
+Second chapter content paragraph.`
+
+	// Page 3 holds Chapter One, page 7 holds Chapter Two (pages in between have no headings).
+	pageMap := []model.PageMap{
+		{PageNumber: 1, Markdown: "Cover"},
+		{PageNumber: 2, Markdown: "Table of contents"},
+		{PageNumber: 3, Markdown: "# Chapter One\nFirst chapter content paragraph."},
+		{PageNumber: 7, Markdown: "# Chapter Two\nSecond chapter content paragraph."},
+	}
+
+	chunks, err := eng.ChunkDocument(context.Background(), "doc-pages-map", nil, md, pageMap)
+	require.NoError(t, err)
+	require.Len(t, chunks, 2)
+
+	assert.Equal(t, 3, chunks[0].PageNumbers[0], "chapter one should resolve to page 3 from PageMap")
+	assert.Equal(t, 7, chunks[1].PageNumbers[0], "chapter two should resolve to page 7 from PageMap")
+}
+
+func TestChunkDocument_PageMapResolvesCitationPages(t *testing.T) {
+	eng := chunking.NewEngine()
+	md := `# Report
+Findings described by Smith et al., 2020 [1] on this page.`
+
+	pageMap := []model.PageMap{
+		{PageNumber: 1, Markdown: "# Report\nFindings described by Smith et al., 2020 [1] on this page."},
+		{PageNumber: 2, Markdown: "Appendix"},
+	}
+
+	chunks, err := eng.ChunkDocument(context.Background(), "doc-cit-pages", nil, md, pageMap)
+	require.NoError(t, err)
+	require.Len(t, chunks, 1)
+	require.NotEmpty(t, chunks[0].Citations)
+	assert.Equal(t, 1, chunks[0].Citations[0].PageNumber, "citation should carry the resolved page from PageMap")
 }

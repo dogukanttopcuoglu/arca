@@ -11,6 +11,7 @@ import (
 var (
 	ErrEncryptedDocument = errors.New("ENCRYPTED_DOCUMENT: PDF document is encrypted or password protected")
 	ErrInvalidDocument   = errors.New("INVALID_DOCUMENT: PDF file structure is invalid or unreadable")
+	ErrMissingDocumentID = errors.New("INVALID_DOCUMENT_ID: a non-empty document id is required for inspection")
 )
 
 // Supported schema versions.

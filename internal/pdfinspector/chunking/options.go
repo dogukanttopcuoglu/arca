@@ -11,13 +11,16 @@ type Options struct {
 }
 
 // DefaultOptions returns the default production chunking options matching ADR 0004.
+// DocumentID is intentionally left empty: chunking requires an explicit per-call
+// document ID (see Engine.ChunkDocument) and must never silently default to a
+// shared value that would collide across documents.
 func DefaultOptions() Options {
 	return Options{
 		TargetMinTokens:   400,
 		TargetMaxTokens:   700,
 		SoftMaxTokens:     1000,
 		AbsoluteMaxTokens: 1200,
-		DocumentID:        "doc-1",
+		DocumentID:        "",
 		Sizer:             NewHeuristicSizer(),
 	}
 }

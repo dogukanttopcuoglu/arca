@@ -33,7 +33,7 @@ func TestPDFInspector_Resiliency_InvalidPDF(t *testing.T) {
 	insp := setupInspector("http://localhost:9999")
 
 	t.Run("empty stream returns ErrInvalidDocument", func(t *testing.T) {
-		res, err := insp.InspectPDF(context.Background(), strings.NewReader(""))
+		res, err := insp.InspectPDF(context.Background(), "doc-res", strings.NewReader(""))
 		if !errors.Is(err, model.ErrInvalidDocument) {
 			t.Errorf("expected ErrInvalidDocument, got %v", err)
 		}
@@ -43,7 +43,7 @@ func TestPDFInspector_Resiliency_InvalidPDF(t *testing.T) {
 	})
 
 	t.Run("non-PDF bytes return ErrInvalidDocument", func(t *testing.T) {
-		res, err := insp.InspectPDF(context.Background(), strings.NewReader("Corrupted data string without PDF header"))
+		res, err := insp.InspectPDF(context.Background(), "doc-res", strings.NewReader("Corrupted data string without PDF header"))
 		if !errors.Is(err, model.ErrInvalidDocument) {
 			t.Errorf("expected ErrInvalidDocument, got %v", err)
 		}
@@ -53,11 +53,23 @@ func TestPDFInspector_Resiliency_InvalidPDF(t *testing.T) {
 	})
 }
 
+func TestPDFInspector_Resiliency_MissingDocumentID(t *testing.T) {
+	insp := setupInspector("http://localhost:9999")
+
+	res, err := insp.InspectPDF(context.Background(), "   ", strings.NewReader("%PDF-1.4 Header"))
+	if !errors.Is(err, model.ErrMissingDocumentID) {
+		t.Errorf("expected ErrMissingDocumentID, got %v", err)
+	}
+	if res == nil || res.Diagnostics.Status != model.StatusFailed {
+		t.Errorf("expected diagnostics status 'failed', got %v", res)
+	}
+}
+
 func TestPDFInspector_Resiliency_EncryptedPDF(t *testing.T) {
 	insp := setupInspector("http://localhost:9999")
 
 	encryptedPayload := "%PDF-1.7\n1 0 obj\n<< /Filter /Standard /Encrypt 2 0 R >>\nendobj\n%%EOF"
-	res, err := insp.InspectPDF(context.Background(), strings.NewReader(encryptedPayload))
+	res, err := insp.InspectPDF(context.Background(), "doc-res", strings.NewReader(encryptedPayload))
 
 	if !errors.Is(err, model.ErrEncryptedDocument) {
 		t.Errorf("expected ErrEncryptedDocument, got %v", err)
@@ -80,7 +92,7 @@ func TestPDFInspector_Resiliency_FirecrawlHTTPErrorMapping(t *testing.T) {
 
 		insp := setupInspector(ts.URL)
 		validHeaderPDF := "%PDF-1.4\nSample PDF payload"
-		res, err := insp.InspectPDF(context.Background(), strings.NewReader(validHeaderPDF))
+		res, err := insp.InspectPDF(context.Background(), "doc-res", strings.NewReader(validHeaderPDF))
 
 		if !errors.Is(err, model.ErrEncryptedDocument) {
 			t.Errorf("expected ErrEncryptedDocument mapped from HTTP response, got %v", err)
@@ -99,7 +111,7 @@ func TestPDFInspector_Resiliency_FirecrawlHTTPErrorMapping(t *testing.T) {
 
 		insp := setupInspector(ts.URL)
 		validHeaderPDF := "%PDF-1.4\nSample PDF payload"
-		res, err := insp.InspectPDF(context.Background(), strings.NewReader(validHeaderPDF))
+		res, err := insp.InspectPDF(context.Background(), "doc-res", strings.NewReader(validHeaderPDF))
 
 		if !errors.Is(err, model.ErrInvalidDocument) {
 			t.Errorf("expected ErrInvalidDocument mapped from HTTP response, got %v", err)
@@ -129,7 +141,7 @@ func TestPDFInspector_Resiliency_PartialSuccess(t *testing.T) {
 	insp := setupInspector(ts.URL)
 	validPDF := "%PDF-1.4\nValid multi-page document payload"
 
-	res, err := insp.InspectPDF(context.Background(), strings.NewReader(validPDF))
+	res, err := insp.InspectPDF(context.Background(), "doc-res", strings.NewReader(validPDF))
 	if err != nil {
 		t.Fatalf("expected no error during partial success test, got: %v", err)
 	}

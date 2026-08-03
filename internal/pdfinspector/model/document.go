@@ -4,6 +4,7 @@ import "time"
 
 // DocumentMetadata represents administrative, technical, and structural metadata extracted from a PDF document.
 type DocumentMetadata struct {
+	DocumentID       string    `json:"documentID,omitempty"`
 	Title            string    `json:"title,omitempty"`
 	Author           string    `json:"author,omitempty"`
 	Creator          string    `json:"creator,omitempty"`

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"io"
+	"strings"
 	"time"
 
 	"arca/internal/pdfinspector/assets"
@@ -17,8 +18,10 @@ import (
 )
 
 // Inspector defines the primary interface for PDF inspection.
+// InspectPDF requires a non-empty document ID so the produced chunks and document
+// metadata carry stable, unique identities for downstream indexing and retrieval.
 type Inspector interface {
-	InspectPDF(ctx context.Context, r io.Reader) (*model.PDFInspectionResult, error)
+	InspectPDF(ctx context.Context, docID string, r io.Reader) (*model.PDFInspectionResult, error)
 }
 
 // PDFInspector orchestrates the document inspection pipeline using injected abstractions.
@@ -77,14 +80,27 @@ func NewPDFInspectorWithEnricher(
 }
 
 // InspectPDF executes the complete end-to-end PDF inspection pipeline with fail-fast resiliency checks and diagnostics aggregation.
-func (i *PDFInspector) InspectPDF(ctx context.Context, r io.Reader) (*model.PDFInspectionResult, error) {
+func (i *PDFInspector) InspectPDF(ctx context.Context, docID string, r io.Reader) (*model.PDFInspectionResult, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
 
 	start := time.Now().UnixMilli()
 
-	// 0. Fail-fast PDF validation check
+	// 0. Fail-fast document ID validation (required for multi-document isolation)
+	if strings.TrimSpace(docID) == "" {
+		err := model.ErrMissingDocumentID
+		diag := i.aggregator.BuildDiagnosticsWithOptions(diagnostics.DiagnosticOptions{
+			Status:    model.StatusFailed,
+			Errors:    []string{err.Error()},
+			StartTime: start,
+		})
+		res := model.NewPDFInspectionResult()
+		res.Diagnostics = diag
+		return res, err
+	}
+
+	// 0b. Fail-fast PDF validation check
 	data, valErr := diagnostics.ValidatePDFStream(r)
 	if valErr != nil {
 		mappedErr := diagnostics.MapFirecrawlError(valErr)
@@ -143,8 +159,10 @@ func (i *PDFInspector) InspectPDF(ctx context.Context, r io.Reader) (*model.PDFI
 		return nil, err
 	}
 
-	// 3. Hierarchical semantic chunking
-	chunks, err := i.chunker.ChunkDocument(ctx, tree, raw.Markdown)
+	// 3. Hierarchical semantic chunking (page layout from json_layout.pages is
+	// authoritative for chunk page provenance)
+	docContent := buildDocumentContent(raw)
+	chunks, err := i.chunker.ChunkDocument(ctx, docID, tree, raw.Markdown, docContent.PageMap)
 	if err != nil {
 		mappedErr := diagnostics.MapFirecrawlError(err)
 		diag := i.aggregator.BuildDiagnosticsWithOptions(diagnostics.DiagnosticOptions{
@@ -162,8 +180,6 @@ func (i *PDFInspector) InspectPDF(ctx context.Context, r io.Reader) (*model.PDFI
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
-
-	docContent := buildDocumentContent(raw)
 
 	// 4. Asset extraction
 	extractedAssets, err := i.extractor.ExtractAssetsWithContext(ctx, tree, docContent, chunks)
@@ -195,6 +211,7 @@ func (i *PDFInspector) InspectPDF(ctx context.Context, r io.Reader) (*model.PDFI
 	}
 
 	docMeta := buildDocumentMetadata(raw, tree, chunks, docContent.PageMap)
+	docMeta.DocumentID = docID
 
 	// 5. Semantic Metadata Enrichment Layer (ADR 0007 via Deep Enricher Seam)
 	enrichReport := i.enricher.Enrich(ctx, &enrichment.EnrichmentInput{

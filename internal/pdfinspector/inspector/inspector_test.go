@@ -40,13 +40,21 @@ func TestPDFInspector_Bootstrap(t *testing.T) {
 	insp := inspector.NewPDFInspector(cfg, client, proc, chunker, ext, agg)
 
 	dummyPDF := strings.NewReader("%PDF-1.4 Header Sample PDF Content")
-	result, err := insp.InspectPDF(context.Background(), dummyPDF)
+	result, err := insp.InspectPDF(context.Background(), "doc-bootstrap", dummyPDF)
 	if err != nil {
 		t.Fatalf("expected no error during bootstrap test, got: %v", err)
 	}
 
 	if result.Diagnostics.Status != "success" {
 		t.Errorf("expected status 'success', got '%s'", result.Diagnostics.Status)
+	}
+
+	if result.Document.DocumentID != "doc-bootstrap" {
+		t.Errorf("expected documentID 'doc-bootstrap', got %q", result.Document.DocumentID)
+	}
+
+	if len(result.Chunks) > 0 && result.Chunks[0].DocumentID != "doc-bootstrap" {
+		t.Errorf("expected chunk document_id 'doc-bootstrap', got %q", result.Chunks[0].DocumentID)
 	}
 
 	if len(result.Chunks) == 0 {
@@ -99,13 +107,17 @@ func TestPDFInspector_E2E_MultiPageDocument(t *testing.T) {
 	insp := inspector.NewPDFInspector(cfg, client, proc, chunker, ext, agg)
 
 	pdfStream := strings.NewReader("%PDF-1.5 Header Multi-page ARC document payload")
-	result, err := insp.InspectPDF(context.Background(), pdfStream)
+	result, err := insp.InspectPDF(context.Background(), "doc-arc-spec", pdfStream)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
 	if result.Document.Title != "ARC Architecture Spec" {
 		t.Errorf("expected Title 'ARC Architecture Spec', got %q", result.Document.Title)
+	}
+
+	if result.Document.DocumentID != "doc-arc-spec" {
+		t.Errorf("expected documentID 'doc-arc-spec', got %q", result.Document.DocumentID)
 	}
 
 	if result.Document.Author != "ARC Team" {
@@ -126,6 +138,18 @@ func TestPDFInspector_E2E_MultiPageDocument(t *testing.T) {
 
 	if len(result.Chunks) == 0 {
 		t.Errorf("expected non-empty chunks")
+	}
+
+	hasPageTwoChunk := false
+	for _, c := range result.Chunks {
+		for _, pg := range c.PageNumbers {
+			if pg == 2 {
+				hasPageTwoChunk = true
+			}
+		}
+	}
+	if !hasPageTwoChunk {
+		t.Errorf("expected at least one chunk resolved to page 2 via json_layout.pages, all got %v", result.Chunks)
 	}
 
 	if len(result.Assets.Tables) == 0 {
@@ -171,7 +195,7 @@ func TestPDFInspector_ContextCancellation(t *testing.T) {
 	cancel() // Cancel immediately
 
 	dummyPDF := strings.NewReader("%PDF-1.4 Header test context cancellation")
-	_, err := insp.InspectPDF(ctx, dummyPDF)
+	_, err := insp.InspectPDF(ctx, "doc-cancelled", dummyPDF)
 	if err == nil {
 		t.Fatalf("expected error due to cancelled context, got nil")
 	}
