@@ -19,7 +19,7 @@ func main() {
 	vecStore := store.NewInMemoryVectorStore()
 	denseRet := dense.NewDenseRetriever(mockProv, vecStore, store.NewInMemoryContentStore())
 
-	ansEng := qa.NewAnswerEngine(nil, denseRet, nil, nil, nil)
+	ansEng := qa.NewAnswerEngine(nil, denseRet, nil, nil, nil, nil)
 	agentEng := agent.NewAgentEngine(agent.AgentPolicy{MaxSteps: 5}, []agenttool.Tool{
 		agenttool.NewKnowledgeTool(ansEng),
 	})

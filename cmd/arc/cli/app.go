@@ -36,7 +36,7 @@ func NewApp() *App {
 func NewAppWithRuntime(runtime *Runtime) *App {
 	denseRet := runtime.denseRetriever
 
-	ansEng := qa.NewAnswerEngine(nil, denseRet, nil, nil, nil)
+	ansEng := qa.NewAnswerEngine(nil, denseRet, nil, nil, nil, nil)
 	agentEng := agent.NewAgentEngine(agent.AgentPolicy{MaxSteps: 5, MaxToolCalls: 10}, []agenttool.Tool{
 		agenttool.NewKnowledgeTool(ansEng),
 	})

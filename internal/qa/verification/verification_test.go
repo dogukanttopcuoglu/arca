@@ -28,8 +28,8 @@ func TestVerificationPipeline(t *testing.T) {
 		if ans == nil {
 			t.Fatal("expected non-nil VerifiedAnswer")
 		}
-		if !ans.IsVerified {
-			t.Error("expected IsVerified to be true for valid reference")
+		if ans.Status != qaverification.StatusVerified {
+			t.Errorf("expected Status %q, got %q", qaverification.StatusVerified, ans.Status)
 		}
 		if len(ans.Citations) != 1 {
 			t.Fatalf("expected 1 citation, got %d", len(ans.Citations))
@@ -43,8 +43,20 @@ func TestVerificationPipeline(t *testing.T) {
 			t.Fatalf("unexpected error during verification: %v", err)
 		}
 
-		if ans.IsVerified {
-			t.Error("expected IsVerified to be false for invalid reference")
+		if ans.Status != qaverification.StatusUnverified {
+			t.Errorf("expected Status %q, got %q", qaverification.StatusUnverified, ans.Status)
+		}
+	})
+
+	t.Run("marks answer unverified when answer cites no sources", func(t *testing.T) {
+		text := "A claim with no citation markers at all."
+		ans, err := pipeline.Verify(ctx, text, win)
+		if err != nil {
+			t.Fatalf("unexpected error during verification: %v", err)
+		}
+
+		if ans.Status != qaverification.StatusUnverified {
+			t.Errorf("expected Status %q, got %q", qaverification.StatusUnverified, ans.Status)
 		}
 	})
 }

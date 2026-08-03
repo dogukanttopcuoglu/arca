@@ -39,7 +39,7 @@ func NewServer() *Server {
 	vecStore := store.NewInMemoryVectorStore()
 	denseRet := dense.NewDenseRetriever(mockProv, vecStore, store.NewInMemoryContentStore())
 
-	ansEng := qa.NewAnswerEngine(nil, denseRet, nil, nil, nil)
+	ansEng := qa.NewAnswerEngine(nil, denseRet, nil, nil, nil, nil)
 
 	pol := agent.AgentPolicy{MaxSteps: 5, MaxToolCalls: 10}
 	agentEng := agent.NewAgentEngine(pol, []agenttool.Tool{
@@ -105,7 +105,7 @@ func (s *Server) ExecuteTool(ctx context.Context, toolName string, params map[st
 		if query == "" {
 			query = "Default Query"
 		}
-		draft, err := s.answerEngine.Answer(ctx, retrievalseam.RetrievalQuery{
+		ans, err := s.answerEngine.Answer(ctx, retrievalseam.RetrievalQuery{
 			QueryText: query,
 			TopK:      5,
 		})
@@ -113,8 +113,8 @@ func (s *Server) ExecuteTool(ctx context.Context, toolName string, params map[st
 			return nil, err
 		}
 		return &MCPToolResult{
-			Content: fmt.Sprintf("Answer for %q backed by %d verified sources.", query, len(draft.SearchResults)),
-			Data:    draft,
+			Content: fmt.Sprintf("Answer for %q backed by %d verified sources.", query, len(ans.Citations)),
+			Data:    ans,
 		}, nil
 
 	case "run_agent_research":

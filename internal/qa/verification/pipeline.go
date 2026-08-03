@@ -8,11 +8,24 @@ import (
 	qacontext "arca/internal/qa/context"
 )
 
+// VerificationStatus is the explicit evidence state of an Answer, carried on
+// the answer itself rather than inferred from citation counts.
+type VerificationStatus string
+
+const (
+	// StatusVerified marks an answer with at least one valid citation and no invalid references.
+	StatusVerified VerificationStatus = "verified"
+	// StatusUnverified marks a generated answer with invalid references or no citations at all.
+	StatusUnverified VerificationStatus = "unverified"
+	// StatusNoEvidence marks answers produced without any retrieved sources (generation skipped).
+	StatusNoEvidence VerificationStatus = "no_evidence"
+)
+
 // VerifiedAnswer models a verified RAG answer payload with structural metrics.
 type VerifiedAnswer struct {
 	Text         string                       `json:"text"`
 	Citations    []qacitation.AnswerCitation  `json:"citations"`
-	IsVerified   bool                         `json:"is_verified"`
+	Status       VerificationStatus           `json:"status"`
 	Verification qacitation.VerificationReport `json:"verification"`
 }
 
@@ -61,12 +74,15 @@ func (p *DefaultVerificationPipeline) Verify(ctx context.Context, answerText str
 		return nil, err
 	}
 
-	isVerified := report.InvalidReferences == 0 && report.VerifiedClaims > 0
+	status := StatusUnverified
+	if report.InvalidReferences == 0 && report.VerifiedClaims > 0 {
+		status = StatusVerified
+	}
 
 	return &VerifiedAnswer{
 		Text:         answerText,
 		Citations:    citations,
-		IsVerified:   isVerified,
+		Status:       status,
 		Verification: report,
 	}, nil
 }

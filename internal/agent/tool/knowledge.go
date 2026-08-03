@@ -42,7 +42,7 @@ func (k *KnowledgeTool) Execute(ctx context.Context, input ToolInput) (ToolResul
 		}, nil
 	}
 
-	draft, err := k.engine.Answer(ctx, retrievalseam.RetrievalQuery{
+	ans, err := k.engine.Answer(ctx, retrievalseam.RetrievalQuery{
 		QueryText: input.Query,
 	})
 	if err != nil {
@@ -50,7 +50,7 @@ func (k *KnowledgeTool) Execute(ctx context.Context, input ToolInput) (ToolResul
 	}
 
 	return ToolResult{
-		Summary: fmt.Sprintf("Found %d search results for query %q", len(draft.SearchResults), input.Query),
-		Data:    draft,
+		Summary: fmt.Sprintf("Answer for query %q grounded in %d sources", input.Query, len(ans.Citations)),
+		Data:    ans,
 	}, nil
 }
