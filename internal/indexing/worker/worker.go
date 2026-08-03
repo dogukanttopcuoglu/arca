@@ -10,6 +10,7 @@ import (
 	indexingjob "arca/internal/indexing/job"
 	indexingmodel "arca/internal/indexing/model"
 	"arca/internal/indexing/provider"
+	"arca/internal/indexing/sparse"
 	"arca/internal/indexing/store"
 	pdfmodel "arca/internal/pdfinspector/model"
 )
@@ -18,18 +19,36 @@ var jobCounter uint64
 
 // IndexingWorker orchestrates differential diff calculation, provider embedding batching, and vector store upserts.
 type IndexingWorker struct {
-	provider     provider.EmbeddingProvider
-	store        store.VectorStore
-	contentStore store.ContentStore
+	provider       provider.EmbeddingProvider
+	store          store.VectorStore
+	contentStore   store.ContentStore
+	sparseProvider sparse.EncoderProvider
+}
+
+// IndexingWorkerOption configures an IndexingWorker instance.
+type IndexingWorkerOption func(*IndexingWorker)
+
+// WithSparseEncoderProvider attaches a sparse encoder provider so the worker
+// computes sparse vectors for new/changed chunks during indexing. The worker
+// only hands the document chunks to the provider — corpus statistics and
+// encoder selection are internal concerns of the provider.
+func WithSparseEncoderProvider(p sparse.EncoderProvider) IndexingWorkerOption {
+	return func(w *IndexingWorker) {
+		w.sparseProvider = p
+	}
 }
 
 // NewIndexingWorker constructs an IndexingWorker instance.
-func NewIndexingWorker(p provider.EmbeddingProvider, s store.VectorStore, c store.ContentStore) *IndexingWorker {
-	return &IndexingWorker{
+func NewIndexingWorker(p provider.EmbeddingProvider, s store.VectorStore, c store.ContentStore, opts ...IndexingWorkerOption) *IndexingWorker {
+	w := &IndexingWorker{
 		provider:     p,
 		store:        s,
 		contentStore: c,
 	}
+	for _, opt := range opts {
+		opt(w)
+	}
+	return w
 }
 
 // ExecuteSync executes document indexing synchronously and returns the completed IndexingJob.
@@ -140,7 +159,32 @@ func (w *IndexingWorker) ExecuteSync(ctx context.Context, documentID string, chu
 		}
 	}
 
-	// 5. Upsert points into store and persist chunk markdown content.
+	// 5. Encode sparse vectors for new/modified chunks when a provider is
+	// configured. The provider owns corpus statistics; the worker only hands
+	// over the document chunks (ADR-0028).
+	if w.sparseProvider != nil && len(chunksToEmbed) > 0 {
+		docChunks := make([]sparse.DocumentChunk, len(chunksToEmbed))
+		for i, chk := range chunksToEmbed {
+			docChunks[i] = sparse.DocumentChunk{ID: chk.ChunkID, Content: chk.ContentMarkdown}
+		}
+		encoder, err := w.sparseProvider.Encoder(ctx, docChunks)
+		if err != nil {
+			jobObj.SetError(err)
+			return jobObj, err
+		}
+		for i := range newPoints {
+			vec, err := encoder.Encode(ctx, chunksToEmbed[i].ContentMarkdown)
+			if err != nil {
+				jobObj.SetError(err)
+				return jobObj, err
+			}
+			if len(vec.Indices) > 0 {
+				newPoints[i].Sparse = &vec
+			}
+		}
+	}
+
+	// 6. Upsert points into store and persist chunk markdown content.
 	if len(newPoints) > 0 {
 		if err := w.store.UpsertPoints(ctx, newPoints); err != nil {
 			jobObj.SetError(err)
@@ -160,7 +204,7 @@ func (w *IndexingWorker) ExecuteSync(ctx context.Context, documentID string, chu
 		}
 	}
 
-	// 6. Update progress and mark job completed
+	// 7. Update progress and mark job completed
 	jobObj.UpdateProgress(len(chunksToEmbed), len(diffPlan.UnchangedChunks))
 	_ = jobObj.TransitionTo(indexingjob.StatusCompleted)
 
