@@ -150,6 +150,30 @@ func TestAnswerEngine_RealPipeline(t *testing.T) {
 		}
 	})
 
+	t.Run("verifies answers citing combined reference markers", func(t *testing.T) {
+		vecStore := store.NewInMemoryVectorStore()
+		contentStore := store.NewInMemoryContentStore()
+		seedChunk(ctx, t, mockProvider, vecStore, contentStore, "chk-1", "Introduction",
+			"Creativity is a fundamental human quality.")
+		seedChunk(ctx, t, mockProvider, vecStore, contentStore, "chk-2", "Practice",
+			"Discipline and daily practice turn creative impulses into finished works.")
+
+		retriever := dense.NewDenseRetriever(mockProvider, vecStore, contentStore)
+		llm := &fakeLLM{content: "Creativity requires practice [Ref 1, 2]."}
+		engine := newTestEngine(retriever, llm, 4000)
+
+		ans, err := engine.Answer(ctx, seam.RetrievalQuery{QueryText: "What is creativity?", TopK: 5})
+		if err != nil {
+			t.Fatalf("unexpected error during Answer execution: %v", err)
+		}
+		if ans.Status != qaverification.StatusVerified {
+			t.Errorf("expected Status %q for combined markers, got %q", qaverification.StatusVerified, ans.Status)
+		}
+		if len(ans.Citations) != 2 {
+			t.Errorf("expected 2 citations from combined markers, got %d", len(ans.Citations))
+		}
+	})
+
 	t.Run("respects the configured context budget at the engine seam", func(t *testing.T) {
 		vecStore := store.NewInMemoryVectorStore()
 		contentStore := store.NewInMemoryContentStore()
