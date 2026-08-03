@@ -10,24 +10,27 @@ import (
 type Capability string
 
 const (
-	CapabilityRawMetadata   Capability = "raw_metadata"
-	CapabilitySemanticTree  Capability = "semantic_tree"
-	CapabilityResolvedTitle Capability = "resolved_title"
-	CapabilityResolvedPages Capability = "resolved_pages"
-	CapabilityChunkStats    Capability = "chunk_stats"
-	CapabilityKeywords      Capability = "keywords"
-	CapabilityEntities      Capability = "entities"
-	CapabilityConcepts      Capability = "concepts"
-	CapabilityRelations     Capability = "relations"
-	CapabilitySummary       Capability = "summary"
+	CapabilityRawMetadata        Capability = "raw_metadata"
+	CapabilitySemanticTree       Capability = "semantic_tree"
+	CapabilityResolvedTitle      Capability = "resolved_title"
+	CapabilityResolvedPages      Capability = "resolved_pages"
+	CapabilityChunkStats         Capability = "chunk_stats"
+	CapabilityMetadataConsistency Capability = "metadata_consistency"
+	CapabilityKeywords           Capability = "keywords"
+	CapabilityEntities           Capability = "entities"
+	CapabilityConcepts           Capability = "concepts"
+	CapabilityRelations          Capability = "relations"
+	CapabilitySummary            Capability = "summary"
 )
 
 // EnricherPass defines the seam for an isolated enrichment stage (compiler pass pattern).
+// Execute returns diagnostic warnings alongside any fatal error. Warnings are always
+// accumulated into the EnrichmentReport so no pass signal is silently dropped.
 type EnricherPass interface {
 	Name() string
 	Requires() []Capability
 	Provides() []Capability
-	Execute(ctx context.Context, input *EnrichmentInput) error
+	Execute(ctx context.Context, input *EnrichmentInput) ([]string, error)
 }
 
 // CompositeEnricher manages and executes an ordered sequence of EnricherPass instances with capability verification.
@@ -81,11 +84,17 @@ func (c *CompositeEnricher) ExecutePasses(ctx context.Context, input *Enrichment
 		}
 
 		start := time.Now()
-		if err := pass.Execute(ctx, input); err != nil {
-			return report, fmt.Errorf("pass %q failed: %w", pass.Name(), err)
-		}
+		passWarnings, err := pass.Execute(ctx, input)
 		durationMs := time.Since(start).Milliseconds()
 		report.StageDurations[pass.Name()] = durationMs
+
+		// Preserve pass warnings even when the pass fails so partial diagnostics survive.
+		if len(passWarnings) > 0 {
+			report.Warnings = append(report.Warnings, passWarnings...)
+		}
+		if err != nil {
+			return report, fmt.Errorf("pass %q failed: %w", pass.Name(), err)
+		}
 
 		// Mark provided capabilities as available
 		for _, prov := range pass.Provides() {
@@ -119,12 +128,12 @@ func NewTitleAuthorPass(tr TitleResolver, ar AuthorResolver) *TitleAuthorPass {
 func (p *TitleAuthorPass) Name() string                     { return "TitleAuthorPass" }
 func (p *TitleAuthorPass) Requires() []Capability           { return []Capability{CapabilityRawMetadata} }
 func (p *TitleAuthorPass) Provides() []Capability           { return []Capability{CapabilityResolvedTitle} }
-func (p *TitleAuthorPass) Execute(ctx context.Context, input *EnrichmentInput) error {
+func (p *TitleAuthorPass) Execute(ctx context.Context, input *EnrichmentInput) ([]string, error) {
 	if input.Metadata != nil {
 		input.Metadata.Title = p.titleResolver.ResolveTitle(*input.Metadata, input.Tree, input.PageMap, input.Filename)
 		input.Metadata.Author = p.authorResolver.ResolveAuthor(*input.Metadata, input.PageMap, input.Filename)
 	}
-	return nil
+	return nil, nil
 }
 
 // PageResolutionPass implements EnricherPass for SemanticTree page mapping.
@@ -138,9 +147,11 @@ func NewPageResolutionPass() *PageResolutionPass {
 func (p *PageResolutionPass) Name() string                     { return "PageResolutionPass" }
 func (p *PageResolutionPass) Requires() []Capability           { return []Capability{CapabilitySemanticTree} }
 func (p *PageResolutionPass) Provides() []Capability           { return []Capability{CapabilityResolvedPages} }
-func (p *PageResolutionPass) Execute(ctx context.Context, input *EnrichmentInput) error {
-	if input.Tree != nil {
-		_ = EnrichSemanticTree(input.Tree, input.PageMap, input.Chunks)
+func (p *PageResolutionPass) Execute(ctx context.Context, input *EnrichmentInput) ([]string, error) {
+	if input.Tree == nil {
+		return nil, nil
 	}
-	return nil
+	// Surface unresolved-heading warnings so ADR-0007's "resolution failures
+	// produce diagnostics warnings" requirement is honored by the pipeline.
+	return EnrichSemanticTree(input.Tree, input.PageMap, input.Chunks), nil
 }

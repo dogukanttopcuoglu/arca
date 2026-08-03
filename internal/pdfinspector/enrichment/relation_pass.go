@@ -27,9 +27,9 @@ func (p *RelationExtractorPass) Requires() []Capability {
 }
 func (p *RelationExtractorPass) Provides() []Capability { return []Capability{CapabilityRelations} }
 
-func (p *RelationExtractorPass) Execute(ctx context.Context, input *EnrichmentInput) error {
+func (p *RelationExtractorPass) Execute(ctx context.Context, input *EnrichmentInput) ([]string, error) {
 	if input == nil {
-		return nil
+		return nil, nil
 	}
 
 	var entities []pdfmodel.Entity
@@ -50,7 +50,7 @@ func (p *RelationExtractorPass) Execute(ctx context.Context, input *EnrichmentIn
 
 	relations, err := p.extractor.ExtractRelations(ctx, relInput)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// 1. Populate canonical deduplicated relation catalog on DocumentMetadata
@@ -80,5 +80,5 @@ func (p *RelationExtractorPass) Execute(ctx context.Context, input *EnrichmentIn
 		}
 	}
 
-	return nil
+	return nil, nil
 }

@@ -28,9 +28,9 @@ func (p *EntityExtractorPass) Requires() []Capability {
 }
 func (p *EntityExtractorPass) Provides() []Capability { return []Capability{CapabilityEntities} }
 
-func (p *EntityExtractorPass) Execute(ctx context.Context, input *EnrichmentInput) error {
+func (p *EntityExtractorPass) Execute(ctx context.Context, input *EnrichmentInput) ([]string, error) {
 	if input == nil || len(input.Chunks) == 0 {
-		return nil
+		return nil, nil
 	}
 
 	lang := "en"
@@ -46,7 +46,7 @@ func (p *EntityExtractorPass) Execute(ctx context.Context, input *EnrichmentInpu
 
 	mentions, err := p.extractor.ExtractEntities(ctx, entityInput)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// 1. Attach mentions to individual KnowledgeChunks
@@ -95,5 +95,5 @@ func (p *EntityExtractorPass) Execute(ctx context.Context, input *EnrichmentInpu
 		input.Metadata.Entities = docEntities
 	}
 
-	return nil
+	return nil, nil
 }

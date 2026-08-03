@@ -1,6 +1,7 @@
 package enrichment_test
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"testing"
@@ -72,7 +73,7 @@ func TestGenerateInspectionResultV2(t *testing.T) {
 	}
 
 	enricher := enrichment.NewEnricher()
-	_ = enricher.Enrich(input)
+	_ = enricher.Enrich(context.Background(), input)
 
 	outputJSON, err := json.MarshalIndent(input, "", "  ")
 	if err != nil {

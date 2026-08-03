@@ -46,8 +46,9 @@ type EnrichmentReport struct {
 }
 
 // Enricher defines the seam for post-extraction semantic metadata enrichment.
+// The provided context is propagated to every EnricherPass in the pipeline.
 type Enricher interface {
-	Enrich(input *EnrichmentInput) *EnrichmentReport
+	Enrich(ctx context.Context, input *EnrichmentInput) *EnrichmentReport
 }
 
 // DefaultEnricher is the default implementation of the Enricher seam.
@@ -79,7 +80,7 @@ func NewEnricherWithExtractors(ee EntityExtractor, ce ConceptExtractor, re Relat
 }
 
 // Enrich executes multi-pass metadata enrichment using CompositeEnricher.
-func (e *DefaultEnricher) Enrich(input *EnrichmentInput) *EnrichmentReport {
+func (e *DefaultEnricher) Enrich(ctx context.Context, input *EnrichmentInput) *EnrichmentReport {
 	if input == nil {
 		return &EnrichmentReport{}
 	}
@@ -88,6 +89,7 @@ func (e *DefaultEnricher) Enrich(input *EnrichmentInput) *EnrichmentReport {
 		NewLanguageDetectionPass(),
 		NewChunkStatisticsPass(),
 		NewTitleAuthorPass(nil, nil),
+		NewMetadataConsistencyPass(),
 		NewPageResolutionPass(),
 		NewEntityExtractorPass(e.entityExtractor),
 		NewKeywordExtractorPass(nil),
@@ -96,7 +98,7 @@ func (e *DefaultEnricher) Enrich(input *EnrichmentInput) *EnrichmentReport {
 		NewSummaryPass(nil),
 	})
 
-	report, _ := comp.ExecutePasses(context.Background(), input)
+	report, _ := comp.ExecutePasses(ctx, input)
 	if report == nil {
 		return &EnrichmentReport{}
 	}

@@ -21,7 +21,7 @@ func TestChunkStatisticsPass(t *testing.T) {
 			},
 		}
 
-		if err := pass.Execute(ctx, input); err != nil {
+		if _, err := pass.Execute(ctx, input); err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
@@ -52,7 +52,7 @@ func TestChunkStatisticsPass(t *testing.T) {
 			},
 		}
 
-		if err := pass.Execute(ctx, input); err != nil {
+		if _, err := pass.Execute(ctx, input); err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
@@ -73,7 +73,7 @@ func TestChunkStatisticsPass(t *testing.T) {
 			},
 		}
 
-		if err := pass.Execute(ctx, input); err != nil {
+		if _, err := pass.Execute(ctx, input); err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
@@ -91,7 +91,7 @@ func TestChunkStatisticsPass(t *testing.T) {
 			},
 		}
 
-		if err := pass.Execute(ctx, input); err != nil {
+		if _, err := pass.Execute(ctx, input); err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
 

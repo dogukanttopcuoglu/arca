@@ -27,9 +27,9 @@ func (p *KeywordExtractorPass) Requires() []Capability {
 }
 func (p *KeywordExtractorPass) Provides() []Capability { return []Capability{CapabilityKeywords} }
 
-func (p *KeywordExtractorPass) Execute(ctx context.Context, input *EnrichmentInput) error {
+func (p *KeywordExtractorPass) Execute(ctx context.Context, input *EnrichmentInput) ([]string, error) {
 	if input == nil || len(input.Chunks) == 0 {
-		return nil
+		return nil, nil
 	}
 
 	lang := "en"
@@ -45,7 +45,7 @@ func (p *KeywordExtractorPass) Execute(ctx context.Context, input *EnrichmentInp
 
 	keywords, err := p.extractor.Extract(ctx, input.Chunks, lang, entities)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// 1. Attach document-level keywords
@@ -67,5 +67,5 @@ func (p *KeywordExtractorPass) Execute(ctx context.Context, input *EnrichmentInp
 		}
 	}
 
-	return nil
+	return nil, nil
 }

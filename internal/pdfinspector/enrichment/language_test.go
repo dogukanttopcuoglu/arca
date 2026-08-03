@@ -20,7 +20,7 @@ func TestLanguageDetectionPass(t *testing.T) {
 			},
 		}
 
-		err := pass.Execute(ctx, input)
+		_, err := pass.Execute(ctx, input)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -38,13 +38,12 @@ func TestLanguageDetectionPass(t *testing.T) {
 			},
 		}
 
-		err := pass.Execute(ctx, input)
+		_, err := pass.Execute(ctx, input)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		if input.Metadata.Language != "en" {
-			t.Errorf("expected language 'en', got %q", input.Metadata.Language)
+		if input.Metadata.Language != "en" {			t.Errorf("expected language 'en', got %q", input.Metadata.Language)
 		}
 	})
 }

@@ -1,6 +1,7 @@
 package enrichment_test
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -46,7 +47,7 @@ func TestEmpiricalEnrichmentQualityBenchmark(t *testing.T) {
 		Filename: "rick-rubin.pdf",
 	}
 
-	report := enricher.Enrich(input)
+	report := enricher.Enrich(context.Background(), input)
 	if report == nil {
 		t.Fatal("expected non-nil EnrichmentReport")
 	}

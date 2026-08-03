@@ -1,6 +1,8 @@
 package enrichment_test
 
 import (
+	"context"
+	"strings"
 	"testing"
 
 	"arca/internal/pdfinspector/enrichment"
@@ -89,7 +91,7 @@ func TestDefaultEnricher(t *testing.T) {
 		{PageNumber: 71, Markdown: "### Beginner's Mind\nSome content"},
 	}
 
-	report := enricher.Enrich(&enrichment.EnrichmentInput{
+	report := enricher.Enrich(context.Background(), &enrichment.EnrichmentInput{
 		Metadata: meta,
 		Tree:     tree,
 		PageMap:  pageMap,
@@ -104,5 +106,78 @@ func TestDefaultEnricher(t *testing.T) {
 	}
 	if report == nil {
 		t.Fatal("expected non-nil EnrichmentReport")
+	}
+}
+
+func TestDefaultEnricherPropagatesPageResolutionWarnings(t *testing.T) {
+	enricher := enrichment.NewEnricher()
+
+	meta := &model.DocumentMetadata{
+		Title:  "Some Title",
+		Author: "Some Author",
+	}
+	tree := &model.SemanticTree{
+		RootNodes: []model.SemanticNode{
+			{Heading: "Unmatched Section", Level: 1, PageNumbers: []int{1}},
+		},
+	}
+	pageMap := []model.PageMap{
+		{PageNumber: 1, Markdown: "# Cover\nwritten by Rick Rubin"},
+	}
+
+	report := enricher.Enrich(context.Background(), &enrichment.EnrichmentInput{
+		Metadata: meta,
+		Tree:     tree,
+		PageMap:  pageMap,
+		Filename: "rick-rubin.pdf",
+	})
+	if report == nil {
+		t.Fatal("expected non-nil EnrichmentReport")
+	}
+
+	found := false
+	for _, w := range report.Warnings {
+		if strings.Contains(w, "semantic page resolution unavailable") {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("expected page-resolution warning surfaced in report.Warnings, got %v", report.Warnings)
+	}
+}
+
+func TestDefaultEnricherWiresMetadataConsistencyPass(t *testing.T) {
+	enricher := enrichment.NewEnricher()
+
+	meta := &model.DocumentMetadata{
+		Title:      "Some Title",
+		Author:     "Some Author",
+		PageCount:  0,
+		Searchable: false,
+	}
+	pageMap := []model.PageMap{
+		{PageNumber: 1, Markdown: "# Cover\nwritten by Rick Rubin"},
+		{PageNumber: 2, Markdown: "Some readable text"},
+	}
+	chunks := []model.KnowledgeChunk{
+		{ChunkID: "chk-1", SectionPath: "S", PageNumbers: []int{3}, ContentMarkdown: "content"},
+	}
+
+	report := enricher.Enrich(context.Background(), &enrichment.EnrichmentInput{
+		Metadata: meta,
+		Tree:     &model.SemanticTree{},
+		PageMap:  pageMap,
+		Chunks:   chunks,
+		Filename: "rick-rubin.pdf",
+	})
+	if report == nil {
+		t.Fatal("expected non-nil EnrichmentReport")
+	}
+
+	if meta.PageCount != 3 {
+		t.Errorf("expected PageCount resolved to 3 (highest chunk page), got %d", meta.PageCount)
+	}
+	if !meta.Searchable {
+		t.Error("expected Searchable resolved to true from non-empty PageMap")
 	}
 }

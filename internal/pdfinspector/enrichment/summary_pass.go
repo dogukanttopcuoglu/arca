@@ -27,9 +27,9 @@ func (p *SummaryPass) Requires() []Capability {
 }
 func (p *SummaryPass) Provides() []Capability { return []Capability{CapabilitySummary} }
 
-func (p *SummaryPass) Execute(ctx context.Context, input *EnrichmentInput) error {
+func (p *SummaryPass) Execute(ctx context.Context, input *EnrichmentInput) ([]string, error) {
 	if input == nil {
-		return nil
+		return nil, nil
 	}
 
 	var keywords []pdfmodel.Keyword
@@ -62,7 +62,7 @@ func (p *SummaryPass) Execute(ctx context.Context, input *EnrichmentInput) error
 
 	res, err := p.extractor.ExtractSummaries(ctx, sumInput)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if input.Metadata != nil && res.DocumentSummary != nil {
@@ -75,5 +75,5 @@ func (p *SummaryPass) Execute(ctx context.Context, input *EnrichmentInput) error
 		}
 	}
 
-	return nil
+	return nil, nil
 }

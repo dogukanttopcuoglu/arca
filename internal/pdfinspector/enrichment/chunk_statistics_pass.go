@@ -32,9 +32,9 @@ func (p *ChunkStatisticsPass) Provides() []Capability {
 
 // Execute populates CharacterCount and TokenEstimate for any chunk where these
 // are zero but ContentMarkdown is non-empty.
-func (p *ChunkStatisticsPass) Execute(ctx context.Context, input *EnrichmentInput) error {
+func (p *ChunkStatisticsPass) Execute(ctx context.Context, input *EnrichmentInput) ([]string, error) {
 	if input == nil {
-		return nil
+		return nil, nil
 	}
 
 	for i := range input.Chunks {
@@ -57,5 +57,5 @@ func (p *ChunkStatisticsPass) Execute(ctx context.Context, input *EnrichmentInpu
 		}
 	}
 
-	return nil
+	return nil, nil
 }

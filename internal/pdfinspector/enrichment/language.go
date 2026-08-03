@@ -21,9 +21,9 @@ func (p *LanguageDetectionPass) Name() string           { return "LanguageDetect
 func (p *LanguageDetectionPass) Requires() []Capability { return []Capability{CapabilityRawMetadata} }
 func (p *LanguageDetectionPass) Provides() []Capability { return []Capability{CapabilityLanguage} }
 
-func (p *LanguageDetectionPass) Execute(ctx context.Context, input *EnrichmentInput) error {
+func (p *LanguageDetectionPass) Execute(ctx context.Context, input *EnrichmentInput) ([]string, error) {
 	if input == nil || input.Metadata == nil {
-		return nil
+		return nil, nil
 	}
 
 	sampleText := ""
@@ -41,7 +41,7 @@ func (p *LanguageDetectionPass) Execute(ctx context.Context, input *EnrichmentIn
 	lang := DetectLanguage(sampleText)
 	input.Metadata.Language = lang
 
-	return nil
+	return nil, nil
 }
 
 // DetectLanguage inspects sample text to determine ISO 639-1 language code ("tr", "en").

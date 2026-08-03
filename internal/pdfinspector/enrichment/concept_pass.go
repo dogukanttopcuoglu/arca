@@ -28,9 +28,9 @@ func (p *ConceptExtractorPass) Requires() []Capability {
 }
 func (p *ConceptExtractorPass) Provides() []Capability { return []Capability{CapabilityConcepts} }
 
-func (p *ConceptExtractorPass) Execute(ctx context.Context, input *EnrichmentInput) error {
+func (p *ConceptExtractorPass) Execute(ctx context.Context, input *EnrichmentInput) ([]string, error) {
 	if input == nil {
-		return nil
+		return nil, nil
 	}
 
 	lang := "en"
@@ -58,7 +58,7 @@ func (p *ConceptExtractorPass) Execute(ctx context.Context, input *EnrichmentInp
 
 	concepts, err := p.extractor.ExtractConcepts(ctx, conceptInput)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if input.Metadata != nil {
@@ -81,5 +81,5 @@ func (p *ConceptExtractorPass) Execute(ctx context.Context, input *EnrichmentInp
 		input.Chunks[i].Concepts = chunkConcepts
 	}
 
-	return nil
+	return nil, nil
 }

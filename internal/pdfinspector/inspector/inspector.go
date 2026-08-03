@@ -197,7 +197,7 @@ func (i *PDFInspector) InspectPDF(ctx context.Context, r io.Reader) (*model.PDFI
 	docMeta := buildDocumentMetadata(raw, tree, chunks, docContent.PageMap)
 
 	// 5. Semantic Metadata Enrichment Layer (ADR 0007 via Deep Enricher Seam)
-	enrichReport := i.enricher.Enrich(&enrichment.EnrichmentInput{
+	enrichReport := i.enricher.Enrich(ctx, &enrichment.EnrichmentInput{
 		Metadata: &docMeta,
 		Tree:     tree,
 		PageMap:  docContent.PageMap,

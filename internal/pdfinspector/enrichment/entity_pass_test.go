@@ -29,7 +29,7 @@ func TestEntityExtractorPass(t *testing.T) {
 			},
 		}
 
-		err := pass.Execute(ctx, input)
+		_, err := pass.Execute(ctx, input)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
