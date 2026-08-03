@@ -16,13 +16,14 @@ import (
 
 // EvalOptions configures an arc eval benchmark run.
 type EvalOptions struct {
-	GoldSetPath  string
-	Mode         retrievalseam.RetrievalMode
-	TopK         int
-	MinScore     float32
-	ReportPath   string
-	SparseWeight float64
-	SparseCap    int
+	GoldSetPath      string
+	Mode             retrievalseam.RetrievalMode
+	TopK             int
+	MinScore         float32
+	ReportPath       string
+	FusionPolicyName string
+	SparseWeight     float64
+	SparseCap        int
 }
 
 // RunEval executes the retrieval benchmark against the real composition root:
@@ -42,7 +43,8 @@ func (a *App) RunEval(ctx context.Context, opts EvalOptions) (string, error) {
 		return "", fmt.Errorf("retrieval mode %q unavailable: %w", opts.Mode, err)
 	}
 
-	// Apply the fusion policy for hybrid sweeps. The retriever owns the
+	// Apply the fusion policy for hybrid sweeps. A named policy sets the
+	// frozen base; raw flags override fields on top. The retriever owns the
 	// policy; eval only records it in the manifest.
 	var fusionPolicy *hybrid.FusionPolicy
 	if opts.Mode == retrievalseam.RetrievalHybrid {
@@ -51,6 +53,13 @@ func (a *App) RunEval(ctx context.Context, opts EvalOptions) (string, error) {
 			return "", fmt.Errorf("hybrid mode requires the hybrid retriever, got %T", retriever)
 		}
 		p := hr.FusionPolicy()
+		if opts.FusionPolicyName != "" {
+			named, err := hybrid.PolicyByName(opts.FusionPolicyName)
+			if err != nil {
+				return "", fmt.Errorf("invalid fusion policy: %w", err)
+			}
+			p = named
+		}
 		if opts.SparseWeight > 0 {
 			p.SparseWeight = opts.SparseWeight
 		}

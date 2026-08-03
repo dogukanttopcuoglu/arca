@@ -45,6 +45,18 @@ func TestLoadFromEnv_RetrievalMinScore(t *testing.T) {
 	}
 }
 
+func TestLoadFromEnv_FusionPolicyName(t *testing.T) {
+	cfg := DefaultConfig()
+	if cfg.FusionPolicyName != "balanced" {
+		t.Errorf("expected default fusion policy balanced, got %q", cfg.FusionPolicyName)
+	}
+
+	t.Setenv("RETRIEVAL_FUSION_POLICY", "densebiased")
+	if got := LoadFromEnv().FusionPolicyName; got != "densebiased" {
+		t.Errorf("expected configured fusion policy densebiased, got %q", got)
+	}
+}
+
 func TestLoadFromEnv_LLMSettings(t *testing.T) {
 	t.Setenv("LLM_BASE_URL", "http://llm.internal:9999/v1")
 	t.Setenv("LLM_API_KEY", "test-key")

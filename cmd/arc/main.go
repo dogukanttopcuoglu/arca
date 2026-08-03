@@ -66,6 +66,7 @@ func main() {
 		topk := fs.Int("topk", 5, "top-k retrieval depth")
 		minScore := fs.Float64("min-score", 0, "minimum retrieval score threshold")
 		report := fs.String("report", "", "path to write the JSON report")
+		fusionPolicy := fs.String("fusion-policy", "", "hybrid fusion policy: balanced|densebiased")
 		sparseWeight := fs.Float64("sparse-weight", 0, "hybrid sparse stream fusion weight (0 = policy default)")
 		sparseCap := fs.Int("sparse-cap", 0, "hybrid sparse candidate cap (0 = unlimited)")
 		if err := fs.Parse(os.Args[2:]); err != nil {
@@ -78,13 +79,14 @@ func main() {
 			os.Exit(1)
 		}
 		out, err := app.RunEval(ctx, arccli.EvalOptions{
-			GoldSetPath:  *goldset,
-			Mode:         m,
-			TopK:         *topk,
-			MinScore:     float32(*minScore),
-			ReportPath:   *report,
-			SparseWeight: *sparseWeight,
-			SparseCap:    *sparseCap,
+			GoldSetPath:      *goldset,
+			Mode:             m,
+			TopK:             *topk,
+			MinScore:         float32(*minScore),
+			ReportPath:       *report,
+			FusionPolicyName: *fusionPolicy,
+			SparseWeight:     *sparseWeight,
+			SparseCap:        *sparseCap,
 		})
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)

@@ -87,6 +87,10 @@ type Config struct {
 	// RetrievalMode selects the retriever used by arc ask: dense (default),
 	// sparse, or hybrid. Sparse and hybrid require SparseIndex.
 	RetrievalMode retrievalseam.RetrievalMode `mapstructure:"RETRIEVAL_MODE"`
+	// FusionPolicyName selects a frozen, calibrated fusion policy for hybrid
+	// retrieval (balanced | densebiased). Resolution happens in composition;
+	// the name is never interpreted at retrieval time.
+	FusionPolicyName string `mapstructure:"RETRIEVAL_FUSION_POLICY"`
 	// HTTPTimeout is the client timeout for external service calls.
 	HTTPTimeout time.Duration `mapstructure:"HTTP_TIMEOUT"`
 }
@@ -109,6 +113,7 @@ func DefaultConfig() Config {
 		RetrievalMinScore:     0,
 		SparseIndex:           false,
 		RetrievalMode:         retrievalseam.RetrievalDense,
+		FusionPolicyName:      "balanced",
 		HTTPTimeout:           30 * time.Second,
 	}
 }
@@ -136,6 +141,7 @@ func LoadFromEnv() Config {
 	v.SetDefault("RETRIEVAL_MIN_SCORE", base.RetrievalMinScore)
 	v.SetDefault("SPARSE_INDEX", base.SparseIndex)
 	v.SetDefault("RETRIEVAL_MODE", base.RetrievalMode.String())
+	v.SetDefault("RETRIEVAL_FUSION_POLICY", base.FusionPolicyName)
 	v.SetDefault("HTTP_TIMEOUT", base.HTTPTimeout)
 
 	return Config{
@@ -154,6 +160,7 @@ func LoadFromEnv() Config {
 		RetrievalMinScore:     float32(v.GetFloat64("RETRIEVAL_MIN_SCORE")),
 		SparseIndex:           v.GetBool("SPARSE_INDEX"),
 		RetrievalMode:         parseRetrievalMode(v.GetString("RETRIEVAL_MODE")),
+		FusionPolicyName:      v.GetString("RETRIEVAL_FUSION_POLICY"),
 		HTTPTimeout:           v.GetDuration("HTTP_TIMEOUT"),
 	}
 }
@@ -227,7 +234,11 @@ func (r *Runtime) RetrieverForMode(mode retrievalseam.RetrievalMode) (retrievals
 			if err != nil {
 				return nil, err
 			}
-			r.hybridRetriever = hybrid.NewHybridRetriever(r.denseRetriever, sparseRet)
+			policy, err := hybrid.PolicyByName(r.cfg.FusionPolicyName)
+			if err != nil {
+				return nil, fmt.Errorf("invalid fusion policy: %w", err)
+			}
+			r.hybridRetriever = hybrid.NewHybridRetriever(r.denseRetriever, sparseRet, hybrid.WithFusionPolicy(policy))
 		}
 		return r.hybridRetriever, nil
 	default:

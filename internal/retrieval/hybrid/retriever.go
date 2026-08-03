@@ -31,6 +31,30 @@ func DefaultFusionPolicy() FusionPolicy {
 	}
 }
 
+// DenseBiasedPolicy is the calibrated sweep policy (λd=1.0, λs=0.5, no cap):
+// it recovers the comparison/procedural regressions at the cost of the
+// entity exact-token rescue — the M4 fusion sweep result
+// (docs/benchmarks/fusion_sweep/summary.md).
+func DenseBiasedPolicy() FusionPolicy {
+	p := DefaultFusionPolicy()
+	p.SparseWeight = 0.5
+	return p
+}
+
+// PolicyByName resolves a frozen, calibrated policy name. Only policies with
+// benchmark evidence are registered; LexicalBiased stays undefined until data
+// supports a sparse-biased policy.
+func PolicyByName(name string) (FusionPolicy, error) {
+	switch name {
+	case "", "balanced":
+		return DefaultFusionPolicy(), nil
+	case "densebiased":
+		return DenseBiasedPolicy(), nil
+	default:
+		return FusionPolicy{}, fmt.Errorf("unknown fusion policy %q", name)
+	}
+}
+
 // HybridRetriever combines Dense vector search and Sparse BM25 search streams using RRF score fusion.
 // It is a pure composition layer: the FusionPolicy is the only tuning surface.
 type HybridRetriever struct {
