@@ -185,7 +185,7 @@ func (f *fakePointsServer) Query(ctx context.Context, req *qdrant.QueryPoints) (
 			continue
 		}
 		score := sparseDotTest(sp, pt.sparse)
-		if req.GetScoreThreshold() != nil && score < req.GetScoreThreshold().GetValue() {
+		if req.ScoreThreshold != nil && score < *req.ScoreThreshold {
 			continue
 		}
 		results = append(results, &qdrant.ScoredPoint{
