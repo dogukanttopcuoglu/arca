@@ -1,7 +1,7 @@
 package cli
 
 import (
-	"fmt"
+	"strings"
 	"time"
 
 	"arca/internal/indexing/provider"
@@ -177,8 +177,14 @@ func buildEmbeddingProvider(cfg Config) (provider.EmbeddingProvider, error) {
 func buildVectorStore(cfg Config) (store.VectorStore, error) {
 	switch cfg.VectorStoreType {
 	case VectorStoreQdrant:
-		// Real Qdrant adapter lands with the vector store decision; M1 defaults to in-memory.
-		return nil, fmt.Errorf("qdrant vector store adapter not yet implemented")
+		// Real Qdrant adapter backed by the official Go client. Vector storage only;
+		// chunk content lives in the ContentStore seam, not the vector payload.
+		host := strings.TrimPrefix(strings.TrimPrefix(cfg.VectorStoreURL, "http://"), "https://")
+		qstore, err := store.NewQdrantVectorStore(host, cfg.QdrantCollection)
+		if err != nil {
+			return nil, err
+		}
+		return qstore, nil
 	default:
 		return store.NewInMemoryVectorStore(), nil
 	}

@@ -121,6 +121,7 @@ func (w *IndexingWorker) ExecuteSync(ctx context.Context, documentID string, chu
 				ChunkOrder:        chk.ChunkOrder,
 				SectionPath:       chk.SectionPath,
 				PageNumbers:       chk.PageNumbers,
+				ContentType:       chk.ContentType,
 				Citations:         extractCitationTexts(chk.Citations),
 				ContentHash:       chk.ContentHash,
 				EmbeddingProvider: embRes.Provider,
