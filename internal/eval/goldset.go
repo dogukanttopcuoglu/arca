@@ -12,6 +12,11 @@ var allowedIntentCategories = [...]string{
 	"single_fact", "concept", "procedural", "comparison", "entity", "abstention",
 }
 
+// AllowedIntentCategories returns the six gold set query intents.
+func AllowedIntentCategories() []string {
+	return append([]string(nil), allowedIntentCategories[:]...)
+}
+
 // GoldSet is the versioned, human-curated chunk-level evaluation dataset
 // (ADR-0027). Queries are built exclusively from the real indexed corpus.
 type GoldSet struct {
