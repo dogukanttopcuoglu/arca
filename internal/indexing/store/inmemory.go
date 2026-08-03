@@ -28,6 +28,13 @@ func (s *InMemoryVectorStore) Health(ctx context.Context) error {
 	return nil
 }
 
+// Points returns the total number of stored vector points (diagnostics helper).
+func (s *InMemoryVectorStore) Points() int {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return len(s.points)
+}
+
 // UpsertPoints inserts or updates vector points in place based on Point ID.
 func (s *InMemoryVectorStore) UpsertPoints(ctx context.Context, points []VectorPoint) error {
 	s.mu.Lock()
@@ -84,6 +91,20 @@ func (s *InMemoryVectorStore) SearchVector(ctx context.Context, query VectorSear
 	}
 
 	return results, nil
+}
+
+// ListPoints enumerates all stored points matching the filter without ranking.
+func (s *InMemoryVectorStore) ListPoints(ctx context.Context, filter model.MetadataFilter) ([]VectorPoint, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	var points []VectorPoint
+	for id, pt := range s.points {
+		if matchesFilter(id, pt.Metadata, filter) {
+			points = append(points, pt)
+		}
+	}
+	return points, nil
 }
 
 // Delete removes vector points matching the given MetadataFilter.

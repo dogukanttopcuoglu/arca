@@ -17,7 +17,7 @@ func main() {
 
 	mockProv := provider.NewMockEmbeddingProvider("mock-provider", "mock-model", 1536)
 	vecStore := store.NewInMemoryVectorStore()
-	denseRet := dense.NewDenseRetriever(mockProv, vecStore)
+	denseRet := dense.NewDenseRetriever(mockProv, vecStore, store.NewInMemoryContentStore())
 
 	ansEng := qa.NewAnswerEngine(nil, denseRet, nil, nil, nil)
 	agentEng := agent.NewAgentEngine(agent.AgentPolicy{MaxSteps: 5}, []agenttool.Tool{

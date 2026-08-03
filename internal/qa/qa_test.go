@@ -58,7 +58,7 @@ func TestAnswerEngine_SyncOrchestration(t *testing.T) {
 		},
 	})
 
-	denseRetriever := dense.NewDenseRetriever(mockProvider, storeImpl)
+	denseRetriever := dense.NewDenseRetriever(mockProvider, storeImpl, store.NewInMemoryContentStore())
 	analyzer := qa.NewRuleBasedAnalyzer()
 
 	engine := qa.NewAnswerEngine(analyzer, denseRetriever, nil, nil, nil)
@@ -83,9 +83,9 @@ func TestAnswerEngine_SyncOrchestration(t *testing.T) {
 }
 
 func mockProviderGenerateVector(p provider.EmbeddingProvider, text string) []float32 {
-	res, err := p.GenerateEmbeddings(context.Background(), []string{text})
-	if err != nil || len(res.Vectors) == 0 {
+	vec, err := p.EmbedQuery(context.Background(), text)
+	if err != nil || len(vec) == 0 {
 		return make([]float32, 1536)
 	}
-	return res.Vectors[0]
+	return vec
 }

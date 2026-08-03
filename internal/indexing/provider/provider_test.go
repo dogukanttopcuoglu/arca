@@ -20,14 +20,14 @@ func TestMockEmbeddingProvider(t *testing.T) {
 		}
 	})
 
-	t.Run("generates deterministic vectors for input text slice", func(t *testing.T) {
+	t.Run("embeds document texts in batch", func(t *testing.T) {
 		ctx := context.Background()
 		texts := []string{
 			"First chunk content for embedding",
 			"Second chunk content for embedding",
 		}
 
-		res, err := mock.GenerateEmbeddings(ctx, texts)
+		res, err := mock.EmbedDocuments(ctx, texts)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -49,6 +49,40 @@ func TestMockEmbeddingProvider(t *testing.T) {
 		}
 		if res.Usage.TotalTokens <= 0 {
 			t.Errorf("expected TotalTokens > 0, got %d", res.Usage.TotalTokens)
+		}
+	})
+
+	t.Run("embeds a single query vector", func(t *testing.T) {
+		ctx := context.Background()
+
+		vec, err := mock.EmbedQuery(ctx, "vector search query")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(vec) != 1536 {
+			t.Errorf("expected query vector dimension 1536, got %d", len(vec))
+		}
+	})
+
+	t.Run("returns deterministic document embeddings", func(t *testing.T) {
+		ctx := context.Background()
+
+		a, err := mock.EmbedDocuments(ctx, []string{"deterministic text"})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		b, err := mock.EmbedDocuments(ctx, []string{"deterministic text"})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if len(a.Vectors[0]) != len(b.Vectors[0]) {
+			t.Fatal("expected matching vector lengths")
+		}
+		for i := range a.Vectors[0] {
+			if a.Vectors[0][i] != b.Vectors[0][i] {
+				t.Fatalf("expected deterministic vectors, mismatch at index %d", i)
+			}
 		}
 	})
 

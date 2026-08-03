@@ -23,6 +23,7 @@ type DiffPlan struct {
 	ModifiedChunks  []pdfmodel.KnowledgeChunk `json:"modified_chunks"`
 	NewChunks       []pdfmodel.KnowledgeChunk `json:"new_chunks"`
 	DeletedPointIDs []string                 `json:"deleted_point_ids"`
+	DeletedChunkIDs []string                 `json:"deleted_chunk_ids"`
 }
 
 // ChunksToEmbed returns all new and modified chunks requiring LLM embedding API calls.

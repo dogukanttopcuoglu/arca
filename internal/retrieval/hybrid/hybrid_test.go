@@ -55,7 +55,7 @@ func TestHybridRetriever(t *testing.T) {
 	}
 	_ = storeImpl.UpsertPoints(ctx, []store.VectorPoint{pt})
 
-	denseRetriever := dense.NewDenseRetriever(mockProvider, storeImpl)
+	denseRetriever := dense.NewDenseRetriever(mockProvider, storeImpl, store.NewInMemoryContentStore())
 	sparseRetriever := &MockSparseRetriever{
 		results: []seam.SearchResult{
 			{
@@ -101,9 +101,9 @@ func (m *MockSparseRetriever) Retrieve(ctx context.Context, query seam.Retrieval
 }
 
 func mockProviderGenerateVector(p provider.EmbeddingProvider, text string) []float32 {
-	res, err := p.GenerateEmbeddings(context.Background(), []string{text})
-	if err != nil || len(res.Vectors) == 0 {
+	vec, err := p.EmbedQuery(context.Background(), text)
+	if err != nil || len(vec) == 0 {
 		return make([]float32, 1536)
 	}
-	return res.Vectors[0]
+	return vec
 }

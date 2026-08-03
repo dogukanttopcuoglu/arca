@@ -17,7 +17,8 @@ func TestIndexingWorker_ExecuteSync(t *testing.T) {
 
 	mockProvider := provider.NewMockEmbeddingProvider("mock-provider", "mock-model-v1", 1536)
 	storeImpl := store.NewInMemoryVectorStore()
-	w := worker.NewIndexingWorker(mockProvider, storeImpl)
+	contentStore := store.NewInMemoryContentStore()
+	w := worker.NewIndexingWorker(mockProvider, storeImpl, contentStore)
 
 	docID := "doc-e2e-123"
 	chunks := []pdfmodel.KnowledgeChunk{
@@ -87,7 +88,8 @@ func TestIndexingWorker_DeletesRemovedChunkPoints(t *testing.T) {
 
 	mockProvider := provider.NewMockEmbeddingProvider("mock-provider", "mock-model-v1", 1536)
 	storeImpl := store.NewInMemoryVectorStore()
-	w := worker.NewIndexingWorker(mockProvider, storeImpl)
+	contentStore := store.NewInMemoryContentStore()
+	w := worker.NewIndexingWorker(mockProvider, storeImpl, contentStore)
 
 	docID := "doc-deletion-1"
 	threeChunks := []pdfmodel.KnowledgeChunk{
@@ -145,5 +147,65 @@ func TestIndexingWorker_DeletesRemovedChunkPoints(t *testing.T) {
 		if r.ID == removedPointID {
 			t.Errorf("deleted point %s should not remain in the store", removedPointID)
 		}
+	}
+}
+
+// recordingStore wraps InMemoryVectorStore and records which seam methods the worker invokes.
+type recordingStore struct {
+	inner          *store.InMemoryVectorStore
+	listCalls      int
+	searchCalls    int
+}
+
+func (s *recordingStore) UpsertPoints(ctx context.Context, points []store.VectorPoint) error {
+	return s.inner.UpsertPoints(ctx, points)
+}
+
+func (s *recordingStore) SearchVector(ctx context.Context, query store.VectorSearchQuery) ([]store.VectorSearchResult, error) {
+	s.searchCalls++
+	return s.inner.SearchVector(ctx, query)
+}
+
+func (s *recordingStore) ListPoints(ctx context.Context, filter indexingmodel.MetadataFilter) ([]store.VectorPoint, error) {
+	s.listCalls++
+	return s.inner.ListPoints(ctx, filter)
+}
+
+func (s *recordingStore) Delete(ctx context.Context, filter indexingmodel.MetadataFilter) error {
+	return s.inner.Delete(ctx, filter)
+}
+
+func (s *recordingStore) Health(ctx context.Context) error {
+	return s.inner.Health(ctx)
+}
+
+func TestIndexingWorker_EnumeratesExistingPointsViaListPoints(t *testing.T) {
+	ctx := context.Background()
+
+	mockProvider := provider.NewMockEmbeddingProvider("mock-provider", "mock-model-v1", 1536)
+	spy := &recordingStore{inner: store.NewInMemoryVectorStore()}
+	contentStore := store.NewInMemoryContentStore()
+	w := worker.NewIndexingWorker(mockProvider, spy, contentStore)
+
+	docID := "doc-enumeration-1"
+	chunks := []pdfmodel.KnowledgeChunk{
+		{
+			ChunkID:         "chk-1",
+			ChunkOrder:      0,
+			SectionPath:     "Intro",
+			ContentMarkdown: "Intro content.",
+			ContentHash:     "hash-1",
+		},
+	}
+
+	if _, err := w.ExecuteSync(ctx, docID, chunks); err != nil {
+		t.Fatalf("unexpected error during sync execution: %v", err)
+	}
+
+	if spy.listCalls == 0 {
+		t.Error("expected worker to enumerate existing points via ListPoints")
+	}
+	if spy.searchCalls != 0 {
+		t.Errorf("expected no SearchVector calls during indexing, got %d", spy.searchCalls)
 	}
 }

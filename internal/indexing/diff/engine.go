@@ -44,6 +44,7 @@ func (e *Engine) ComputeDiffPlan(documentID string, chunks []pdfmodel.KnowledgeC
 		ModifiedChunks:  []pdfmodel.KnowledgeChunk{},
 		NewChunks:       []pdfmodel.KnowledgeChunk{},
 		DeletedPointIDs: []string{},
+		DeletedChunkIDs: []string{},
 	}
 
 	// Index existing points by stable Point ID
@@ -89,6 +90,7 @@ func (e *Engine) ComputeDiffPlan(documentID string, chunks []pdfmodel.KnowledgeC
 			ptID := indexingstore.CalculatePointID(pt.DocumentID, pt.SectionPath, extractOrderFromMetadata(pt))
 			if !matchedPointIDs[ptID] {
 				plan.DeletedPointIDs = append(plan.DeletedPointIDs, ptID)
+				plan.DeletedChunkIDs = append(plan.DeletedChunkIDs, pt.ChunkID)
 			}
 		}
 	}

@@ -11,6 +11,7 @@ type VectorMetadata struct {
 	ChunkOrder       int      `json:"chunk_order"`
 	SectionPath      string   `json:"section_path,omitempty"`
 	PageNumbers      []int    `json:"page_numbers,omitempty"`
+	Citations        []string `json:"citations,omitempty"`
 	ContentHash      string   `json:"content_hash,omitempty"`
 	EmbeddingProvider string  `json:"embedding_provider,omitempty"`
 	EmbeddingModel   string   `json:"embedding_model,omitempty"`

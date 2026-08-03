@@ -29,6 +29,11 @@ type VectorStore interface {
 	// SearchVector executes nearest-neighbor similarity search using VectorSearchQuery.
 	SearchVector(ctx context.Context, query VectorSearchQuery) ([]VectorSearchResult, error)
 
+	// ListPoints enumerates all stored points matching the filter without ranking.
+	// This is a read operation for enumeration (e.g. differential indexing), not a
+	// similarity search, so it never truncates by TopK and never requires a query vector.
+	ListPoints(ctx context.Context, filter model.MetadataFilter) ([]VectorPoint, error)
+
 	// Delete removes matching vector points based on MetadataFilter.
 	Delete(ctx context.Context, filter model.MetadataFilter) error
 

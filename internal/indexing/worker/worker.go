@@ -18,15 +18,17 @@ var jobCounter uint64
 
 // IndexingWorker orchestrates differential diff calculation, provider embedding batching, and vector store upserts.
 type IndexingWorker struct {
-	provider provider.EmbeddingProvider
-	store    store.VectorStore
+	provider     provider.EmbeddingProvider
+	store        store.VectorStore
+	contentStore store.ContentStore
 }
 
 // NewIndexingWorker constructs an IndexingWorker instance.
-func NewIndexingWorker(p provider.EmbeddingProvider, s store.VectorStore) *IndexingWorker {
+func NewIndexingWorker(p provider.EmbeddingProvider, s store.VectorStore, c store.ContentStore) *IndexingWorker {
 	return &IndexingWorker{
-		provider: p,
-		store:    s,
+		provider:     p,
+		store:        s,
+		contentStore: c,
 	}
 }
 
@@ -47,19 +49,18 @@ func (w *IndexingWorker) ExecuteSync(ctx context.Context, documentID string, chu
 		return nil, err
 	}
 
-	// 1. Fetch existing vector points for this document to perform differential diff
-	existingResults, err := w.store.SearchVector(ctx, store.VectorSearchQuery{
-		TopK:   len(chunks) + 1000,
-		Filter: indexingmodel.MetadataFilter{DocumentIDs: []string{documentID}},
-	})
+	// 1. Enumerate existing vector points for this document to perform differential
+	// diff. Listing is a read operation (ListPoints), not a similarity search, so it
+	// is never truncated by TopK and needs no query vector.
+	existingPoints, err := w.store.ListPoints(ctx, indexingmodel.MetadataFilter{DocumentIDs: []string{documentID}})
 	if err != nil {
 		jobObj.SetError(err)
 		return jobObj, err
 	}
 
-	existingMeta := make([]indexingmodel.VectorMetadata, len(existingResults))
-	for i, res := range existingResults {
-		existingMeta[i] = res.Metadata
+	existingMeta := make([]indexingmodel.VectorMetadata, len(existingPoints))
+	for i, pt := range existingPoints {
+		existingMeta[i] = pt.Metadata
 	}
 
 	// 2. Compute DiffPlan using DiffEngine
@@ -74,6 +75,10 @@ func (w *IndexingWorker) ExecuteSync(ctx context.Context, documentID string, chu
 			DocumentIDs: []string{documentID},
 			PointIDs:    diffPlan.DeletedPointIDs,
 		}); err != nil {
+			jobObj.SetError(err)
+			return jobObj, err
+		}
+		if err := w.contentStore.DeleteContent(ctx, diffPlan.DeletedChunkIDs); err != nil {
 			jobObj.SetError(err)
 			return jobObj, err
 		}
@@ -100,7 +105,7 @@ func (w *IndexingWorker) ExecuteSync(ctx context.Context, documentID string, chu
 			texts[bIdx] = chk.ContentMarkdown
 		}
 
-		embRes, err := w.provider.GenerateEmbeddings(ctx, texts)
+		embRes, err := w.provider.EmbedDocuments(ctx, texts)
 		if err != nil {
 			jobObj.SetError(err)
 			return jobObj, err
@@ -116,6 +121,7 @@ func (w *IndexingWorker) ExecuteSync(ctx context.Context, documentID string, chu
 				ChunkOrder:        chk.ChunkOrder,
 				SectionPath:       chk.SectionPath,
 				PageNumbers:       chk.PageNumbers,
+				Citations:         extractCitationTexts(chk.Citations),
 				ContentHash:       chk.ContentHash,
 				EmbeddingProvider: embRes.Provider,
 				EmbeddingModel:    embRes.Model,
@@ -132,9 +138,21 @@ func (w *IndexingWorker) ExecuteSync(ctx context.Context, documentID string, chu
 		}
 	}
 
-	// 5. Upsert points into store
+	// 5. Upsert points into store and persist chunk markdown content.
 	if len(newPoints) > 0 {
 		if err := w.store.UpsertPoints(ctx, newPoints); err != nil {
+			jobObj.SetError(err)
+			return jobObj, err
+		}
+
+		chunkContents := make([]store.ChunkContent, len(chunksToEmbed))
+		for i, chk := range chunksToEmbed {
+			chunkContents[i] = store.ChunkContent{
+				ChunkID:         chk.ChunkID,
+				ContentMarkdown: chk.ContentMarkdown,
+			}
+		}
+		if err := w.contentStore.PutContent(ctx, chunkContents); err != nil {
 			jobObj.SetError(err)
 			return jobObj, err
 		}
@@ -145,4 +163,22 @@ func (w *IndexingWorker) ExecuteSync(ctx context.Context, documentID string, chu
 	_ = jobObj.TransitionTo(indexingjob.StatusCompleted)
 
 	return jobObj, nil
+}
+
+// extractCitationTexts flattens chunk citations into their raw reference texts for
+// vector metadata, preserving the source references for retrieval and QA citation work.
+func extractCitationTexts(citations []pdfmodel.Citation) []string {
+	if len(citations) == 0 {
+		return nil
+	}
+	texts := make([]string, 0, len(citations))
+	for _, cit := range citations {
+		if cit.RawText != "" {
+			texts = append(texts, cit.RawText)
+		}
+	}
+	if len(texts) == 0 {
+		return nil
+	}
+	return texts
 }

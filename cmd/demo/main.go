@@ -25,6 +25,8 @@ import (
 	"arca/internal/indexing/provider"
 	"arca/internal/indexing/store"
 	"arca/internal/indexing/worker"
+	"arca/internal/retrieval/dense"
+	retrievalseam "arca/internal/retrieval/seam"
 )
 
 const banner = `
@@ -167,7 +169,9 @@ func main() {
 
 		indexingProvider := provider.NewMockEmbeddingProvider("mock-provider", "mock-model-v1", 1536)
 		vectorStore := store.NewInMemoryVectorStore()
-		indexingWorker := worker.NewIndexingWorker(indexingProvider, vectorStore)
+		contentStore := store.NewInMemoryContentStore()
+		indexingWorker := worker.NewIndexingWorker(indexingProvider, vectorStore, contentStore)
+		denseRetriever := dense.NewDenseRetriever(indexingProvider, vectorStore, contentStore)
 
 		indexCtx := context.Background()
 		jobObj, err := indexingWorker.ExecuteSync(indexCtx, result.Document.DocumentID, result.Chunks)
@@ -185,16 +189,11 @@ func main() {
 			fmt.Println("-------------------------------------------------------------------")
 			fmt.Printf("[+] Retrieval query: %q\n", *query)
 
-			queryEmb, err := indexingProvider.GenerateEmbeddings(indexCtx, []string{*query})
-			if err != nil {
-				fmt.Printf("[-] Query embedding failed: %v\n", err)
-				os.Exit(1)
-			}
-
-			matches, err := vectorStore.SearchVector(indexCtx, store.VectorSearchQuery{
-				Vector: queryEmb.Vectors[0],
-				TopK:   5,
-				Filter: indexingmodel.MetadataFilter{DocumentIDs: []string{result.Document.DocumentID}},
+			matches, err := denseRetriever.Retrieve(indexCtx, retrievalseam.RetrievalQuery{
+				QueryText: *query,
+				TopK:      5,
+				Mode:      retrievalseam.RetrievalDense,
+				Filter:    indexingmodel.MetadataFilter{DocumentIDs: []string{result.Document.DocumentID}},
 			})
 			if err != nil {
 				fmt.Printf("[-] Retrieval failed: %v\n", err)
@@ -205,12 +204,20 @@ func main() {
 				fmt.Println("[-] No matching chunks found.")
 			}
 			for i, m := range matches {
-				fmt.Printf("   [%d] score=%.4f pages=%v section=%q chunk=%s\n",
-					i+1, m.Score, m.Metadata.PageNumbers, m.Metadata.SectionPath, m.Metadata.ChunkID)
+				fmt.Printf("   [%d] score=%.4f pages=%v section=%q chunk=%s content=%q\n",
+					i+1, m.Score, m.Metadata.PageNumbers, m.Metadata.SectionPath, m.Metadata.ChunkID, truncate(m.ContentMarkdown, 60))
 			}
 		}
 		fmt.Println("===================================================================")
 	}
+}
+
+// truncate shortens a string to the given rune count with an ellipsis.
+func truncate(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+	return s[:n] + "..."
 }
 
 func sampleExtractionJSON() string {

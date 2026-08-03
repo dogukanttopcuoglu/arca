@@ -119,4 +119,55 @@ func TestInMemoryVectorStore(t *testing.T) {
 			t.Errorf("expected 0 points after deletion, got %d", len(results))
 		}
 	})
+
+	t.Run("list points enumerates without ranking or truncation", func(t *testing.T) {
+		points := []store.VectorPoint{
+			{
+				ID:     "pt-a",
+				Vector: []float32{1.0, 0.0, 0.0},
+				Metadata: model.VectorMetadata{
+					DocumentID: "doc-list",
+					ChunkID:    "chk-a",
+				},
+			},
+			{
+				ID:     "pt-b",
+				Vector: []float32{0.0, 1.0, 0.0},
+				Metadata: model.VectorMetadata{
+					DocumentID: "doc-list",
+					ChunkID:    "chk-b",
+				},
+			},
+			{
+				ID:     "pt-other",
+				Vector: []float32{0.0, 0.0, 1.0},
+				Metadata: model.VectorMetadata{
+					DocumentID: "doc-other",
+					ChunkID:    "chk-other",
+				},
+			},
+		}
+		if err := storeImpl.UpsertPoints(ctx, points); err != nil {
+			t.Fatalf("unexpected upsert error: %v", err)
+		}
+
+		listed, err := storeImpl.ListPoints(ctx, model.MetadataFilter{DocumentIDs: []string{"doc-list"}})
+		if err != nil {
+			t.Fatalf("unexpected list error: %v", err)
+		}
+		if len(listed) != 2 {
+			t.Fatalf("expected 2 listed points for doc-list, got %d", len(listed))
+		}
+
+		ids := map[string]bool{}
+		for _, pt := range listed {
+			ids[pt.ID] = true
+			if len(pt.Vector) != 3 {
+				t.Errorf("expected vector preserved in listed point %s", pt.ID)
+			}
+		}
+		if !ids["pt-a"] || !ids["pt-b"] {
+			t.Errorf("expected pt-a and pt-b in list, got %v", ids)
+		}
+	})
 }

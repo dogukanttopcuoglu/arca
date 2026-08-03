@@ -28,9 +28,18 @@ type EmbeddingResult struct {
 }
 
 // EmbeddingProvider defines the deep module interface seam for LLM embedding generation.
+//
+// Document and query embeddings are distinct operations: documents are embedded
+// in bulk for storage (and may carry provider-specific document prefixes), while
+// queries are embedded singly for retrieval (and may carry provider-specific
+// retrieval prefixes/instructions). Provider-specific behavior is encapsulated in
+// the adapter, so callers never depend on embedding model quirks.
 type EmbeddingProvider interface {
-	// GenerateEmbeddings produces dense vector embeddings for a slice of input texts.
-	GenerateEmbeddings(ctx context.Context, texts []string) (*EmbeddingResult, error)
+	// EmbedDocuments produces dense vector embeddings for a batch of document texts.
+	EmbedDocuments(ctx context.Context, texts []string) (*EmbeddingResult, error)
+
+	// EmbedQuery produces a dense vector embedding for a single query string.
+	EmbedQuery(ctx context.Context, query string) ([]float32, error)
 
 	// Capabilities returns provider operational bounds (dimension, batch size, token limits).
 	Capabilities() ProviderCapabilities

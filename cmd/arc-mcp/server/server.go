@@ -37,7 +37,7 @@ type Server struct {
 func NewServer() *Server {
 	mockProv := provider.NewMockEmbeddingProvider("mock-provider", "mock-model", 1536)
 	vecStore := store.NewInMemoryVectorStore()
-	denseRet := dense.NewDenseRetriever(mockProv, vecStore)
+	denseRet := dense.NewDenseRetriever(mockProv, vecStore, store.NewInMemoryContentStore())
 
 	ansEng := qa.NewAnswerEngine(nil, denseRet, nil, nil, nil)
 

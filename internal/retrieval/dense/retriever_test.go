@@ -16,6 +16,7 @@ func TestDenseRetriever(t *testing.T) {
 
 	mockProvider := provider.NewMockEmbeddingProvider("mock-provider", "mock-model-v1", 1536)
 	storeImpl := store.NewInMemoryVectorStore()
+	contentStore := store.NewInMemoryContentStore()
 
 	// Seed vector points
 	pt1 := store.VectorPoint{
@@ -43,7 +44,14 @@ func TestDenseRetriever(t *testing.T) {
 		t.Fatalf("failed to seed vector store: %v", err)
 	}
 
-	denseRetriever := dense.NewDenseRetriever(mockProvider, storeImpl)
+	if err := contentStore.PutContent(ctx, []store.ChunkContent{
+		{ChunkID: "chk-1", ContentMarkdown: "Clean architecture principles and deep modules."},
+		{ChunkID: "chk-2", ContentMarkdown: "Database optimization and indexing strategies."},
+	}); err != nil {
+		t.Fatalf("failed to seed content store: %v", err)
+	}
+
+	denseRetriever := dense.NewDenseRetriever(mockProvider, storeImpl, contentStore)
 
 	t.Run("successfully retrieves nearest neighbor for query text", func(t *testing.T) {
 		query := seam.RetrievalQuery{
@@ -65,6 +73,12 @@ func TestDenseRetriever(t *testing.T) {
 		}
 		if results[0].Score <= 0 {
 			t.Errorf("expected positive relevance score, got %.4f", results[0].Score)
+		}
+		if results[0].ContentMarkdown == "" {
+			t.Error("expected ContentMarkdown to be populated from ContentStore")
+		}
+		if results[0].ContentMarkdown != "Clean architecture principles and deep modules." {
+			t.Errorf("unexpected ContentMarkdown: %q", results[0].ContentMarkdown)
 		}
 	})
 
@@ -91,9 +105,9 @@ func TestDenseRetriever(t *testing.T) {
 }
 
 func mockProviderGenerateVector(p provider.EmbeddingProvider, text string) []float32 {
-	res, err := p.GenerateEmbeddings(context.Background(), []string{text})
-	if err != nil || len(res.Vectors) == 0 {
+	vec, err := p.EmbedQuery(context.Background(), text)
+	if err != nil || len(vec) == 0 {
 		return make([]float32, 1536)
 	}
-	return res.Vectors[0]
+	return vec
 }

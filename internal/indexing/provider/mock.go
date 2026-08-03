@@ -83,8 +83,8 @@ func (m *MockEmbeddingProvider) Health(ctx context.Context) error {
 	return nil
 }
 
-// GenerateEmbeddings produces deterministic normalized pseudo-vectors for input text strings.
-func (m *MockEmbeddingProvider) GenerateEmbeddings(ctx context.Context, texts []string) (*EmbeddingResult, error) {
+// EmbedDocuments produces deterministic normalized pseudo-vectors for input text strings.
+func (m *MockEmbeddingProvider) EmbedDocuments(ctx context.Context, texts []string) (*EmbeddingResult, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -110,6 +110,18 @@ func (m *MockEmbeddingProvider) GenerateEmbeddings(ctx context.Context, texts []
 		Model:    m.model,
 		Version:  "1.0.0",
 	}, nil
+}
+
+// EmbedQuery produces a deterministic normalized pseudo-vector for a single query string.
+func (m *MockEmbeddingProvider) EmbedQuery(ctx context.Context, query string) ([]float32, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	if !m.healthy {
+		return nil, ErrProviderUnhealthy
+	}
+
+	return m.generateDeterministicVector(query), nil
 }
 
 func (m *MockEmbeddingProvider) generateDeterministicVector(text string) []float32 {
