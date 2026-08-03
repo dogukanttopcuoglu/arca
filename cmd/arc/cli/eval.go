@@ -1,0 +1,136 @@
+package cli
+
+import (
+	"context"
+	"fmt"
+	"os"
+	"os/exec"
+	"strings"
+
+	"arca/internal/eval"
+	indexingmodel "arca/internal/indexing/model"
+	"arca/internal/indexing/store"
+	retrievalseam "arca/internal/retrieval/seam"
+)
+
+// EvalOptions configures an arc eval benchmark run.
+type EvalOptions struct {
+	GoldSetPath string
+	Mode        retrievalseam.RetrievalMode
+	TopK        int
+	MinScore    float32
+	ReportPath  string
+}
+
+// RunEval executes the retrieval benchmark against the real composition root:
+// real embedding provider and real vector store — never mocks. The corpus
+// fingerprint is verified before any query executes; a mismatch aborts with
+// an error. Renders a human table and optionally writes the JSON report.
+func (a *App) RunEval(ctx context.Context, opts EvalOptions) (string, error) {
+	if strings.TrimSpace(opts.GoldSetPath) == "" {
+		return "", fmt.Errorf("gold set path cannot be empty")
+	}
+	if opts.Mode != retrievalseam.RetrievalDense {
+		return "", fmt.Errorf("retrieval mode %q not implemented yet", opts.Mode)
+	}
+	if opts.TopK <= 0 {
+		opts.TopK = 5
+	}
+
+	gsFile, err := os.Open(opts.GoldSetPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to open gold set: %w", err)
+	}
+	defer gsFile.Close()
+	gs, err := eval.LoadGoldSet(gsFile)
+	if err != nil {
+		return "", fmt.Errorf("invalid gold set: %w", err)
+	}
+
+	runner := eval.New(
+		a.runtime.denseRetriever,
+		listPointsSource{store: a.runtime.vectorStore},
+		eval.Options{
+			Mode:              opts.Mode,
+			TopK:              opts.TopK,
+			MinScore:          opts.MinScore,
+			EmbeddingProvider: a.runtime.embeddingProvider.Provider(),
+			EmbeddingModel:    a.runtime.embeddingProvider.Model(),
+			Collection:        a.runtime.cfg.QdrantCollection,
+			GitCommit:         gitHead(),
+		},
+	)
+
+	report, err := runner.Run(ctx, gs)
+	if err != nil {
+		return "", err
+	}
+
+	if opts.ReportPath != "" {
+		raw, err := report.JSON()
+		if err != nil {
+			return "", fmt.Errorf("failed to serialize report: %w", err)
+		}
+		if err := os.WriteFile(opts.ReportPath, raw, 0644); err != nil {
+			return "", fmt.Errorf("failed to write report: %w", err)
+		}
+	}
+
+	return renderReport(report), nil
+}
+
+// listPointsSource implements eval.FingerprintSource over the real vector
+// store, reading content hashes from the indexed points.
+type listPointsSource struct {
+	store store.VectorStore
+}
+
+// ContentHashes returns the ContentHash of every indexed chunk for the
+// document via ListPoints.
+func (s listPointsSource) ContentHashes(documentID string) ([]string, error) {
+	points, err := s.store.ListPoints(context.Background(), indexingmodel.MetadataFilter{DocumentIDs: []string{documentID}})
+	if err != nil {
+		return nil, err
+	}
+	hashes := make([]string, len(points))
+	for i, p := range points {
+		hashes[i] = p.Metadata.ContentHash
+	}
+	return hashes, nil
+}
+
+// gitHead returns the current git commit hash, or "unknown" when unavailable.
+func gitHead() string {
+	out, err := exec.Command("git", "rev-parse", "HEAD").Output()
+	if err != nil {
+		return "unknown"
+	}
+	return strings.TrimSpace(string(out))
+}
+
+// renderReport formats the benchmark report as a human-readable table.
+func renderReport(report *eval.Report) string {
+	var sb strings.Builder
+	fmt.Fprintf(&sb, "=== ARC EVAL — %s ===\n", report.Retrieval.Mode)
+	fmt.Fprintf(&sb, "corpus: %s (%d chunks, fingerprint %.16s…)\n",
+		report.Corpus.DocumentID, report.Corpus.ChunkCount, report.Corpus.Fingerprint)
+	fmt.Fprintf(&sb, "config: mode=%s top_k=%d min_score=%v model=%s/%s commit=%s\n\n",
+		report.Retrieval.Mode, report.Retrieval.TopK, report.Retrieval.MinScore,
+		report.Retrieval.EmbeddingProvider, report.Retrieval.EmbeddingModel, report.GitCommit)
+
+	fmt.Fprintf(&sb, "%-8s %-12s %-9s %-11s %-6s %-8s %s\n",
+		"id", "intent", "recall@k", "precision@k", "mrr", "ndcg@k", "retrieved")
+	for _, q := range report.PerQuery {
+		fmt.Fprintf(&sb, "%-8s %-12s %-9.3f %-11.3f %-6.3f %-8.3f %d\n",
+			q.ID, q.Intent, q.RecallAtK, q.PrecisionAtK, q.MRR, q.NDCGAtK, len(q.RetrievedChunkIDs))
+	}
+
+	sb.WriteString("\nAGGREGATE\n")
+	fmt.Fprintf(&sb, "  recall@5            %.3f\n", report.Metrics.RecallAtK)
+	fmt.Fprintf(&sb, "  precision@5         %.3f\n", report.Metrics.PrecisionAtK)
+	fmt.Fprintf(&sb, "  mrr                 %.3f\n", report.Metrics.MRR)
+	fmt.Fprintf(&sb, "  ndcg@5              %.3f\n", report.Metrics.NDCGAtK)
+	fmt.Fprintf(&sb, "  no_evidence_precision %.3f\n", report.Metrics.NoEvidencePrecision)
+	fmt.Fprintf(&sb, "  queries             %d (%.0f ms)\n", report.Metrics.Queries, float64(report.DurationMs))
+	return sb.String()
+}
