@@ -30,8 +30,8 @@ func TestDefaultConfig_LLMSettings(t *testing.T) {
 	if cfg.LLMContextBudget != 4000 {
 		t.Errorf("expected default context budget 4000, got %d", cfg.LLMContextBudget)
 	}
-	if cfg.RetrievalMinScore != 0 {
-		t.Errorf("expected default retrieval min score 0 (no threshold), got %v", cfg.RetrievalMinScore)
+	if cfg.RetrievalMinScore != 0.6 {
+		t.Errorf("expected default retrieval min score 0.6 (M4 frozen operating point), got %v", cfg.RetrievalMinScore)
 	}
 }
 

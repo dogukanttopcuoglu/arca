@@ -12,7 +12,7 @@ import (
 func TestAgentEngine(t *testing.T) {
 	ctx := context.Background()
 
-	knowledgeTool := agenttool.NewKnowledgeTool(qa.NewAnswerEngine(nil, nil, nil, nil, nil, nil))
+	knowledgeTool := agenttool.NewKnowledgeTool(qa.NewAnswerEngine(nil, nil, nil, nil, nil, nil, nil))
 	policy := agent.AgentPolicy{
 		MaxSteps:     5,
 		MaxToolCalls: 10,

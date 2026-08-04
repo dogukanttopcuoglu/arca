@@ -2,6 +2,7 @@ package main_test
 
 import (
 	"context"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -47,6 +48,21 @@ func mockLLMResponse() string {
 }`
 }
 
+// mockEvidenceGateResponse returns a structured gate decision the fake
+// gateway serves for evidence-gate requests.
+func mockEvidenceGateResponse() string {
+	return `{
+  "choices": [{"message": {"role": "assistant", "content": "{\"decision\":\"supported\"}"}}],
+  "usage": {"prompt_tokens": 8, "completion_tokens": 4, "total_tokens": 12}
+}`
+}
+
+// isEvidenceGateRequest reports whether the request body targets the
+// pre-generation evidence gate (detected by its system instruction).
+func isEvidenceGateRequest(body []byte) bool {
+	return strings.Contains(string(body), "evidence gate")
+}
+
 // newTestApp wires the composition root against a mock Firecrawl service and a
 // mock OpenAI-compatible LLM gateway, returning the app, the PDF path, and a
 // cleanup function.
@@ -62,6 +78,11 @@ func newTestApp(t *testing.T) (*arccli.App, string, func()) {
 	llmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
+		body, _ := io.ReadAll(r.Body)
+		if isEvidenceGateRequest(body) {
+			_, _ = w.Write([]byte(mockEvidenceGateResponse()))
+			return
+		}
 		_, _ = w.Write([]byte(mockLLMResponse()))
 	}))
 
@@ -70,6 +91,10 @@ func newTestApp(t *testing.T) (*arccli.App, string, func()) {
 	cfg.LLMBaseURL = llmServer.URL
 	cfg.LLMModel = "test-model"
 	cfg.LLMProviderLabel = "test-gateway"
+	// The M4 min-score (0.6) is calibrated on real nomic embeddings; the mock
+	// embedding provider produces near-zero cosine similarities, so the
+	// fixture explicitly disables the threshold to test rendering behavior.
+	cfg.RetrievalMinScore = 0
 
 	runtime, err := arccli.NewRuntime(cfg)
 	if err != nil {

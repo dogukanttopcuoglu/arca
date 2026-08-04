@@ -10,6 +10,7 @@ import (
 	graphstore "arca/internal/graph/store"
 	"arca/internal/indexing/provider"
 	"arca/internal/indexing/store"
+	llmprovider "arca/internal/llm/provider"
 	"arca/internal/qa"
 	"arca/internal/retrieval/dense"
 	retrievalseam "arca/internal/retrieval/seam"
@@ -39,7 +40,11 @@ func NewServer() *Server {
 	vecStore := store.NewInMemoryVectorStore()
 	denseRet := dense.NewDenseRetriever(mockProv, vecStore, store.NewInMemoryContentStore())
 
-	ansEng := qa.NewAnswerEngine(nil, denseRet, nil, nil, nil, nil)
+	// The MCP root shares one LLM provider between generation and the
+	// evidence gate so both fail or succeed symmetrically (ADR-0030): with
+	// no model configured, generation and gate both fail closed.
+	llm := llmprovider.NewOpenAICompatibleProvider("", "", "", "")
+	ansEng := qa.NewAnswerEngine(nil, denseRet, nil, nil, llm, nil, qa.NewLLMEvidenceGate(llm))
 
 	pol := agent.AgentPolicy{MaxSteps: 5, MaxToolCalls: 10}
 	agentEng := agent.NewAgentEngine(pol, []agenttool.Tool{

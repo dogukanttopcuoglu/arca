@@ -110,7 +110,7 @@ func DefaultConfig() Config {
 		LLMBaseURL:            "https://agentrouter.org/v1",
 		LLMProviderLabel:      "agentrouter",
 		LLMContextBudget:      4000,
-		RetrievalMinScore:     0,
+		RetrievalMinScore:     0.6, // frozen M4 calibrated operating point (ADR-0036)
 		SparseIndex:           false,
 		RetrievalMode:         retrievalseam.RetrievalDense,
 		FusionPolicyName:      "balanced",
@@ -369,7 +369,8 @@ func buildLLMProvider(cfg Config) llmprovider.LLMProvider {
 
 // buildAnswerEngine wires the real AnswerEngine seams: ContextBuilder with the
 // configured budget, the RAG PromptBuilder, the OpenAI-compatible LLM adapter,
-// and the default verification pipeline. Retrieval stays on the provided seam.
+// the default verification pipeline, and the real EvidenceGate (ADR-0030).
+// Retrieval stays on the provided seam.
 func buildAnswerEngine(cfg Config, retriever retrievalseam.Retriever) *qa.AnswerEngine {
 	return qa.NewAnswerEngine(
 		nil,
@@ -378,5 +379,6 @@ func buildAnswerEngine(cfg Config, retriever retrievalseam.Retriever) *qa.Answer
 		qaprompt.NewRAGPromptBuilder(),
 		buildLLMProvider(cfg),
 		qaverification.NewDefaultVerificationPipeline(),
+		qa.NewLLMEvidenceGate(buildLLMProvider(cfg)),
 	)
 }

@@ -68,6 +68,7 @@ func TestAppRunAsk_RendersAnswer(t *testing.T) {
 			qaprompt.NewRAGPromptBuilder(),
 			&cliFakeLLM{content: "Should never be called [Ref 1]."},
 			qaverification.NewDefaultVerificationPipeline(),
+			nil, // nil gate: legacy behavior for tests
 		)
 		app := &App{answerEngine: engine}
 
@@ -140,6 +141,7 @@ func newTestApp(ctx context.Context, t *testing.T, llmContent string) *App {
 		qaprompt.NewRAGPromptBuilder(),
 		&cliFakeLLM{content: llmContent},
 		qaverification.NewDefaultVerificationPipeline(),
+		nil, // nil gate: legacy behavior for tests
 	)
 	return &App{answerEngine: engine}
 }

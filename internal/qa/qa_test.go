@@ -281,6 +281,7 @@ func newTestEngine(retriever seam.Retriever, llm llmprovider.LLMProvider, budget
 		qaprompt.NewRAGPromptBuilder(),
 		llm,
 		qaverification.NewDefaultVerificationPipeline(),
+		nil, // nil gate: legacy behavior for tests
 	)
 }
 

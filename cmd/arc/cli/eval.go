@@ -26,6 +26,9 @@ type EvalOptions struct {
 	SparseWeight     float64
 	SparseCap        int
 	Decompose        bool
+	// M5Gate enables the pre-generation semantic evidence gate over each
+	// query's assembled context, producing the M5 report section.
+	M5Gate bool
 }
 
 // RunEval executes the retrieval benchmark against the real composition root:
@@ -95,6 +98,9 @@ func (a *App) RunEval(ctx context.Context, opts EvalOptions) (string, error) {
 			Collection:        a.runtime.cfg.QdrantCollection,
 			GitCommit:         gitHead(),
 			Decompose:         decomposeFunc(opts.Decompose),
+			Gate:              m5GateFunc(opts, a.runtime.cfg),
+			GateProvider:      a.runtime.cfg.LLMProviderLabel,
+			GateModel:         a.runtime.cfg.LLMModel,
 			CorpusTexts: func() ([]string, error) {
 				return corpusSource{store: a.runtime.vectorStore}.CorpusTexts(context.Background())
 			},
@@ -153,6 +159,16 @@ func decomposeFunc(enabled bool) func(string) []string {
 		}
 		return analyzed.SubQueries
 	}
+}
+
+// m5GateFunc returns the real EvidenceGate adapter when the M5 gate flag is
+// enabled; nil otherwise. The gate shares the configured LLM provider, so the
+// benchmark measures the production adapter.
+func m5GateFunc(opts EvalOptions, cfg Config) qa.EvidenceGate {
+	if !opts.M5Gate {
+		return nil
+	}
+	return qa.NewLLMEvidenceGate(buildLLMProvider(cfg))
 }
 
 // gitHead returns the current git commit hash, or "unknown" when unavailable.

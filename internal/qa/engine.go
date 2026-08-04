@@ -42,7 +42,7 @@ type Answer struct {
 }
 
 // AnswerEngine orchestrates the RAG pipeline stages using modular composition:
-// Analyze -> Retrieve -> ContextBuilder -> PromptBuilder -> LLM.Generate -> Verification.
+// Analyze -> Retrieve -> ContextBuilder -> EvidenceGate -> PromptBuilder -> LLM.Generate -> Verification.
 type AnswerEngine struct {
 	analyzer       QueryAnalyzer
 	retriever      seam.Retriever
@@ -50,12 +50,16 @@ type AnswerEngine struct {
 	promptBuilder  qaprompt.PromptBuilder
 	llmProvider    llmprovider.LLMProvider
 	verifier       qaverification.VerificationPipeline
+	evidenceGate   EvidenceGate
 }
 
 // NewAnswerEngine constructs an AnswerEngine instance. Nil seams fall back to
 // working defaults (rule-based analyzer, default context builder, RAG prompt
 // builder, mock LLM provider, default verification pipeline) so the engine is
-// usable offline; production composition supplies the real seams.
+// usable offline; production composition supplies the real seams. A nil
+// evidenceGate disables pre-generation semantic abstention and is reserved
+// for tests and explicitly legacy/offline composition — every production
+// composition root must supply a real gate (ADR-0030).
 func NewAnswerEngine(
 	analyzer QueryAnalyzer,
 	retriever seam.Retriever,
@@ -63,6 +67,7 @@ func NewAnswerEngine(
 	promptBuilder qaprompt.PromptBuilder,
 	llm llmprovider.LLMProvider,
 	verifier qaverification.VerificationPipeline,
+	evidenceGate EvidenceGate,
 ) *AnswerEngine {
 	if analyzer == nil {
 		analyzer = NewRuleBasedAnalyzer()
@@ -86,7 +91,25 @@ func NewAnswerEngine(
 		promptBuilder:  promptBuilder,
 		llmProvider:    llm,
 		verifier:       verifier,
+		evidenceGate:   evidenceGate,
 	}
+}
+
+// evaluateGate runs the evidence gate with one bounded retry (ADR-0034).
+// supported and unsupported decisions return immediately; operational
+// failures (errors or EvidenceGateFailed decisions) are retried once and
+// surface as a typed EvidenceGateError after exhaustion.
+func (e *AnswerEngine) evaluateGate(ctx context.Context, query string, win *qacontext.ContextWindow) (EvidenceDecision, error) {
+	var lastErr error
+	for attempt := 1; attempt <= MaxGateAttempts; attempt++ {
+		decision, err := e.evidenceGate.Evaluate(ctx, query, win)
+		if err != nil || decision == EvidenceGateFailed {
+			lastErr = err
+			continue
+		}
+		return decision, nil
+	}
+	return EvidenceGateFailed, &EvidenceGateError{Attempts: MaxGateAttempts, Cause: lastErr}
 }
 
 // Answer executes the full RAG pipeline and returns the final Answer.
@@ -106,11 +129,12 @@ func (e *AnswerEngine) Answer(ctx context.Context, query seam.RetrievalQuery) (*
 	draft.AnalyzedQuery = analyzed
 
 	if e.retriever != nil {
-		// Decomposed queries (e.g. comparisons) retrieve each sub-query and
-		// merge deterministically; single-intent queries take the direct path.
-		if len(draft.AnalyzedQuery.SubQueries) > 0 {
+		// M5 orchestration (ADR-0032): comparison queries detected by the
+		// existing analyzer signal retrieve each sub-query and merge
+		// deterministically; everything else takes the direct Balanced path.
+		if DecideRetrievalRouting(analyzed).Decompose {
 			var lists [][]seam.SearchResult
-			for _, sub := range draft.AnalyzedQuery.SubQueries {
+			for _, sub := range analyzed.SubQueries {
 				subQuery := query
 				subQuery.QueryText = sub
 				results, err := e.retriever.Retrieve(ctx, subQuery)
@@ -139,6 +163,24 @@ func (e *AnswerEngine) Answer(ctx context.Context, query seam.RetrievalQuery) (*
 	win, err := e.contextBuilder.Build(ctx, draft.SearchResults)
 	if err != nil {
 		return nil, fmt.Errorf("context assembly failed: %w", err)
+	}
+
+	// Pre-generation semantic abstention (ADR-0034): the gate evaluates the
+	// original query against the exact context that would reach generation.
+	// Unsupported context abstains without an LLM call; operational gate
+	// failures retry once, then fail closed with a typed error. A nil gate
+	// preserves legacy behavior for tests and offline composition.
+	if e.evidenceGate != nil {
+		decision, gateErr := e.evaluateGate(ctx, query.QueryText, win)
+		if gateErr != nil {
+			return nil, gateErr
+		}
+		if decision == EvidenceUnsupported {
+			return &Answer{
+				Text:   "The retrieved sources do not cover this query, so no grounded answer can be provided.",
+				Status: qaverification.StatusNoEvidence,
+			}, nil
+		}
 	}
 
 	promptMsg, err := e.promptBuilder.Build(ctx, query.QueryText, win)

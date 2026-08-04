@@ -7,9 +7,16 @@ import (
 	"time"
 
 	"arca/internal/indexing/sparse"
+	"arca/internal/qa"
+	qacontext "arca/internal/qa/context"
 	"arca/internal/retrieval/hybrid"
 	retrievalseam "arca/internal/retrieval/seam"
 )
+
+// maxGateAttempts mirrors the AnswerEngine bounded retry budget (one initial
+// attempt plus one retry) by referencing the engine's single source of truth,
+// so the harness policy cannot drift from production.
+const maxGateAttempts = qa.MaxGateAttempts
 
 // Options configures a benchmark run. Everything needed to reproduce the run
 // months later is recorded in the report (ADR-0027).
@@ -33,6 +40,15 @@ type Options struct {
 	// DistinctiveMaxDF is the maximum document frequency for a query term to
 	// count as distinctive in the lexical coverage signal (default 3).
 	DistinctiveMaxDF int
+	// Gate, when non-nil, runs the M5 semantic evidence gate over each
+	// query's assembled retrieval content, mirroring the AnswerEngine flow
+	// (retrieve -> context -> gate). It enables the M5 report section; the
+	// harness itself never invokes generation. Retries follow the same
+	// one-retry policy as the engine. GateProvider and GateModel identify
+	// the gate adapter in the report.
+	Gate         qa.EvidenceGate
+	GateProvider string
+	GateModel    string
 }
 
 // Runner executes a gold set against a Retriever and produces a Report.
@@ -117,9 +133,11 @@ func (r *Runner) Run(ctx context.Context, gs *GoldSet) (*Report, error) {
 			Stats:     &retrievalseam.RetrievalStats{},
 		}
 		var results []retrievalseam.SearchResult
+		qres := QueryResult{ID: q.ID, Intent: q.Intent}
 		if r.opts.Decompose != nil {
 			subs := r.opts.Decompose(q.Query)
 			if len(subs) > 0 {
+				qres.Decomposed = true
 				var lists [][]retrievalseam.SearchResult
 				for _, sub := range subs {
 					subQuery := query
@@ -156,15 +174,29 @@ func (r *Runner) Run(ctx context.Context, gs *GoldSet) (*Report, error) {
 			content.WriteString(" ")
 		}
 
-		qres := QueryResult{
-			ID:                 q.ID,
-			Intent:             q.Intent,
-			RetrievedChunkIDs:  retrieved,
-			RetrievedScores:    scores,
-			ExpectedChunkIDs:   q.ExpectedChunkIDs,
-			ExpectedNoEvidence: q.ExpectedNoEvidence,
-			Stats:              query.Stats,
+		qres.RetrievedChunkIDs = retrieved
+		qres.RetrievedScores = scores
+		qres.ExpectedChunkIDs = q.ExpectedChunkIDs
+		qres.ExpectedNoEvidence = q.ExpectedNoEvidence
+		qres.Stats = query.Stats
+
+		// M5 evidence gate (ADR-0034): empty retrieval abstains immediately
+		// without a gate call, mirroring the AnswerEngine flow. Only real
+		// gate evaluations are recorded as observations.
+		if r.opts.Gate != nil && len(results) > 0 {
+			win := &qacontext.ContextWindow{Content: content.String()}
+			decision, retries, latency, gateErr := r.evaluateGate(ctx, q.Query, win)
+			obs := &GateObservation{
+				Decision:  string(decision),
+				LatencyMs: latency,
+				Retries:   retries,
+			}
+			if gateErr != nil {
+				obs.Error = gateErr.Error()
+			}
+			qres.Gate = obs
 		}
+
 		if corpusDF != nil {
 			qres.Signals = abstentionSignals(q.Query, content.String(), scores, corpusDF, maxDF)
 		}
@@ -194,9 +226,84 @@ func (r *Runner) Run(ctx context.Context, gs *GoldSet) (*Report, error) {
 		NoEvidencePrecision: NoEvidencePrecision(abstentionCounts),
 		Queries:             len(gs.Queries),
 	}
+
+	if r.opts.Gate != nil {
+		report.M5 = computeM5Metrics(report.PerQuery)
+		if r.opts.GateProvider != "" {
+			report.M5.GateProvider = r.opts.GateProvider
+		}
+		if r.opts.GateModel != "" {
+			report.M5.GateModel = r.opts.GateModel
+		}
+	}
+
 	report.DurationMs = time.Since(start).Milliseconds()
 
 	return report, nil
+}
+
+// evaluateGate runs the M5 gate with the same one-retry policy as the
+// AnswerEngine: supported and unsupported decisions return immediately;
+// operational failures retry once and surface as GateError.
+func (r *Runner) evaluateGate(ctx context.Context, query string, win *qacontext.ContextWindow) (qa.EvidenceDecision, int, int64, error) {
+	start := time.Now()
+	var lastErr error
+	retries := 0
+	for attempt := 1; attempt <= maxGateAttempts; attempt++ {
+		decision, err := r.opts.Gate.Evaluate(ctx, query, win)
+		if err != nil || decision == qa.EvidenceGateFailed {
+			lastErr = err
+			if attempt < maxGateAttempts {
+				retries++
+			}
+			continue
+		}
+		return decision, retries, time.Since(start).Milliseconds(), nil
+	}
+	return qa.EvidenceGateFailed, retries, time.Since(start).Milliseconds(), lastErr
+}
+
+// computeM5Metrics derives semantic-abstention measurements from the recorded
+// per-query observations. Empty retrieval abstains by construction. Gate-error
+// queries are operational failures and are excluded from both abstention and
+// missed-abstention counts.
+func computeM5Metrics(queries []QueryResult) *M5Metrics {
+	m := &M5Metrics{}
+	abstain := 0
+	expected := 0
+	for _, qr := range queries {
+		abstained := len(qr.RetrievedChunkIDs) == 0 || gateDecisionIs(qr, "unsupported")
+		if abstained {
+			m.GenerationSkipped++
+			if qr.ExpectedNoEvidence {
+				abstain++
+			} else {
+				m.FalseAbstentions++
+			}
+		}
+		if qr.ExpectedNoEvidence {
+			expected++
+			if gateDecisionIs(qr, "supported") {
+				m.MissedAbstentions++
+			}
+		}
+	}
+	m.AbstentionPrecision = frac(abstain, m.GenerationSkipped)
+	m.AbstentionRecall = frac(abstain, expected)
+	return m
+}
+
+// gateDecisionIs reports whether a per-query gate observation carries the
+// given decision; queries without an observation never match.
+func gateDecisionIs(qr QueryResult, decision string) bool {
+	return qr.Gate != nil && qr.Gate.Decision == decision
+}
+
+func frac(num, den int) float64 {
+	if den == 0 {
+		return 0
+	}
+	return float64(num) / float64(den)
 }
 
 func avg(sum float64, n int) float64 {

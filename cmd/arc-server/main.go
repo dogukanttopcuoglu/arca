@@ -8,6 +8,7 @@ import (
 	agenttool "arca/internal/agent/tool"
 	"arca/internal/indexing/provider"
 	"arca/internal/indexing/store"
+	llmprovider "arca/internal/llm/provider"
 	"arca/internal/qa"
 	"arca/internal/retrieval/dense"
 )
@@ -19,7 +20,11 @@ func main() {
 	vecStore := store.NewInMemoryVectorStore()
 	denseRet := dense.NewDenseRetriever(mockProv, vecStore, store.NewInMemoryContentStore())
 
-	ansEng := qa.NewAnswerEngine(nil, denseRet, nil, nil, nil, nil)
+	// The demo root shares one LLM provider between generation and the
+	// evidence gate so both fail or succeed symmetrically (ADR-0030): with
+	// no model configured, generation and gate both fail closed.
+	llm := llmprovider.NewOpenAICompatibleProvider("", "", "", "")
+	ansEng := qa.NewAnswerEngine(nil, denseRet, nil, nil, llm, nil, qa.NewLLMEvidenceGate(llm))
 	agentEng := agent.NewAgentEngine(agent.AgentPolicy{MaxSteps: 5}, []agenttool.Tool{
 		agenttool.NewKnowledgeTool(ansEng),
 	})

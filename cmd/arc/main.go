@@ -70,6 +70,7 @@ func main() {
 		sparseWeight := fs.Float64("sparse-weight", 0, "hybrid sparse stream fusion weight (0 = policy default)")
 		sparseCap := fs.Int("sparse-cap", 0, "hybrid sparse candidate cap (0 = unlimited)")
 		decompose := fs.Bool("decompose", false, "run gold-set queries through rule-based decomposition")
+		m5gate := fs.Bool("m5-gate", false, "run the M5 semantic evidence gate over each query's context")
 		if err := fs.Parse(os.Args[2:]); err != nil {
 			fmt.Printf("Error: %v\n", err)
 			os.Exit(1)
@@ -89,6 +90,7 @@ func main() {
 			SparseWeight:     *sparseWeight,
 			SparseCap:        *sparseCap,
 			Decompose:        *decompose,
+			M5Gate:           *m5gate,
 		})
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)
