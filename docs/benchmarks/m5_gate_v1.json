@@ -1,0 +1,1193 @@
+{
+  "git_commit": "aaf3045117515d1bdf02caed97d74a0b7ad22425",
+  "timestamp": "2026-08-04T17:29:14.7904759Z",
+  "corpus": {
+    "corpus_fingerprint": "8b21a6640f590c557a61d19f73a0486cf8bdd9fc3c1b225f735ea7d15a7cd899",
+    "document_id": "",
+    "chunk_count": 3017
+  },
+  "documents": [
+    {
+      "corpus_fingerprint": "999342c3dc0c02d107b3e7f74648cc76c9dee92553999f01337f55b86c5a3995",
+      "document_id": "Browne, M. Neil_Keeley, Stuart M - Asking the Right Questions_ A Guide to Critical Thinking (2015_2014, Pearson) - libgen.li",
+      "chunk_count": 416
+    },
+    {
+      "corpus_fingerprint": "da442d50937bbdffb6d6e6a0487d8dafc91fded0243d7652d9860e3c4d67ece3",
+      "document_id": "Matthew Boyle - Domain-Driven Design with Golang_ Use Golang to create simple, maintainable systems to solve complex business problems (Packt Publishing) - libgen.li",
+      "chunk_count": 671
+    },
+    {
+      "corpus_fingerprint": "1bad1d654e47fb531f45ded86e34231d29b84e6f079f0b216a23c68b42eeceef",
+      "document_id": "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li",
+      "chunk_count": 397
+    },
+    {
+      "corpus_fingerprint": "f9f0b5fa1505abe3d2144383856a715942134c0ef0bb9269b5e830318e38fcbb",
+      "document_id": "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li",
+      "chunk_count": 1337
+    },
+    {
+      "corpus_fingerprint": "51b1909e1a2639b3114eb4e9afaeeafa58938cbdb0d195392dc65d06ac0b483d",
+      "document_id": "rick-rubin",
+      "chunk_count": 196
+    }
+  ],
+  "retrieval": {
+    "mode": "Dense",
+    "embedding_provider": "Ollama",
+    "embedding_model": "nomic-embed-text:latest",
+    "top_k": 5,
+    "min_score": 0.6,
+    "collection": "arca_chunks"
+  },
+  "duration_ms": 203998,
+  "metrics": {
+    "recall_at_k": 1,
+    "precision_at_k": 0.38095238095238104,
+    "mrr": 0.8968253968253967,
+    "ndcg_at_k": 0.9018644456752711,
+    "no_evidence_precision": 0.25,
+    "queries": 29
+  },
+  "per_query": [
+    {
+      "abstention_signals": {
+        "lexical_coverage": 1,
+        "score_gap": 1.013086799753486
+      },
+      "id": "m5-sf-01",
+      "intent": "single_fact",
+      "retrieved_chunk_ids": [
+        "Browne, M. Neil_Keeley, Stuart M - Asking the Right Questions_ A Guide to Critical Thinking (2015_2014, Pearson) - libgen.li/ilearn-to-ask-critical-questions-about-a-specific-part-of-the-reasoning-structure-person-al-e-xp-erien-ce-as-e-viden-ce/006",
+        "Browne, M. Neil_Keeley, Stuart M - Asking the Right Questions_ A Guide to Critical Thinking (2015_2014, Pearson) - libgen.li/ilearn-to-ask-critical-questions-about-a-specific-part-of-the-reasoning-structure-person-al-e-xp-erien-ce-as-e-viden-ce/001",
+        "Browne, M. Neil_Keeley, Stuart M - Asking the Right Questions_ A Guide to Critical Thinking (2015_2014, Pearson) - libgen.li/ilearn-to-ask-critical-questions-about-a-specific-part-of-the-reasoning-structure-test-imon-ial-s-as-e-viden-ce/005",
+        "Browne, M. Neil_Keeley, Stuart M - Asking the Right Questions_ A Guide to Critical Thinking (2015_2014, Pearson) - libgen.li/ilearn-to-ask-critical-questions-about-a-specific-part-of-the-reasoning-structure-u-sin-g-t-his-c-rit-ical-quest-ion/001",
+        "Browne, M. Neil_Keeley, Stuart M - Asking the Right Questions_ A Guide to Critical Thinking (2015_2014, Pearson) - libgen.li/ithem-as-evidence-personal-o-bservation-as-e-vidence/001"
+      ],
+      "retrieved_scores": [
+        0.7767996,
+        0.7667651,
+        0.7183958,
+        0.7140939,
+        0.6986306
+      ],
+      "expected_chunk_ids": [
+        "Browne, M. Neil_Keeley, Stuart M - Asking the Right Questions_ A Guide to Critical Thinking (2015_2014, Pearson) - libgen.li/ilearn-to-ask-critical-questions-about-a-specific-part-of-the-reasoning-structure-person-al-e-xp-erien-ce-as-e-viden-ce/006",
+        "Browne, M. Neil_Keeley, Stuart M - Asking the Right Questions_ A Guide to Critical Thinking (2015_2014, Pearson) - libgen.li/ilearn-to-ask-critical-questions-about-a-specific-part-of-the-reasoning-structure-person-al-e-xp-erien-ce-as-e-viden-ce/001"
+      ],
+      "expected_no_evidence": false,
+      "recall_at_k": 1,
+      "precision_at_k": 0.4,
+      "mrr": 1,
+      "ndcg_at_k": 1,
+      "stats": {
+        "duration_ms": 108,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0.6
+      },
+      "gate": {
+        "decision": "supported",
+        "latency_ms": 3830
+      }
+    },
+    {
+      "abstention_signals": {
+        "lexical_coverage": 1,
+        "score_gap": 1.004160289972945
+      },
+      "id": "m5-sf-02",
+      "intent": "single_fact",
+      "retrieved_chunk_ids": [
+        "Browne, M. Neil_Keeley, Stuart M - Asking the Right Questions_ A Guide to Critical Thinking (2015_2014, Pearson) - libgen.li/ithem-as-evidence-a-nalog-ies-as-e-vidence/006",
+        "Browne, M. Neil_Keeley, Stuart M - Asking the Right Questions_ A Guide to Critical Thinking (2015_2014, Pearson) - libgen.li/ithem-as-evidence-a-nalog-ies-as-e-vidence/001",
+        "Browne, M. Neil_Keeley, Stuart M - Asking the Right Questions_ A Guide to Critical Thinking (2015_2014, Pearson) - libgen.li/ithem-as-evidence-e-valuating-a-nalogies/004",
+        "Browne, M. Neil_Keeley, Stuart M - Asking the Right Questions_ A Guide to Critical Thinking (2015_2014, Pearson) - libgen.li/ithem-as-evidence-i-dentifying-and-c-omprehending-a-nalogies/001",
+        "Browne, M. Neil_Keeley, Stuart M - Asking the Right Questions_ A Guide to Critical Thinking (2015_2014, Pearson) - libgen.li/ithem-as-evidence-e-valuating-a-nalogies/001"
+      ],
+      "retrieved_scores": [
+        0.8483517,
+        0.84483695,
+        0.77071965,
+        0.7688781,
+        0.76790446
+      ],
+      "expected_chunk_ids": [
+        "Browne, M. Neil_Keeley, Stuart M - Asking the Right Questions_ A Guide to Critical Thinking (2015_2014, Pearson) - libgen.li/ithem-as-evidence-a-nalog-ies-as-e-vidence/006",
+        "Browne, M. Neil_Keeley, Stuart M - Asking the Right Questions_ A Guide to Critical Thinking (2015_2014, Pearson) - libgen.li/ithem-as-evidence-a-nalog-ies-as-e-vidence/001"
+      ],
+      "expected_no_evidence": false,
+      "recall_at_k": 1,
+      "precision_at_k": 0.4,
+      "mrr": 1,
+      "ndcg_at_k": 1,
+      "stats": {
+        "duration_ms": 74,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0.6
+      },
+      "gate": {
+        "decision": "supported",
+        "latency_ms": 8338
+      }
+    },
+    {
+      "abstention_signals": {
+        "lexical_coverage": 1,
+        "score_gap": 1.0029119520848202
+      },
+      "id": "m5-sf-03",
+      "intent": "concept",
+      "retrieved_chunk_ids": [
+        "Browne, M. Neil_Keeley, Stuart M - Asking the Right Questions_ A Guide to Critical Thinking (2015_2014, Pearson) - libgen.li/tfrom-your-pan-as-well-as-how-to-discover-the-invisible-glue-that-passage-2/005",
+        "Browne, M. Neil_Keeley, Stuart M - Asking the Right Questions_ A Guide to Critical Thinking (2015_2014, Pearson) - libgen.li/asking-the-right-questions-contents-chapter-7-are-there-any-fallacies-in-the-reasoning-76/001",
+        "Browne, M. Neil_Keeley, Stuart M - Asking the Right Questions_ A Guide to Critical Thinking (2015_2014, Pearson) - libgen.li/tfrom-your-pan-as-well-as-how-to-discover-the-invisible-glue-that-a-questioning-approa-ch-to-finding-r-ea-soning-fa-lla-cies/001",
+        "Browne, M. Neil_Keeley, Stuart M - Asking the Right Questions_ A Guide to Critical Thinking (2015_2014, Pearson) - libgen.li/tfrom-your-pan-as-well-as-how-to-discover-the-invisible-glue-that-d-iscovering-o-ther-c-ommon-r-ea-soning-fa-lla-cies/006",
+        "Browne, M. Neil_Keeley, Stuart M - Asking the Right Questions_ A Guide to Critical Thinking (2015_2014, Pearson) - libgen.li/tfrom-your-pan-as-well-as-how-to-discover-the-invisible-glue-that-s-leight-of-ha-nd-begging-the-question/001"
+      ],
+      "retrieved_scores": [
+        0.78599787,
+        0.7837157,
+        0.7820263,
+        0.7751399,
+        0.7694179
+      ],
+      "expected_chunk_ids": [
+        "Browne, M. Neil_Keeley, Stuart M - Asking the Right Questions_ A Guide to Critical Thinking (2015_2014, Pearson) - libgen.li/asking-the-right-questions-contents-chapter-7-are-there-any-fallacies-in-the-reasoning-76/001",
+        "Browne, M. Neil_Keeley, Stuart M - Asking the Right Questions_ A Guide to Critical Thinking (2015_2014, Pearson) - libgen.li/tfrom-your-pan-as-well-as-how-to-discover-the-invisible-glue-that-a-questioning-approa-ch-to-finding-r-ea-soning-fa-lla-cies/001"
+      ],
+      "expected_no_evidence": false,
+      "recall_at_k": 1,
+      "precision_at_k": 0.4,
+      "mrr": 0.5,
+      "ndcg_at_k": 0.6934264036172708,
+      "stats": {
+        "duration_ms": 65,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0.6
+      },
+      "gate": {
+        "decision": "gate_error",
+        "error": "evidence gate returned malformed JSON: invalid character '`' looking for beginning of value",
+        "latency_ms": 4099,
+        "retries": 1
+      }
+    },
+    {
+      "abstention_signals": {
+        "lexical_coverage": 1,
+        "score_gap": 1.0226761708093686
+      },
+      "id": "m5-sf-04",
+      "intent": "concept",
+      "retrieved_chunk_ids": [
+        "Matthew Boyle - Domain-Driven Design with Golang_ Use Golang to create simple, maintainable systems to solve complex business problems (Packt Publishing) - libgen.li/table-of-contents-entities-value-objects-and-aggregates-working-with-entities/002",
+        "Matthew Boyle - Domain-Driven Design with Golang_ Use Golang to create simple, maintainable systems to solve complex business problems (Packt Publishing) - libgen.li/table-of-contents-entities-value-objects-and-aggregates-summary/001",
+        "Matthew Boyle - Domain-Driven Design with Golang_ Use Golang to create simple, maintainable systems to solve complex business problems (Packt Publishing) - libgen.li/table-of-contents-entities-value-objects-and-aggregates-working-with-entities/001",
+        "Matthew Boyle - Domain-Driven Design with Golang_ Use Golang to create simple, maintainable systems to solve complex business problems (Packt Publishing) - libgen.li/table-of-contents-entities-value-objects-and-aggregates/001",
+        "Matthew Boyle - Domain-Driven Design with Golang_ Use Golang to create simple, maintainable systems to solve complex business problems (Packt Publishing) - libgen.li/table-of-contents-application-getting-started-with-our-coffeeco-system/018"
+      ],
+      "retrieved_scores": [
+        0.85320365,
+        0.83428526,
+        0.8321154,
+        0.81118464,
+        0.8020984
+      ],
+      "expected_chunk_ids": [
+        "Matthew Boyle - Domain-Driven Design with Golang_ Use Golang to create simple, maintainable systems to solve complex business problems (Packt Publishing) - libgen.li/table-of-contents-entities-value-objects-and-aggregates-working-with-entities/002",
+        "Matthew Boyle - Domain-Driven Design with Golang_ Use Golang to create simple, maintainable systems to solve complex business problems (Packt Publishing) - libgen.li/table-of-contents-entities-value-objects-and-aggregates-summary/001"
+      ],
+      "expected_no_evidence": false,
+      "recall_at_k": 1,
+      "precision_at_k": 0.4,
+      "mrr": 1,
+      "ndcg_at_k": 1,
+      "stats": {
+        "duration_ms": 65,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0.6
+      },
+      "gate": {
+        "decision": "supported",
+        "latency_ms": 5405
+      }
+    },
+    {
+      "abstention_signals": {
+        "lexical_coverage": 1,
+        "score_gap": 1.0152990737526968
+      },
+      "id": "m5-sf-05",
+      "intent": "concept",
+      "retrieved_chunk_ids": [
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/table-of-contents-supporting-patterns-in-brief-bounded-contexts-are-a-difficult-concept/001",
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/table-of-contents-supporting-patterns-in-brief-how-is-it-useful-for-eda/002",
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/table-of-contents-supporting-patterns-in-brief-how-is-it-useful-for-eda/001",
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/table-of-contents-supporting-patterns-in-brief-so-what-is-it-all-about-then/001",
+        "Matthew Boyle - Domain-Driven Design with Golang_ Use Golang to create simple, maintainable systems to solve complex business problems (Packt Publishing) - libgen.li/table-of-contents-bounded-contexts/001"
+      ],
+      "retrieved_scores": [
+        0.8002907,
+        0.7882315,
+        0.77281237,
+        0.76837665,
+        0.76024055
+      ],
+      "expected_chunk_ids": [
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/table-of-contents-supporting-patterns-in-brief-bounded-contexts-are-a-difficult-concept/001",
+        "Matthew Boyle - Domain-Driven Design with Golang_ Use Golang to create simple, maintainable systems to solve complex business problems (Packt Publishing) - libgen.li/table-of-contents-bounded-contexts/001"
+      ],
+      "expected_no_evidence": false,
+      "recall_at_k": 1,
+      "precision_at_k": 0.4,
+      "mrr": 1,
+      "ndcg_at_k": 0.8503449055347547,
+      "stats": {
+        "duration_ms": 63,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0.6
+      },
+      "gate": {
+        "decision": "supported",
+        "latency_ms": 2751
+      }
+    },
+    {
+      "abstention_signals": {
+        "lexical_coverage": 1,
+        "score_gap": 1.012247004234445
+      },
+      "id": "m5-sf-06",
+      "intent": "single_fact",
+      "retrieved_chunk_ids": [
+        "Matthew Boyle - Domain-Driven Design with Golang_ Use Golang to create simple, maintainable systems to solve complex business problems (Packt Publishing) - libgen.li/table-of-contents-ddd-for-distributed-systems-cqrs/002",
+        "Matthew Boyle - Domain-Driven Design with Golang_ Use Golang to create simple, maintainable systems to solve complex business problems (Packt Publishing) - libgen.li/table-of-contents-a-brief-history-of-domain-driven-design-adoption-of-ddd/003",
+        "Matthew Boyle - Domain-Driven Design with Golang_ Use Golang to create simple, maintainable systems to solve complex business problems (Packt Publishing) - libgen.li/table-of-contents-ddd-for-distributed-systems-cqrs/001",
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/table-of-contents-supporting-patterns-in-brief-summary/001",
+        "Matthew Boyle - Domain-Driven Design with Golang_ Use Golang to create simple, maintainable systems to solve complex business problems (Packt Publishing) - libgen.li/table-of-contents-a-brief-history-of-domain-driven-design-adoption-of-ddd/001"
+      ],
+      "retrieved_scores": [
+        0.7639493,
+        0.7547064,
+        0.7255732,
+        0.6929357,
+        0.6897172
+      ],
+      "expected_chunk_ids": [
+        "Matthew Boyle - Domain-Driven Design with Golang_ Use Golang to create simple, maintainable systems to solve complex business problems (Packt Publishing) - libgen.li/table-of-contents-ddd-for-distributed-systems-cqrs/002",
+        "Matthew Boyle - Domain-Driven Design with Golang_ Use Golang to create simple, maintainable systems to solve complex business problems (Packt Publishing) - libgen.li/table-of-contents-ddd-for-distributed-systems-cqrs/001"
+      ],
+      "expected_no_evidence": false,
+      "recall_at_k": 1,
+      "precision_at_k": 0.4,
+      "mrr": 1,
+      "ndcg_at_k": 0.9197207891481877,
+      "stats": {
+        "duration_ms": 68,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0.6
+      },
+      "gate": {
+        "decision": "supported",
+        "latency_ms": 16336,
+        "retries": 1
+      }
+    },
+    {
+      "abstention_signals": {
+        "lexical_coverage": 1,
+        "score_gap": 1.0051827582971677
+      },
+      "id": "m5-sf-07",
+      "intent": "concept",
+      "retrieved_chunk_ids": [
+        "Matthew Boyle - Domain-Driven Design with Golang_ Use Golang to create simple, maintainable systems to solve complex business problems (Packt Publishing) - libgen.li/table-of-contents-exploring-factories-repositories-and-services-implementing-the-repository-pattern-in-golang/001",
+        "Matthew Boyle - Domain-Driven Design with Golang_ Use Golang to create simple, maintainable systems to solve complex business problems (Packt Publishing) - libgen.li/table-of-contents-exploring-factories-repositories-and-services-implementing-the-repository-pattern-in-golang/002",
+        "Matthew Boyle - Domain-Driven Design with Golang_ Use Golang to create simple, maintainable systems to solve complex business problems (Packt Publishing) - libgen.li/table-of-contents-exploring-factories-repositories-and-services/001",
+        "Matthew Boyle - Domain-Driven Design with Golang_ Use Golang to create simple, maintainable systems to solve complex business problems (Packt Publishing) - libgen.li/table-of-contents-exploring-factories-repositories-and-services/002",
+        "Matthew Boyle - Domain-Driven Design with Golang_ Use Golang to create simple, maintainable systems to solve complex business problems (Packt Publishing) - libgen.li/table-of-contents-application-implementing-our-product-repository/012"
+      ],
+      "retrieved_scores": [
+        0.75609285,
+        0.7521944,
+        0.7481729,
+        0.7456033,
+        0.736245
+      ],
+      "expected_chunk_ids": [
+        "Matthew Boyle - Domain-Driven Design with Golang_ Use Golang to create simple, maintainable systems to solve complex business problems (Packt Publishing) - libgen.li/table-of-contents-exploring-factories-repositories-and-services-implementing-the-repository-pattern-in-golang/001",
+        "Matthew Boyle - Domain-Driven Design with Golang_ Use Golang to create simple, maintainable systems to solve complex business problems (Packt Publishing) - libgen.li/table-of-contents-exploring-factories-repositories-and-services-implementing-the-repository-pattern-in-golang/002"
+      ],
+      "expected_no_evidence": false,
+      "recall_at_k": 1,
+      "precision_at_k": 0.4,
+      "mrr": 1,
+      "ndcg_at_k": 1,
+      "stats": {
+        "duration_ms": 110,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0.6
+      },
+      "gate": {
+        "decision": "supported",
+        "latency_ms": 4004
+      }
+    },
+    {
+      "abstention_signals": {
+        "lexical_coverage": 1,
+        "score_gap": 1.0117603959340744
+      },
+      "id": "m5-sf-08",
+      "intent": "concept",
+      "retrieved_chunk_ids": [
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-the-basics-bathtubs-101-understanding-system-behavior-over-time/001",
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-the-basics-a-note-on-reading-graphs-of-behavior-over-time/006",
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-appendix-summary-of-systems-principles/005",
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-the-basics-a-note-on-reading-graphs-of-behavior-over-time/005",
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-appendix-summary-of-systems-principles/007"
+      ],
+      "retrieved_scores": [
+        0.75590754,
+        0.7471211,
+        0.74612725,
+        0.73947597,
+        0.7276888
+      ],
+      "expected_chunk_ids": [
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-the-basics-bathtubs-101-understanding-system-behavior-over-time/001",
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-the-basics-a-note-on-reading-graphs-of-behavior-over-time/006"
+      ],
+      "expected_no_evidence": false,
+      "recall_at_k": 1,
+      "precision_at_k": 0.4,
+      "mrr": 1,
+      "ndcg_at_k": 1,
+      "stats": {
+        "duration_ms": 67,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0.6
+      },
+      "gate": {
+        "decision": "supported",
+        "latency_ms": 9059,
+        "retries": 1
+      }
+    },
+    {
+      "abstention_signals": {
+        "lexical_coverage": 1,
+        "score_gap": 1.027625913883741
+      },
+      "id": "m5-sf-09",
+      "intent": "concept",
+      "retrieved_chunk_ids": [
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-system-traps-and-opportunities-the-tragedy-of-the-commons/002",
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-system-traps-and-opportunities-the-tragedy-of-the-commons/001",
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-system-traps-and-opportunities-the-tragedy-of-the-commons/005",
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-system-traps-and-opportunities-the-tragedy-of-the-commons/003",
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-appendix-springing-the-system-traps/002"
+      ],
+      "retrieved_scores": [
+        0.8231855,
+        0.8010556,
+        0.7908614,
+        0.73734677,
+        0.7206404
+      ],
+      "expected_chunk_ids": [
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-system-traps-and-opportunities-the-tragedy-of-the-commons/002",
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-system-traps-and-opportunities-the-tragedy-of-the-commons/001"
+      ],
+      "expected_no_evidence": false,
+      "recall_at_k": 1,
+      "precision_at_k": 0.4,
+      "mrr": 1,
+      "ndcg_at_k": 1,
+      "stats": {
+        "duration_ms": 67,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0.6
+      },
+      "gate": {
+        "decision": "supported",
+        "latency_ms": 23587,
+        "retries": 1
+      }
+    },
+    {
+      "abstention_signals": {
+        "lexical_coverage": 1,
+        "score_gap": 1.0760584618365228
+      },
+      "id": "m5-sf-10",
+      "intent": "concept",
+      "retrieved_chunk_ids": [
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-leverage-points-places-to-intervene-in-a-system-9-delays-the-lengths-of-time-relative-to-the-rates-of-system-changes/007",
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-leverage-points-places-to-intervene-in-a-system-7-reinforcing-feedback-loops-the-strength-of-the-gain-of-driving-loops/003",
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-leverage-points-places-to-intervene-in-a-system/003",
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-leverage-points-places-to-intervene-in-a-system-1-transcending-paradigms/001",
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-leverage-points-places-to-intervene-in-a-system-6-information-flows-the-structure-of-who-does-and-does-not-have-access-to-information/001"
+      ],
+      "retrieved_scores": [
+        0.80909306,
+        0.75190437,
+        0.7499731,
+        0.74287134,
+        0.7261952
+      ],
+      "expected_chunk_ids": [
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-leverage-points-places-to-intervene-in-a-system-9-delays-the-lengths-of-time-relative-to-the-rates-of-system-changes/007",
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-leverage-points-places-to-intervene-in-a-system-7-reinforcing-feedback-loops-the-strength-of-the-gain-of-driving-loops/003"
+      ],
+      "expected_no_evidence": false,
+      "recall_at_k": 1,
+      "precision_at_k": 0.4,
+      "mrr": 1,
+      "ndcg_at_k": 1,
+      "stats": {
+        "duration_ms": 76,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0.6
+      },
+      "gate": {
+        "decision": "supported",
+        "latency_ms": 6056
+      }
+    },
+    {
+      "abstention_signals": {
+        "lexical_coverage": 1,
+        "score_gap": 1.0075596583879083
+      },
+      "id": "m5-sf-11",
+      "intent": "concept",
+      "retrieved_chunk_ids": [
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-system-traps-and-opportunities-the-trap-seeking-the-wrong-goal/001",
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-the-basics-how-the-system-runs-itself-feedback/002",
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-leverage-points-places-to-intervene-in-a-system-9-delays-the-lengths-of-time-relative-to-the-rates-of-system-changes/004",
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-appendix-summary-of-systems-principles/009",
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-the-basics-how-the-system-runs-itself-feedback/001"
+      ],
+      "retrieved_scores": [
+        0.8241762,
+        0.81799245,
+        0.8159476,
+        0.815898,
+        0.8099685
+      ],
+      "expected_chunk_ids": [
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-the-basics-how-the-system-runs-itself-feedback/002",
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-the-basics-how-the-system-runs-itself-feedback/001"
+      ],
+      "expected_no_evidence": false,
+      "recall_at_k": 1,
+      "precision_at_k": 0.4,
+      "mrr": 0.5,
+      "ndcg_at_k": 0.6240505200038378,
+      "stats": {
+        "duration_ms": 67,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0.6
+      },
+      "gate": {
+        "decision": "supported",
+        "latency_ms": 7147,
+        "retries": 1
+      }
+    },
+    {
+      "abstention_signals": {
+        "lexical_coverage": 1,
+        "score_gap": 1.1191552075951587
+      },
+      "id": "m5-sf-12",
+      "intent": "single_fact",
+      "retrieved_chunk_ids": [
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/table-of-contents-introduction-to-event-driven-architectures-event-carried-state-transfer/001",
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/consequences-what-becomes-easier-or-more-difficult-to-do-because-of-this-change-asynchronous-connections-integration-with-event-carried-state-transfer/001",
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/consequences-what-becomes-easier-or-more-difficult-to-do-because-of-this-change-asynchronous-connections-integration-with-event-carried-state-transfer/002",
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/consequences-what-becomes-easier-or-more-difficult-to-do-because-of-this-change-event-carried-state-transfer-technical-requirements/004",
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/consequences-what-becomes-easier-or-more-difficult-to-do-because-of-this-change-asynchronous-connections-asynchronous-integration-with-messages/006"
+      ],
+      "retrieved_scores": [
+        0.87147975,
+        0.7786943,
+        0.7723671,
+        0.7722789,
+        0.75597835
+      ],
+      "expected_chunk_ids": [
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/table-of-contents-introduction-to-event-driven-architectures-event-carried-state-transfer/001",
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/consequences-what-becomes-easier-or-more-difficult-to-do-because-of-this-change-asynchronous-connections-integration-with-event-carried-state-transfer/001"
+      ],
+      "expected_no_evidence": false,
+      "recall_at_k": 1,
+      "precision_at_k": 0.4,
+      "mrr": 1,
+      "ndcg_at_k": 1,
+      "stats": {
+        "duration_ms": 68,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0.6
+      },
+      "gate": {
+        "decision": "supported",
+        "latency_ms": 3118
+      }
+    },
+    {
+      "abstention_signals": {
+        "lexical_coverage": 1,
+        "score_gap": 1.0431759506509086
+      },
+      "id": "m5-sf-13",
+      "intent": "concept",
+      "retrieved_chunk_ids": [
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/consequences-what-becomes-easier-or-more-difficult-to-do-because-of-this-change-tracking-changes-with-event-sourcing-events-are-our-source-of-truth/002",
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/consequences-what-becomes-easier-or-more-difficult-to-do-because-of-this-change-tracking-changes-with-event-sourcing-what-is-event-sourcing/001",
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/consequences-what-becomes-easier-or-more-difficult-to-do-because-of-this-change-tracking-changes-with-event-sourcing-understanding-the-difference-between-event-streaming-and-event-sourcing/001",
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/consequences-what-becomes-easier-or-more-difficult-to-do-because-of-this-change-event-foundations-event-sourcing-events/001",
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/consequences-what-becomes-easier-or-more-difficult-to-do-because-of-this-change-tracking-changes-with-event-sourcing-events-are-our-source-of-truth/001"
+      ],
+      "retrieved_scores": [
+        0.82825065,
+        0.7939702,
+        0.78979486,
+        0.77730834,
+        0.7595608
+      ],
+      "expected_chunk_ids": [
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/consequences-what-becomes-easier-or-more-difficult-to-do-because-of-this-change-tracking-changes-with-event-sourcing-events-are-our-source-of-truth/002",
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/consequences-what-becomes-easier-or-more-difficult-to-do-because-of-this-change-tracking-changes-with-event-sourcing-events-are-our-source-of-truth/001"
+      ],
+      "expected_no_evidence": false,
+      "recall_at_k": 1,
+      "precision_at_k": 0.4,
+      "mrr": 1,
+      "ndcg_at_k": 0.8503449055347547,
+      "stats": {
+        "duration_ms": 67,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0.6
+      },
+      "gate": {
+        "decision": "supported",
+        "latency_ms": 4222,
+        "retries": 1
+      }
+    },
+    {
+      "abstention_signals": {
+        "lexical_coverage": 1,
+        "score_gap": 1.0372762522060528
+      },
+      "id": "m5-sf-14",
+      "intent": "concept",
+      "retrieved_chunk_ids": [
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/consequences-what-becomes-easier-or-more-difficult-to-do-because-of-this-change-transactional-messaging-updating-the-depot-module-with-dependency-containers/004",
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/consequences-what-becomes-easier-or-more-difficult-to-do-because-of-this-change-transactional-messaging-identifying-problems-in-asynchronous-applications/004",
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/consequences-what-becomes-easier-or-more-difficult-to-do-because-of-this-change-transactional-messaging-subscriber-container-get-stream-am-rawmessagestream/001",
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/consequences-what-becomes-easier-or-more-difficult-to-do-because-of-this-change-transactional-messaging-using-an-inbox-and-outbox-for-messages/001",
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/consequences-what-becomes-easier-or-more-difficult-to-do-because-of-this-change-transactional-messaging-outbox-middleware/004"
+      ],
+      "retrieved_scores": [
+        0.7854942,
+        0.75726616,
+        0.7498901,
+        0.74935067,
+        0.74846077
+      ],
+      "expected_chunk_ids": [
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/consequences-what-becomes-easier-or-more-difficult-to-do-because-of-this-change-transactional-messaging-updating-the-depot-module-with-dependency-containers/004",
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/consequences-what-becomes-easier-or-more-difficult-to-do-because-of-this-change-transactional-messaging-identifying-problems-in-asynchronous-applications/004"
+      ],
+      "expected_no_evidence": false,
+      "recall_at_k": 1,
+      "precision_at_k": 0.4,
+      "mrr": 1,
+      "ndcg_at_k": 1,
+      "stats": {
+        "duration_ms": 108,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0.6
+      },
+      "gate": {
+        "decision": "unsupported",
+        "latency_ms": 6713
+      }
+    },
+    {
+      "abstention_signals": {
+        "lexical_coverage": 1,
+        "score_gap": 1.0029149315883403
+      },
+      "id": "m5-sf-15",
+      "intent": "concept",
+      "retrieved_chunk_ids": [
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/table-of-contents-introduction-to-event-driven-architectures/001",
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/table-of-contents-introduction-to-event-driven-architectures/002",
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/table-of-contents-preface-what-this-book-covers/001",
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/table-of-contents-supporting-patterns-in-brief/001",
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/table-of-contents/001"
+      ],
+      "retrieved_scores": [
+        0.8270119,
+        0.8246082,
+        0.80433315,
+        0.79812956,
+        0.79604167
+      ],
+      "expected_chunk_ids": [
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/table-of-contents-introduction-to-event-driven-architectures/001",
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/table-of-contents-introduction-to-event-driven-architectures/002"
+      ],
+      "expected_no_evidence": false,
+      "recall_at_k": 1,
+      "precision_at_k": 0.4,
+      "mrr": 1,
+      "ndcg_at_k": 1,
+      "stats": {
+        "duration_ms": 58,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0.6
+      },
+      "gate": {
+        "decision": "supported",
+        "latency_ms": 3505
+      }
+    },
+    {
+      "abstention_signals": {
+        "lexical_coverage": 1,
+        "score_gap": 1.1412759337233391
+      },
+      "id": "m5-sf-16",
+      "intent": "concept",
+      "retrieved_chunk_ids": [
+        "rick-rubin/beginner-s-mind/004",
+        "rick-rubin/about-the-author/001",
+        "rick-rubin/a-whisper-out-of-time/001",
+        "rick-rubin/spontaneity-special-moments/001",
+        "Browne, M. Neil_Keeley, Stuart M - Asking the Right Questions_ A Guide to Critical Thinking (2015_2014, Pearson) - libgen.li/ihas-taught-you-how-answering-the-wrong-question/001"
+      ],
+      "retrieved_scores": [
+        0.73440695,
+        0.6434964,
+        0.6361482,
+        0.61785555,
+        0.61612177
+      ],
+      "expected_chunk_ids": [
+        "rick-rubin/beginner-s-mind/004"
+      ],
+      "expected_no_evidence": false,
+      "recall_at_k": 1,
+      "precision_at_k": 0.2,
+      "mrr": 1,
+      "ndcg_at_k": 1,
+      "stats": {
+        "duration_ms": 138,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0.6
+      },
+      "gate": {
+        "decision": "gate_error",
+        "error": "evidence gate returned malformed JSON: invalid character '`' looking for beginning of value",
+        "latency_ms": 11509,
+        "retries": 1
+      }
+    },
+    {
+      "abstention_signals": {
+        "lexical_coverage": 1,
+        "score_gap": 1.0060323808455311
+      },
+      "id": "m5-sf-17",
+      "intent": "single_fact",
+      "retrieved_chunk_ids": [
+        "rick-rubin/the-gatekeeper/002",
+        "rick-rubin/the-gatekeeper/001",
+        "rick-rubin/make-it-up/002",
+        "rick-rubin/tuning-out-undermining-voices/002",
+        "rick-rubin/make-it-up/001"
+      ],
+      "retrieved_scores": [
+        0.7632329,
+        0.7586564,
+        0.6767902,
+        0.67598855,
+        0.67209023
+      ],
+      "expected_chunk_ids": [
+        "rick-rubin/the-gatekeeper/002",
+        "rick-rubin/the-gatekeeper/001"
+      ],
+      "expected_no_evidence": false,
+      "recall_at_k": 1,
+      "precision_at_k": 0.4,
+      "mrr": 1,
+      "ndcg_at_k": 1,
+      "stats": {
+        "duration_ms": 67,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0.6
+      },
+      "gate": {
+        "decision": "supported",
+        "latency_ms": 12474
+      }
+    },
+    {
+      "abstention_signals": {
+        "lexical_coverage": 1,
+        "score_gap": 1.00780018724364
+      },
+      "id": "m5-cmp-01",
+      "intent": "comparison",
+      "retrieved_chunk_ids": [
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/table-of-contents-supporting-patterns-in-brief-so-what-is-it-all-about-then/001",
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/table-of-contents-supporting-patterns-in-brief-bounded-contexts-are-a-difficult-concept/001",
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-bibliography-of-systems-resources-systems-thinking-and-business/001",
+        "Matthew Boyle - Domain-Driven Design with Golang_ Use Golang to create simple, maintainable systems to solve complex business problems (Packt Publishing) - libgen.li/table-of-contents-a-brief-history-of-domain-driven-design-summary/001",
+        "Matthew Boyle - Domain-Driven Design with Golang_ Use Golang to create simple, maintainable systems to solve complex business problems (Packt Publishing) - libgen.li/table-of-contents-bounded-contexts-summary/001"
+      ],
+      "retrieved_scores": [
+        0.74883395,
+        0.7430381,
+        0.740905,
+        0.73624945,
+        0.72984016
+      ],
+      "expected_chunk_ids": [
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/table-of-contents-supporting-patterns-in-brief-bounded-contexts-are-a-difficult-concept/001",
+        "Matthew Boyle - Domain-Driven Design with Golang_ Use Golang to create simple, maintainable systems to solve complex business problems (Packt Publishing) - libgen.li/table-of-contents-bounded-contexts-summary/001"
+      ],
+      "expected_no_evidence": false,
+      "recall_at_k": 1,
+      "precision_at_k": 0.4,
+      "mrr": 0.5,
+      "ndcg_at_k": 0.6240505200038378,
+      "stats": {
+        "duration_ms": 116,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0.6
+      },
+      "gate": {
+        "decision": "unsupported",
+        "latency_ms": 8608,
+        "retries": 1
+      }
+    },
+    {
+      "abstention_signals": {
+        "lexical_coverage": 1,
+        "score_gap": 1.0093192852260684
+      },
+      "id": "m5-cmp-02",
+      "intent": "comparison",
+      "retrieved_chunk_ids": [
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/consequences-what-becomes-easier-or-more-difficult-to-do-because-of-this-change-event-carried-state-transfer-documenting-the-asynchronous-api/001",
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/consequences-what-becomes-easier-or-more-difficult-to-do-because-of-this-change-event-carried-state-transfer-summary/001",
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/consequences-what-becomes-easier-or-more-difficult-to-do-because-of-this-change-asynchronous-connections-summary/001",
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/consequences-what-becomes-easier-or-more-difficult-to-do-because-of-this-change-message-workflows-the-choreographed-saga/001",
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/consequences-what-becomes-easier-or-more-difficult-to-do-because-of-this-change-transactional-messaging-identifying-problems-in-asynchronous-applications/004"
+      ],
+      "retrieved_scores": [
+        0.7257016,
+        0.719001,
+        0.71257436,
+        0.71182215,
+        0.7110878
+      ],
+      "expected_chunk_ids": [
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/consequences-what-becomes-easier-or-more-difficult-to-do-because-of-this-change-asynchronous-connections-summary/001"
+      ],
+      "expected_no_evidence": false,
+      "recall_at_k": 1,
+      "precision_at_k": 0.2,
+      "mrr": 0.3333333333333333,
+      "ndcg_at_k": 0.5,
+      "stats": {
+        "duration_ms": 65,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0.6
+      },
+      "gate": {
+        "decision": "unsupported",
+        "latency_ms": 7190
+      }
+    },
+    {
+      "abstention_signals": {
+        "lexical_coverage": 1,
+        "score_gap": 1.0023560416883568
+      },
+      "id": "m5-cmp-03",
+      "intent": "comparison",
+      "retrieved_chunk_ids": [
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/consequences-what-becomes-easier-or-more-difficult-to-do-because-of-this-change-asynchronous-connections-integration-with-event-carried-state-transfer/002",
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/table-of-contents-introduction-to-event-driven-architectures-event-carried-state-transfer/001",
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/table-of-contents-supporting-patterns-in-brief-cqrs-and-event-sourcing/001",
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/consequences-what-becomes-easier-or-more-difficult-to-do-because-of-this-change-asynchronous-connections-integration-with-event-carried-state-transfer/001",
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/consequences-what-becomes-easier-or-more-difficult-to-do-because-of-this-change-asynchronous-connections-integration-with-event-carried-state-transfer/004"
+      ],
+      "retrieved_scores": [
+        0.76896334,
+        0.7671559,
+        0.7578126,
+        0.74966514,
+        0.73863304
+      ],
+      "expected_chunk_ids": [
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/consequences-what-becomes-easier-or-more-difficult-to-do-because-of-this-change-asynchronous-connections-integration-with-event-carried-state-transfer/002",
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/table-of-contents-introduction-to-event-driven-architectures-event-carried-state-transfer/001"
+      ],
+      "expected_no_evidence": false,
+      "recall_at_k": 1,
+      "precision_at_k": 0.4,
+      "mrr": 1,
+      "ndcg_at_k": 1,
+      "stats": {
+        "duration_ms": 139,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0.6
+      },
+      "gate": {
+        "decision": "unsupported",
+        "latency_ms": 7898
+      }
+    },
+    {
+      "abstention_signals": {
+        "lexical_coverage": 1,
+        "score_gap": 1.0107268824063116
+      },
+      "id": "m5-cmp-04",
+      "intent": "comparison",
+      "retrieved_chunk_ids": [
+        "rick-rubin/inspiration/001",
+        "rick-rubin/beginner-s-mind/006",
+        "rick-rubin/surrounding-the-lightning-bolt/001",
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/table-of-contents-introduction-to-event-driven-architectures-agility/001",
+        "rick-rubin/surrounding-the-lightning-bolt/002"
+      ],
+      "retrieved_scores": [
+        0.73743147,
+        0.7296051,
+        0.72813576,
+        0.725201,
+        0.723362
+      ],
+      "expected_chunk_ids": [
+        "rick-rubin/inspiration/001",
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/table-of-contents-introduction-to-event-driven-architectures-agility/001"
+      ],
+      "expected_no_evidence": false,
+      "recall_at_k": 1,
+      "precision_at_k": 0.4,
+      "mrr": 1,
+      "ndcg_at_k": 0.8772153153380494,
+      "stats": {
+        "duration_ms": 56,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0.6
+      },
+      "gate": {
+        "decision": "unsupported",
+        "latency_ms": 5769
+      }
+    },
+    {
+      "abstention_signals": {
+        "lexical_coverage": 0,
+        "score_gap": 0
+      },
+      "id": "m5-ab-01",
+      "intent": "abstention",
+      "retrieved_chunk_ids": [],
+      "retrieved_scores": [],
+      "expected_chunk_ids": [],
+      "expected_no_evidence": true,
+      "stats": {
+        "duration_ms": 94,
+        "candidates": 0,
+        "top_k_requested": 5,
+        "top_k_returned": 0,
+        "min_score": 0.6
+      }
+    },
+    {
+      "abstention_signals": {
+        "lexical_coverage": 0,
+        "score_gap": 1.0014355472813758
+      },
+      "id": "m5-ab-02",
+      "intent": "abstention",
+      "retrieved_chunk_ids": [
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-the-basics-think-about-this/003",
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-leverage-points-places-to-intervene-in-a-system-6-information-flows-the-structure-of-who-does-and-does-not-have-access-to-information/003",
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-living-in-a-world-of-systems-use-language-with-care-and-enrich-it-with-systems-concepts/001",
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-leverage-points-places-to-intervene-in-a-system-2-paradigms-the-mind-set-out-of-which-the-system-its-goals-structure-rules-delays-parameters-arises/002"
+      ],
+      "retrieved_scores": [
+        0.6139303,
+        0.6130502,
+        0.6038759,
+        0.6028794
+      ],
+      "expected_chunk_ids": [],
+      "expected_no_evidence": true,
+      "stats": {
+        "duration_ms": 100,
+        "candidates": 4,
+        "top_k_requested": 5,
+        "top_k_returned": 4,
+        "min_score": 0.6
+      },
+      "gate": {
+        "decision": "unsupported",
+        "latency_ms": 6601
+      }
+    },
+    {
+      "abstention_signals": {
+        "lexical_coverage": 1,
+        "score_gap": 1.0237868326539765
+      },
+      "id": "m5-ab-03",
+      "intent": "abstention",
+      "retrieved_chunk_ids": [
+        "Matthew Boyle - Domain-Driven Design with Golang_ Use Golang to create simple, maintainable systems to solve complex business problems (Packt Publishing) - libgen.li/table-of-contents-bounded-contexts-go-install-github-com-deepmap-oapi-codegen-cmd-oapi-codegen-latest/006",
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/consequences-what-becomes-easier-or-more-difficult-to-do-because-of-this-change-testing/002",
+        "Matthew Boyle - Domain-Driven Design with Golang_ Use Golang to create simple, maintainable systems to solve complex business problems (Packt Publishing) - libgen.li/index-kafka-145-146/001",
+        "Matthew Boyle - Domain-Driven Design with Golang_ Use Golang to create simple, maintainable systems to solve complex business problems (Packt Publishing) - libgen.li/index-kafka-145-146/003",
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/consequences-what-becomes-easier-or-more-difficult-to-do-because-of-this-change-testing/001"
+      ],
+      "retrieved_scores": [
+        0.6748766,
+        0.6591964,
+        0.65848494,
+        0.63889694,
+        0.6374822
+      ],
+      "expected_chunk_ids": [],
+      "expected_no_evidence": true,
+      "stats": {
+        "duration_ms": 133,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0.6
+      },
+      "gate": {
+        "decision": "unsupported",
+        "latency_ms": 3908
+      }
+    },
+    {
+      "abstention_signals": {
+        "lexical_coverage": 0,
+        "score_gap": 1.0035414944653835
+      },
+      "id": "m5-ab-04",
+      "intent": "abstention",
+      "retrieved_chunk_ids": [
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-system-traps-and-opportunities-success-to-the-successful-competitive-exclusion/003",
+        "rick-rubin/patience/002",
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-system-traps-and-opportunities-success-to-the-successful-competitive-exclusion/008",
+        "Browne, M. Neil_Keeley, Stuart M - Asking the Right Questions_ A Guide to Critical Thinking (2015_2014, Pearson) - libgen.li/ithem-as-evidence-are-there-rival-causes-r-ival-causes-and-your-ow-n-comm-unic-ation/001",
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-system-traps-and-opportunities-the-way-out/002"
+      ],
+      "retrieved_scores": [
+        0.6235101,
+        0.62130976,
+        0.61935425,
+        0.61749464,
+        0.6155908
+      ],
+      "expected_chunk_ids": [],
+      "expected_no_evidence": true,
+      "stats": {
+        "duration_ms": 49,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0.6
+      },
+      "gate": {
+        "decision": "unsupported",
+        "latency_ms": 5609
+      }
+    },
+    {
+      "abstention_signals": {
+        "lexical_coverage": 1,
+        "score_gap": 0
+      },
+      "id": "m5-ab-05",
+      "intent": "abstention",
+      "retrieved_chunk_ids": [],
+      "retrieved_scores": [],
+      "expected_chunk_ids": [],
+      "expected_no_evidence": true,
+      "stats": {
+        "duration_ms": 92,
+        "candidates": 0,
+        "top_k_requested": 5,
+        "top_k_returned": 0,
+        "min_score": 0.6
+      }
+    },
+    {
+      "abstention_signals": {
+        "lexical_coverage": 0,
+        "score_gap": 1.0008904107058958
+      },
+      "id": "m5-ab-06",
+      "intent": "abstention",
+      "retrieved_chunk_ids": [
+        "Matthew Boyle - Domain-Driven Design with Golang_ Use Golang to create simple, maintainable systems to solve complex business problems (Packt Publishing) - libgen.li/table-of-contents-building-a-microservice-using-ddd-a-few-notes-before-we-proceed/001",
+        "Matthew Boyle - Domain-Driven Design with Golang_ Use Golang to create simple, maintainable systems to solve complex business problems (Packt Publishing) - libgen.li/table-of-contents-building-a-microservice-using-ddd-a-few-notes-before-we-proceed/002",
+        "Matthew Boyle - Domain-Driven Design with Golang_ Use Golang to create simple, maintainable systems to solve complex business problems (Packt Publishing) - libgen.li/table-of-contents-exploring-factories-repositories-and-services-introducing-the-factory-pattern/005",
+        "Matthew Boyle - Domain-Driven Design with Golang_ Use Golang to create simple, maintainable systems to solve complex business problems (Packt Publishing) - libgen.li/index-domain-services-66-68/001",
+        "Matthew Boyle - Domain-Driven Design with Golang_ Use Golang to create simple, maintainable systems to solve complex business problems (Packt Publishing) - libgen.li/table-of-contents-bounded-contexts-benefits-of-ubiquitous-language/005"
+      ],
+      "retrieved_scores": [
+        0.6783103,
+        0.67770684,
+        0.6282088,
+        0.606879,
+        0.6054783
+      ],
+      "expected_chunk_ids": [],
+      "expected_no_evidence": true,
+      "stats": {
+        "duration_ms": 60,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0.6
+      },
+      "gate": {
+        "decision": "unsupported",
+        "latency_ms": 1478
+      }
+    },
+    {
+      "abstention_signals": {
+        "lexical_coverage": 0,
+        "score_gap": 1
+      },
+      "id": "m5-ab-07",
+      "intent": "abstention",
+      "retrieved_chunk_ids": [
+        "Matthew Boyle - Domain-Driven Design with Golang_ Use Golang to create simple, maintainable systems to solve complex business problems (Packt Publishing) - libgen.li/table-of-contents-application-type-carddetails-struct/016"
+      ],
+      "retrieved_scores": [
+        0.6027994
+      ],
+      "expected_chunk_ids": [],
+      "expected_no_evidence": true,
+      "stats": {
+        "duration_ms": 90,
+        "candidates": 1,
+        "top_k_requested": 5,
+        "top_k_returned": 1,
+        "min_score": 0.6
+      },
+      "gate": {
+        "decision": "unsupported",
+        "latency_ms": 3065
+      }
+    },
+    {
+      "abstention_signals": {
+        "lexical_coverage": 0,
+        "score_gap": 1.0003650353721993
+      },
+      "id": "m5-ab-08",
+      "intent": "abstention",
+      "retrieved_chunk_ids": [
+        "Browne, M. Neil_Keeley, Stuart M - Asking the Right Questions_ A Guide to Critical Thinking (2015_2014, Pearson) - libgen.li/the-benefit-and-manner-of-asking-the-right-questions-the-importance-of-practice/001",
+        "Browne, M. Neil_Keeley, Stuart M - Asking the Right Questions_ A Guide to Critical Thinking (2015_2014, Pearson) - libgen.li/the-benefit-and-manner-of-asking-the-right-questions-the-noisy-confused-world-we-live-in/001",
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/table-of-contents-design-and-planning/002",
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/table-of-contents-design-and-planning/001",
+        "Browne, M. Neil_Keeley, Stuart M - Asking the Right Questions_ A Guide to Critical Thinking (2015_2014, Pearson) - libgen.li/asking-the-right-questions-preface/003"
+      ],
+      "retrieved_scores": [
+        0.65827703,
+        0.6580368,
+        0.6562817,
+        0.654148,
+        0.65287495
+      ],
+      "expected_chunk_ids": [],
+      "expected_no_evidence": true,
+      "stats": {
+        "duration_ms": 99,
+        "candidates": 5,
+        "top_k_requested": 5,
+        "top_k_returned": 5,
+        "min_score": 0.6
+      },
+      "gate": {
+        "decision": "unsupported",
+        "latency_ms": 6879,
+        "retries": 1
+      }
+    }
+  ],
+  "m5": {
+    "abstention_precision": 0.6153846153846154,
+    "abstention_recall": 1,
+    "false_abstentions": 5,
+    "missed_abstentions": 0,
+    "generation_skipped": 13,
+    "gate_provider": "openrouter",
+    "gate_model": "google/gemma-4-26b-a4b-it:free"
+  }
+}
