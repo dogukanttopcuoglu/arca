@@ -19,13 +19,16 @@ func AllowedIntentCategories() []string {
 
 // GoldSet is the versioned, human-curated chunk-level evaluation dataset
 // (ADR-0027). Queries are built exclusively from the real indexed corpus.
+// The corpus is either a single document (legacy `corpus` field) or a list
+// of documents (`documents`, schema 1.2) when queries span multiple books.
 type GoldSet struct {
 	SchemaVersion string      `json:"schema_version"`
-	Corpus        CorpusInfo  `json:"corpus"`
+	Corpus        CorpusInfo  `json:"corpus,omitempty"`
+	Documents     []CorpusInfo `json:"documents,omitempty"`
 	Queries       []GoldQuery `json:"queries"`
 }
 
-// CorpusInfo identifies the expected indexed corpus for this gold set.
+// CorpusInfo identifies one indexed document of the corpus.
 type CorpusInfo struct {
 	DocumentID        string `json:"document_id"`
 	CorpusFingerprint string `json:"corpus_fingerprint"`
@@ -61,11 +64,22 @@ func (g *GoldSet) Validate() error {
 	if len(g.Queries) == 0 {
 		return fmt.Errorf("gold set contains no queries")
 	}
-	if g.Corpus.DocumentID == "" {
-		return fmt.Errorf("gold set corpus document_id is empty")
-	}
-	if g.Corpus.CorpusFingerprint == "" {
-		return fmt.Errorf("gold set corpus fingerprint is empty")
+	if len(g.Documents) > 0 {
+		for _, d := range g.Documents {
+			if d.DocumentID == "" {
+				return fmt.Errorf("gold set document has empty document_id")
+			}
+			if d.CorpusFingerprint == "" {
+				return fmt.Errorf("gold set document %q has empty fingerprint", d.DocumentID)
+			}
+		}
+	} else {
+		if g.Corpus.DocumentID == "" {
+			return fmt.Errorf("gold set corpus document_id is empty")
+		}
+		if g.Corpus.CorpusFingerprint == "" {
+			return fmt.Errorf("gold set corpus fingerprint is empty")
+		}
 	}
 
 	allowed := map[string]bool{}

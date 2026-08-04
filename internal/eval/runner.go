@@ -88,7 +88,6 @@ func (r *Runner) Run(ctx context.Context, gs *GoldSet) (*Report, error) {
 		Timestamp: time.Now().UTC(),
 		Corpus: CorpusResult{
 			Fingerprint: ComputeFingerprint(liveHashes),
-			DocumentID:  gs.Corpus.DocumentID,
 			ChunkCount:  len(liveHashes),
 		},
 		Retrieval: RetrievalConfig{
@@ -101,6 +100,24 @@ func (r *Runner) Run(ctx context.Context, gs *GoldSet) (*Report, error) {
 			Reranker:          r.opts.Reranker,
 			Collection:        r.opts.Collection,
 		},
+	}
+	if len(gs.Documents) > 0 {
+		// Multi-document corpus (gold set schema 1.2): record the aggregate
+		// in Corpus and per-document detail in Documents.
+		report.Documents = make([]CorpusResult, 0, len(gs.Documents))
+		for _, doc := range gs.Documents {
+			docHashes, err := r.source.ContentHashes(doc.DocumentID)
+			if err != nil {
+				return nil, fmt.Errorf("failed to read corpus hashes for %q: %w", doc.DocumentID, err)
+			}
+			report.Documents = append(report.Documents, CorpusResult{
+				DocumentID:  doc.DocumentID,
+				Fingerprint: ComputeFingerprint(docHashes),
+				ChunkCount:  len(docHashes),
+			})
+		}
+	} else {
+		report.Corpus.DocumentID = gs.Corpus.DocumentID
 	}
 
 	var abstentionCounts []int

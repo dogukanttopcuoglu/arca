@@ -14,7 +14,10 @@ type Report struct {
 	GitCommit  string          `json:"git_commit"`
 	Timestamp  time.Time       `json:"timestamp"`
 	Corpus     CorpusResult    `json:"corpus"`
-	Retrieval  RetrievalConfig `json:"retrieval"`
+	// Documents records per-document identity for multi-document corpora
+	// (gold set schema 1.2); absent for single-document runs.
+	Documents []CorpusResult  `json:"documents,omitempty"`
+	Retrieval RetrievalConfig `json:"retrieval"`
 	DurationMs int64           `json:"duration_ms"`
 	Metrics    Metrics         `json:"metrics"`
 	PerQuery   []QueryResult   `json:"per_query"`

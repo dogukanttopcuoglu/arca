@@ -28,11 +28,31 @@ type FingerprintSource interface {
 }
 
 // VerifyFingerprint computes the live fingerprint from the source's content
-// hashes and compares it against the gold set's declared value. It returns the
-// live hashes (for report population) and an error describing any mismatch.
+// hashes and compares it against the gold set's declared value. For a
+// multi-document gold set every declared document is verified individually.
+// It returns the live hashes of the whole corpus (in declaration order, for
+// report population) and an error describing any mismatch.
 func VerifyFingerprint(source FingerprintSource, gs *GoldSet) ([]string, error) {
 	if source == nil {
 		return nil, fmt.Errorf("fingerprint source is nil")
+	}
+	var all []string
+	if len(gs.Documents) > 0 {
+		for _, doc := range gs.Documents {
+			hashes, err := source.ContentHashes(doc.DocumentID)
+			if err != nil {
+				return nil, fmt.Errorf("failed to read corpus hashes: %w", err)
+			}
+			live := ComputeFingerprint(hashes)
+			if live != doc.CorpusFingerprint {
+				return nil, fmt.Errorf(
+					"corpus fingerprint mismatch for %q: gold set declares %s, live index is %s (%d chunks)",
+					doc.DocumentID, doc.CorpusFingerprint, live, len(hashes),
+				)
+			}
+			all = append(all, hashes...)
+		}
+		return all, nil
 	}
 	hashes, err := source.ContentHashes(gs.Corpus.DocumentID)
 	if err != nil {
