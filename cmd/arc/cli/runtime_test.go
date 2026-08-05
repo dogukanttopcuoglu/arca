@@ -33,6 +33,9 @@ func TestDefaultConfig_LLMSettings(t *testing.T) {
 	if cfg.RetrievalMinScore != 0.6 {
 		t.Errorf("expected default retrieval min score 0.6 (M4 frozen operating point), got %v", cfg.RetrievalMinScore)
 	}
+	if cfg.ComparisonTopK != 8 {
+		t.Errorf("expected default comparison TopK 8 (M6 calibrated evidence budget), got %d", cfg.ComparisonTopK)
+	}
 }
 
 func TestLoadFromEnv_RetrievalMinScore(t *testing.T) {
@@ -42,6 +45,14 @@ func TestLoadFromEnv_RetrievalMinScore(t *testing.T) {
 
 	if cfg.RetrievalMinScore != 0.65 {
 		t.Errorf("expected configured retrieval min score 0.65, got %v", cfg.RetrievalMinScore)
+	}
+}
+
+func TestLoadFromEnv_ComparisonTopK(t *testing.T) {
+	t.Setenv("RETRIEVAL_COMPARISON_TOP_K", "10")
+	cfg := LoadFromEnv()
+	if cfg.ComparisonTopK != 10 {
+		t.Errorf("expected configured comparison TopK 10, got %d", cfg.ComparisonTopK)
 	}
 }
 

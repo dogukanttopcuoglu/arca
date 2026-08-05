@@ -94,7 +94,9 @@ type Config struct {
 	// ComparisonTopK is the M6 evidence budget for comparison queries
 	// (ADR-0037): the orchestrator raises TopK for decomposed comparison
 	// sub-queries and trims the merge to the same value. Zero keeps the
-	// caller's TopK. The value freezes only after benchmark calibration.
+	// caller's TopK. Calibrated on Gold Set v2: 8 (comparison false
+	// abstentions 4/4 -> 2/4, abstention precision 0.615 -> 0.727, recall
+	// flat; TopK 10 rejected — upstream 429 rate limiting invalidated it).
 	ComparisonTopK int `mapstructure:"RETRIEVAL_COMPARISON_TOP_K"`
 	// HTTPTimeout is the client timeout for external service calls.
 	HTTPTimeout time.Duration `mapstructure:"HTTP_TIMEOUT"`
@@ -119,7 +121,7 @@ func DefaultConfig() Config {
 		SparseIndex:           false,
 		RetrievalMode:         retrievalseam.RetrievalDense,
 		FusionPolicyName:      "balanced",
-		ComparisonTopK:        0, // unset until benchmark calibration (ADR-0037)
+		ComparisonTopK:        8, // M6 calibrated evidence budget (ADR-0037)
 		HTTPTimeout:           30 * time.Second,
 	}
 }
