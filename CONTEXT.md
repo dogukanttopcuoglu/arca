@@ -191,10 +191,17 @@ A deterministic digest of the indexed corpus used to prove benchmark validity: S
 The indexing-stage seam, symmetric to the dense embedding provider, that converts a `KnowledgeChunk` into a sparse vector representation (BM25 term weights in M3; SPLADE/learned sparse later). Sparse vectors share the same Qdrant collection and lifecycle as dense vectors — retrieval state is never process-local.
 
 ## IntentHint
-A confidence-scored signal emitted by query understanding (e.g. `Type: Comparison, Confidence: 0.93`). A hint never decides retrieval behavior — the Retrieval Orchestrator holds policy and may ignore, partially use, or combine hints with other signals. Keeps classification replaceable and decoupled from the retrieval pipeline.
+A minimal signal emitted by query understanding carrying only `Intent`, `Decompose`, and `Source` (initially `"rule_based"`, derived from the existing deterministic analyzer signal). A hint never decides retrieval behavior — the Retrieval Orchestrator holds policy and may ignore, partially use, or combine hints with other signals. No confidence score is attached until a benchmarked classifier justifies probabilistic semantics.
+_Avoid_: Intent classification (the label alone is not a decision), intent score
 
 ## Retrieval Orchestrator
-The single policy-deciding component that selects and parameterizes the retrieval strategy from IntentHints and other signals. It is the only place where hints translate into behavior; the classifier stays infrastructure. Benchmark results decide whether classification exists at all.
+The pure decision function in `qa` translating `IntentHint + RuntimeConfig` into a `RetrievalDecision` (`Decompose`, optional `TopKOverride`). It is the only place where hints translate into behavior; the classifier stays infrastructure. Benchmark results decide whether classification exists at all. Runtime fusion-policy selection is currently config-frozen (`Balanced`); a `Policy` decision field appears only when a production benchmark demonstrates a per-intent gain beyond the 5% tolerance.
+
+## RetrievalDecision
+The output of the Retrieval Orchestrator, kept minimal and benchmark-backed: `Decompose bool` and an optional `TopKOverride` (evidence budget). No `Policy` field until a second benchmark-validated runtime policy path exists. `AnswerEngine` executes the decision; retrievers remain execution components.
+
+## EvidenceBudget
+The maximum number of retrieved chunks admitted to evidence assembly, expressed in M6 as a `TopKOverride` on the RetrievalDecision — never a token-budget or gate change. The concrete value is calibrated per intent by benchmark (e.g. comparison false-abstention reduction on Gold Set v2) before it freezes; the default is the caller's TopK.
 
 ## FusionPolicy
-A frozen, calibrated retrieval fusion configuration (`DenseWeight`, `SparseWeight`, `SparseCap`) produced by offline benchmark calibration — not raw tuned parameters. Named policies (e.g. `Balanced`, `DenseBiased`, `LexicalBiased`) are the only fusion variants an orchestrator may select; numerical optimization ends at calibration (M4), runtime selection is orchestration (M5).
+A frozen, calibrated retrieval fusion configuration (`DenseWeight`, `SparseWeight`, `SparseCap`) produced by offline benchmark calibration — not raw tuned parameters. Named policies (e.g. `Balanced`, `DenseBiased`, `LexicalBiased`) are the only fusion variants an orchestrator may select; numerical optimization ends at calibration (M4). Runtime selection stays config-frozen (`Balanced`) until a production benchmark demonstrates a per-intent gain beyond the 5% tolerance (M6).
