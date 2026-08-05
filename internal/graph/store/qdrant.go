@@ -58,11 +58,15 @@ func NewQdrantGraphStore(baseURL, collection string) (*QdrantGraphStore, error) 
 func (s *QdrantGraphStore) Close() error { return nil }
 
 // AddNode upserts an entity node idempotently: existing chunk evidence is
-// unioned with the incoming chunk IDs (ADR-0038).
+// unioned with the incoming chunk IDs, and the score never regresses on a
+// partial-set write (the higher of existing and incoming wins) — ADR-0038.
 func (s *QdrantGraphStore) AddNode(ctx context.Context, node graphmodel.Node) error {
 	chunks := node.ChunkIDs()
 	if existing, err := s.GetNode(ctx, node.ID); err == nil && existing != nil {
 		chunks = unionStrings(existing.ChunkIDs(), chunks)
+		if existing.Score() > node.Score() {
+			node.Properties["score"] = existing.Score()
+		}
 	}
 	return s.upsertNode(ctx, node, chunks)
 }

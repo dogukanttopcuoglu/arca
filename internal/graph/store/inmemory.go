@@ -45,6 +45,11 @@ func (s *InMemoryGraphStore) AddNode(ctx context.Context, node graphmodel.Node) 
 			node.Properties = map[string]any{}
 		}
 		node.Properties["chunk_ids"] = unionStrings(existing.ChunkIDs(), node.ChunkIDs())
+		// The doc-level mention-count score must never regress on a
+		// partial-set write: keep the higher score.
+		if existing.Score() > node.Score() {
+			node.Properties["score"] = existing.Score()
+		}
 	}
 	if node.Properties == nil {
 		node.Properties = map[string]any{}

@@ -3,9 +3,13 @@ package worker
 import (
 	"context"
 	"fmt"
+	"slices"
+	"strings"
 	"sync/atomic"
 	"time"
 
+	graphmodel "arca/internal/graph/model"
+	graphstore "arca/internal/graph/store"
 	"arca/internal/indexing/diff"
 	indexingjob "arca/internal/indexing/job"
 	indexingmodel "arca/internal/indexing/model"
@@ -23,6 +27,7 @@ type IndexingWorker struct {
 	store          store.VectorStore
 	contentStore   store.ContentStore
 	sparseProvider sparse.EncoderProvider
+	graphStore     graphstore.GraphStore
 }
 
 // IndexingWorkerOption configures an IndexingWorker instance.
@@ -35,6 +40,15 @@ type IndexingWorkerOption func(*IndexingWorker)
 func WithSparseEncoderProvider(p sparse.EncoderProvider) IndexingWorkerOption {
 	return func(w *IndexingWorker) {
 		w.sparseProvider = p
+	}
+}
+
+// WithGraphStore attaches the entity-only graph store (ADR-0038): the worker
+// writes entity nodes from chunk enrichment output, tied to the diff
+// lifecycle. Without it, indexing behavior is unchanged.
+func WithGraphStore(gs graphstore.GraphStore) IndexingWorkerOption {
+	return func(w *IndexingWorker) {
+		w.graphStore = gs
 	}
 }
 
@@ -103,8 +117,49 @@ func (w *IndexingWorker) ExecuteSync(ctx context.Context, documentID string, chu
 		}
 	}
 
-	// 4. Batch & Generate Embeddings for new/modified chunks
+	// 3b. Write entity graph state tied to the diff lifecycle (ADR-0038),
+	// BEFORE the vector upsert: a graph failure fails the job with nothing
+	// persisted, so a retry re-runs the same diff instead of silently
+	// leaving the graph stale. Removed chunks drop their evidence
+	// (document-scoped cleanup followed by a rewrite of the current chunk
+	// set); otherwise only new/changed chunks contribute, and unchanged
+	// evidence is preserved by the idempotent store union.
 	chunksToEmbed := diffPlan.ChunksToEmbed()
+	if w.graphStore != nil {
+		var err error
+		if len(diffPlan.DeletedPointIDs) > 0 {
+			if derr := w.graphStore.DeleteByDocument(ctx, documentID); derr != nil {
+				err = fmt.Errorf("graph cleanup failed: %w", derr)
+			} else {
+				err = w.writeEntityNodes(ctx, chunks)
+			}
+		} else if len(diffPlan.ChunksToEmbed()) > 0 {
+			err = w.writeEntityNodes(ctx, diffPlan.ChunksToEmbed())
+		}
+		if err != nil {
+			jobObj.SetError(err)
+			return jobObj, err
+		}
+	}
+
+	if w.graphStore != nil {
+		var err error
+		if len(diffPlan.DeletedPointIDs) > 0 {
+			if derr := w.graphStore.DeleteByDocument(ctx, documentID); derr != nil {
+				err = fmt.Errorf("graph cleanup failed: %w", derr)
+			} else {
+				err = w.writeEntityNodes(ctx, chunks)
+			}
+		} else if len(chunksToEmbed) > 0 {
+			err = w.writeEntityNodes(ctx, chunksToEmbed)
+		}
+		if err != nil {
+			jobObj.SetError(err)
+			return jobObj, err
+		}
+	}
+
+	// 4. Batch & Generate Embeddings for new/modified chunks
 	batchSize := caps.MaxBatchSize
 	if batchSize <= 0 {
 		batchSize = 50
@@ -209,6 +264,68 @@ func (w *IndexingWorker) ExecuteSync(ctx context.Context, documentID string, chu
 	_ = jobObj.TransitionTo(indexingjob.StatusCompleted)
 
 	return jobObj, nil
+}
+
+// graphScoreFloor is the ADR-0038 entity persistence threshold: entities
+// below it are frequency noise (title pages, acknowledgments, bibliography).
+const graphScoreFloor = 0.9
+
+// writeEntityNodes aggregates entity mentions across the given chunks,
+// derives the document-level score (0.8 + 0.1 per extra mention beyond the
+// first, capped at 1.0 — the enrichment mention-count proxy), and upserts
+// nodes for entities at or above the persistence floor. Node identity
+// follows ADR-0038: "entityType:lower(name)" with cross-document merging
+// via the store's union.
+func (w *IndexingWorker) writeEntityNodes(ctx context.Context, chunks []pdfmodel.KnowledgeChunk) error {
+	type entityAcc struct {
+		name       string
+		entityType string
+		mentions   int
+		chunkIDs   []string
+	}
+	entityAccs := make(map[string]*entityAcc)
+	for _, chk := range chunks {
+		for _, m := range chk.Entities {
+			key := strings.ToLower(strings.TrimSpace(m.Text))
+			if key == "" {
+				continue
+			}
+			a := entityAccs[key]
+			if a == nil {
+				a = &entityAcc{name: m.Text, entityType: string(m.Type)}
+				entityAccs[key] = a
+			}
+			a.mentions++
+			if !slices.Contains(a.chunkIDs, chk.ChunkID) {
+				a.chunkIDs = append(a.chunkIDs, chk.ChunkID)
+			}
+		}
+	}
+
+	for key, a := range entityAccs {
+		score := 0.8 + 0.1*float64(a.mentions-1)
+		if score > 1.0 {
+			score = 1.0
+		}
+		if score < graphScoreFloor {
+			continue
+		}
+		node := graphmodel.Node{
+			ID:   a.entityType + ":" + key,
+			Type: graphmodel.NodeTypeEntity,
+			Properties: map[string]any{
+				"name":           key,
+				"canonical_name": a.name,
+				"entity_type":    a.entityType,
+				"score":          score,
+				"chunk_ids":      a.chunkIDs,
+			},
+		}
+		if err := w.graphStore.AddNode(ctx, node); err != nil {
+			return fmt.Errorf("graph node upsert failed: %w", err)
+		}
+	}
+	return nil
 }
 
 // extractCitationTexts flattens chunk citations into their raw reference texts for
