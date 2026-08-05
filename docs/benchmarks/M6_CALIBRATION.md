@@ -28,3 +28,17 @@
 - **TopK 10 rejected**: 20/29 gate calls failed operationally (10 upstream 429 rate limits on the free-tier shared pool, 9 malformed outputs, 1 empty response). The run is invalid as calibration evidence, not a gate-quality result.
 - Remaining comparison false abstentions (m5-cmp-01/02) are deeper evidence-scarcity cases; no further budget increase is justified by this data — the next lever would be gate-prompt or context-assembly work, both outside M6 scope (ADR-0037).
 - Free-tier model instability (429 + malformed outputs) remains the dominant gate-quality risk; deterministic fake-gate tests stay the regression anchor.
+
+## DeepSeek rerun — model dependence (2026-08-05)
+
+The calibration was rerun with a different gate model (`deepseek-v4-flash` via DeepSeek API) after the gate `MaxTokens` was raised 32 → 256 (reasoning-capable models consume the old budget entirely in `reasoning_content`, leaving `content` empty; generation is unaffected — its 1500-token budget is sufficient).
+
+| config (DeepSeek) | comparison unsupported | false abstentions | abstention precision | abstention recall | gen_skipped | gate errors |
+|---|---|---|---|---|---|---|
+| TopK 5 (`m6_ds_topk5.json`) | 2/4 | 3 | 0.727 | 1.000 | 11 | 0 |
+| TopK 8 (`m6_ds_topk8.json`) | 3/4 | 3 | 0.727 | 1.000 | 11 | 1 |
+| TopK 10 (`m6_ds_topk10.json`) | 2/4 | 3 | 0.727 | 1.000 | 11 | 0 |
+
+**Finding: the TopK override's benefit is gate-model dependent.** DeepSeek already reaches the gemma-TopK-8 quality level at TopK 5 (false abstentions 3, precision 0.727); raising the budget yields no measurable gain on DeepSeek — but also no regression.
+
+**Decision:** the frozen default stays **8**. Evidence to *remove* the value would need a measured regression; none exists. The model dependence is documented here, and per-model budgets (e.g. Gemma=8, DeepSeek=5) would each require their own calibration benchmark before becoming config — no model-specific defaults are introduced now.

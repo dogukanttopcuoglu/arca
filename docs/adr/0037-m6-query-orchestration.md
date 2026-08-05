@@ -34,3 +34,5 @@ M6 productizes only benchmark-proven retrieval decisions. It defines a minimal `
 | TopK 10 | rejected | — | — | — | — | 20 |
 
 TopK 8 passes the acceptance rule: comparison `unsupported` drops 4/4 → 2/4 while dense recall@5 and abstention recall stay flat. TopK 10 is rejected — 20 of 29 gate calls failed (10 upstream 429 rate limits on the free-tier pool, 9 malformed outputs, 1 empty), invalidating the run. Reports: `m6_gate_topk8.json`, `m6_gate_topk10.json` (unusable), `M6_CALIBRATION.md`.
+
+**Model dependence (DeepSeek rerun):** with `deepseek-v4-flash` as the gate model the override shows no measurable gain (TopK 5/8/10 all at 0.727 precision, 3 false abstentions) — the benefit measured with gemma is model-dependent, and DeepSeek reaches the same quality at TopK 5. The frozen value stays 8 (no measured regression; evidence to remove it would need one). Per-model budgets (Gemma=8, DeepSeek=5) are not introduced; each would require its own calibration benchmark first. The gate `MaxTokens` was raised 32 → 256 for reasoning-capable providers (a provider-capability adjustment, not a gate-design change).

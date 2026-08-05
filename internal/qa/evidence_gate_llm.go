@@ -46,12 +46,16 @@ func (g *LLMEvidenceGate) Evaluate(ctx context.Context, query string, win *qacon
 		return EvidenceGateFailed, fmt.Errorf("evidence gate context is empty")
 	}
 
+	// MaxTokens must leave room for reasoning-capable models (e.g. DeepSeek
+	// flash) to finish their reasoning_content before emitting the decision
+	// JSON; 32 tokens get fully consumed by reasoning on such models.
+	options := qaprompt.GenerationOptions{Temperature: 0, MaxTokens: 256}
 	prompt := qaprompt.PromptMessage{
 		System: evidenceGateSystemInstruction,
 		Messages: []qaprompt.Message{
 			{Role: "user", Content: fmt.Sprintf("SOURCES:\n%s\n\nQUESTION:\n%s", win.Content, query)},
 		},
-		Options: qaprompt.GenerationOptions{Temperature: 0, MaxTokens: 32},
+		Options: options,
 	}
 
 	resp, err := g.llm.Generate(ctx, prompt)
