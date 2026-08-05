@@ -34,6 +34,24 @@ type Node struct {
 	Properties map[string]any `json:"properties,omitempty"`
 }
 
+// Name returns the normalized (lowercase) entity name property, or "".
+func (n Node) Name() string {
+	name, _ := n.Properties["name"].(string)
+	return name
+}
+
+// Score returns the entity score property, or 0.
+func (n Node) Score() float64 {
+	score, _ := n.Properties["score"].(float64)
+	return score
+}
+
+// ChunkIDs returns the chunk evidence property, or nil.
+func (n Node) ChunkIDs() []string {
+	ids, _ := n.Properties["chunk_ids"].([]string)
+	return ids
+}
+
 // Edge models a directed connection between two graph vertices.
 type Edge struct {
 	From     string       `json:"from"`

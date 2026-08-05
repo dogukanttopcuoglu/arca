@@ -99,7 +99,7 @@ func (s *Server) ExecuteTool(ctx context.Context, toolName string, params map[st
 
 	case "traverse_knowledge_graph":
 		gStore := graphstore.NewInMemoryGraphStore()
-		gRet := retriever.NewGraphRetriever(gStore)
+		gRet := retriever.NewGraphRetriever(gStore, store.NewInMemoryContentStore())
 		_ = gRet
 		return &MCPToolResult{
 			Content: "Traversed Knowledge Graph: 3 concept nodes found.",

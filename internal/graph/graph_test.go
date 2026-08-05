@@ -7,6 +7,7 @@ import (
 	graphmodel "arca/internal/graph/model"
 	graphretriever "arca/internal/graph/retriever"
 	graphstore "arca/internal/graph/store"
+	"arca/internal/indexing/store"
 	retrievalseam "arca/internal/retrieval/seam"
 )
 
@@ -62,35 +63,41 @@ func TestInMemoryGraphStore(t *testing.T) {
 
 func TestGraphRetriever_ImplementsRetrieverSeam(t *testing.T) {
 	ctx := context.Background()
-	store := graphstore.NewInMemoryGraphStore()
+	gs := graphstore.NewInMemoryGraphStore()
+	cs := store.NewInMemoryContentStore()
 
-	_ = store.AddNode(ctx, graphmodel.Node{
-		ID:   "chk-1",
-		Type: graphmodel.NodeTypeChunk,
+	_ = gs.AddNode(ctx, graphmodel.Node{
+		ID:   "organization:world bank",
+		Type: graphmodel.NodeTypeEntity,
 		Properties: map[string]any{
-			"content":     "Creativity requires presence and awareness.",
-			"document_id": "doc-1",
-			"section_path": "Intro",
+			"name":      "world bank",
+			"score":     1.0,
+			"chunk_ids": []string{"doc-1/notes/001"},
 		},
 	})
+	_ = cs.PutContent(ctx, []store.ChunkContent{{
+		ChunkID: "doc-1/notes/001", ContentMarkdown: "The World Bank lends to developing countries.",
+	}})
 
-	gr := graphretriever.NewGraphRetriever(store)
+	gr := graphretriever.NewGraphRetriever(gs, cs)
 
-	t.Run("retrieves search results adhering to Retriever seam", func(t *testing.T) {
+	t.Run("retrieves entity evidence adhering to Retriever seam", func(t *testing.T) {
 		results, err := gr.Retrieve(ctx, retrievalseam.RetrievalQuery{
-			QueryText: "Creativity presence",
+			QueryText: "What does the book say about World Bank?",
 			TopK:      5,
 		})
 
 		if err != nil {
 			t.Fatalf("unexpected error during GraphRetriever.Retrieve: %v", err)
 		}
-
-		if len(results) == 0 {
-			t.Fatal("expected non-empty search results from GraphRetriever")
+		if len(results) != 1 {
+			t.Fatalf("expected 1 entity-evidence result, got %d", len(results))
 		}
-		if results[0].ChunkID != "chk-1" {
-			t.Errorf("expected ChunkID 'chk-1', got %s", results[0].ChunkID)
+		if results[0].ChunkID != "doc-1/notes/001" {
+			t.Errorf("expected entity-evidence chunk, got %s", results[0].ChunkID)
+		}
+		if results[0].ContentMarkdown == "" {
+			t.Error("expected content resolved from ContentStore")
 		}
 	})
 }

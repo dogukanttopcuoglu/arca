@@ -60,9 +60,9 @@ func (s *QdrantGraphStore) Close() error { return nil }
 // AddNode upserts an entity node idempotently: existing chunk evidence is
 // unioned with the incoming chunk IDs (ADR-0038).
 func (s *QdrantGraphStore) AddNode(ctx context.Context, node graphmodel.Node) error {
-	chunks := chunkIDsFrom(node)
+	chunks := node.ChunkIDs()
 	if existing, err := s.GetNode(ctx, node.ID); err == nil && existing != nil {
-		chunks = unionStrings(chunkIDsFrom(*existing), chunks)
+		chunks = unionStrings(existing.ChunkIDs(), chunks)
 	}
 	return s.upsertNode(ctx, node, chunks)
 }
@@ -80,10 +80,10 @@ func (s *QdrantGraphStore) upsertNode(ctx context.Context, node graphmodel.Node,
 	payload := map[string]any{
 		"id":             node.ID,
 		"node_type":      string(node.Type),
-		"name":           strings.ToLower(strings.TrimSpace(nameOf(node))),
+		"name":           strings.ToLower(strings.TrimSpace(node.Name())),
 		"canonical_name": canonicalNameOf(node),
 		"entity_type":    entityTypeOf(node),
-		"score":          scoreOf(node),
+		"score":          node.Score(),
 		"chunk_ids":      chunks,
 	}
 	var out struct {
@@ -163,11 +163,65 @@ func (s *QdrantGraphStore) FindNodeByName(ctx context.Context, name string) (*gr
 // DeleteByDocument removes every chunk evidence reference belonging to the
 // document from all nodes; nodes left without evidence are deleted.
 func (s *QdrantGraphStore) DeleteByDocument(ctx context.Context, documentID string) error {
+	nodes, err := s.scrollNodes(ctx, nil)
+	if err != nil {
+		return err
+	}
+	for i := range nodes {
+		node := nodes[i]
+		var kept []string
+		for _, cid := range node.ChunkIDs() {
+			if chunkBelongsToDocument(cid, documentID) {
+				continue
+			}
+			kept = append(kept, cid)
+		}
+		if len(kept) == 0 {
+			if err := s.deletePoint(ctx, graphmodel.CalculatePointID(node.ID)); err != nil {
+				return err
+			}
+			continue
+		}
+		node.Properties["chunk_ids"] = kept
+		// Direct upsert (no union): AddNode would re-merge the removed
+		// evidence back into the node.
+		if err := s.upsertNode(ctx, node, kept); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// deletePoint removes the point with the given deterministic point ID.
+func (s *QdrantGraphStore) deletePoint(ctx context.Context, pointID string) error {
+	return s.doJSON(ctx, http.MethodPost, "/collections/"+s.collection+"/points/delete", map[string]any{
+		"points": []string{pointID},
+	}, nil)
+}
+
+// ListEntityNodes returns every entity node in the collection (scrolled in
+// batches). Order is unspecified; the retriever applies its own ordering.
+func (s *QdrantGraphStore) ListEntityNodes(ctx context.Context) ([]graphmodel.Node, error) {
+	return s.scrollNodes(ctx, map[string]any{
+		"must": []map[string]any{{
+			"key":   "node_type",
+			"match": map[string]any{"value": string(graphmodel.NodeTypeEntity)},
+		}},
+	})
+}
+
+// scrollNodes pages through the collection with the given filter and returns
+// every matching node.
+func (s *QdrantGraphStore) scrollNodes(ctx context.Context, filter any) ([]graphmodel.Node, error) {
+	var nodes []graphmodel.Node
 	var next any
 	for {
 		req := map[string]any{
 			"limit":        graphScrollBatchSize,
 			"with_payload": true,
+		}
+		if filter != nil {
+			req["filter"] = filter
 		}
 		if next != nil {
 			req["offset"] = next
@@ -175,48 +229,27 @@ func (s *QdrantGraphStore) DeleteByDocument(ctx context.Context, documentID stri
 		var out struct {
 			Result struct {
 				Points []struct {
-					ID      string         `json:"id"`
 					Payload map[string]any `json:"payload"`
 				} `json:"points"`
 				NextPageOffset any `json:"next_page_offset"`
 			} `json:"result"`
 		}
 		if err := s.doJSON(ctx, http.MethodPost, "/collections/"+s.collection+"/points/scroll", req, &out); err != nil {
-			return fmt.Errorf("graph delete scroll failed: %w", err)
+			return nil, fmt.Errorf("graph node scroll failed: %w", err)
 		}
 		for _, pt := range out.Result.Points {
 			node, err := nodeFromPayload(pt.Payload)
 			if err != nil {
-				return err
+				return nil, err
 			}
-			var kept []string
-			for _, cid := range chunkIDsFrom(*node) {
-				if chunkBelongsToDocument(cid, documentID) {
-					continue
-				}
-				kept = append(kept, cid)
-			}
-			if len(kept) == 0 {
-				if err := s.doJSON(ctx, http.MethodPost, "/collections/"+s.collection+"/points/delete", map[string]any{
-					"points": []string{pt.ID},
-				}, nil); err != nil {
-					return fmt.Errorf("graph node delete failed: %w", err)
-				}
-				continue
-			}
-			node.Properties["chunk_ids"] = kept
-			// Direct upsert (no union): AddNode would re-merge the removed
-			// evidence back into the node.
-			if err := s.upsertNode(ctx, *node, kept); err != nil {
-				return err
-			}
+			nodes = append(nodes, *node)
 		}
 		if out.Result.NextPageOffset == nil {
 			break
 		}
 		next = out.Result.NextPageOffset
 	}
-	return nil
+	return nodes, nil
 }
 
 // AddEdge is not supported in v1 (entity-only graph, no relation persistence,
@@ -340,14 +373,6 @@ func nodeFromPayload(payload map[string]any) (*graphmodel.Node, error) {
 	}, nil
 }
 
-func nameOf(node graphmodel.Node) string {
-	if node.Properties == nil {
-		return ""
-	}
-	name, _ := node.Properties["name"].(string)
-	return name
-}
-
 func canonicalNameOf(node graphmodel.Node) string {
 	if node.Properties == nil {
 		return ""
@@ -362,20 +387,4 @@ func entityTypeOf(node graphmodel.Node) string {
 	}
 	t, _ := node.Properties["entity_type"].(string)
 	return t
-}
-
-func scoreOf(node graphmodel.Node) float64 {
-	if node.Properties == nil {
-		return 0
-	}
-	s, _ := node.Properties["score"].(float64)
-	return s
-}
-
-func chunkIDsFrom(node graphmodel.Node) []string {
-	if node.Properties == nil {
-		return nil
-	}
-	ids, _ := node.Properties["chunk_ids"].([]string)
-	return ids
 }

@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 	"sync"
 
@@ -43,7 +44,7 @@ func (s *InMemoryGraphStore) AddNode(ctx context.Context, node graphmodel.Node) 
 		if node.Properties == nil {
 			node.Properties = map[string]any{}
 		}
-		node.Properties["chunk_ids"] = unionStrings(chunkIDsFrom(existing), chunkIDsFrom(node))
+		node.Properties["chunk_ids"] = unionStrings(existing.ChunkIDs(), node.ChunkIDs())
 	}
 	if node.Properties == nil {
 		node.Properties = map[string]any{}
@@ -76,6 +77,26 @@ func (s *InMemoryGraphStore) FindNodeByName(ctx context.Context, name string) (*
 	return &node, nil
 }
 
+// ListEntityNodes returns every entity node, ordered by node ID for a
+// deterministic result.
+func (s *InMemoryGraphStore) ListEntityNodes(ctx context.Context) ([]graphmodel.Node, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	ids := make([]string, 0, len(s.nodes))
+	for id, node := range s.nodes {
+		if node.Type == graphmodel.NodeTypeEntity {
+			ids = append(ids, id)
+		}
+	}
+	sort.Strings(ids)
+	out := make([]graphmodel.Node, 0, len(ids))
+	for _, id := range ids {
+		out = append(out, s.nodes[id])
+	}
+	return out, nil
+}
+
 // DeleteByDocument removes every chunk evidence reference belonging to the
 // document from all nodes; nodes left without evidence are deleted.
 func (s *InMemoryGraphStore) DeleteByDocument(ctx context.Context, documentID string) error {
@@ -83,7 +104,7 @@ func (s *InMemoryGraphStore) DeleteByDocument(ctx context.Context, documentID st
 	defer s.mu.Unlock()
 
 	for id, node := range s.nodes {
-		ids := chunkIDsFrom(node)
+		ids := node.ChunkIDs()
 		if ids == nil {
 			continue
 		}

@@ -26,6 +26,10 @@ type GraphStore interface {
 	// (exact match on the lowercase "name" property).
 	FindNodeByName(ctx context.Context, name string) (*graphmodel.Node, error)
 
+	// ListEntityNodes returns every entity node in the store. The order is
+	// unspecified; callers must apply their own deterministic ordering.
+	ListEntityNodes(ctx context.Context) ([]graphmodel.Node, error)
+
 	// DeleteByDocument removes all chunk evidence belonging to the given
 	// document from every node; nodes left without evidence are deleted.
 	DeleteByDocument(ctx context.Context, documentID string) error
