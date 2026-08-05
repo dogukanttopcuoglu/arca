@@ -51,6 +51,19 @@ type AnswerEngine struct {
 	llmProvider    llmprovider.LLMProvider
 	verifier       qaverification.VerificationPipeline
 	evidenceGate   EvidenceGate
+	retrievalCfg   RetrievalRuntimeConfig
+}
+
+// AnswerEngineOption configures an AnswerEngine instance.
+type AnswerEngineOption func(*AnswerEngine)
+
+// WithRetrievalRuntimeConfig sets the benchmark-calibrated orchestration
+// parameters (evidence budget per intent, ADR-0037). The zero value keeps the
+// caller's TopK for every query.
+func WithRetrievalRuntimeConfig(cfg RetrievalRuntimeConfig) AnswerEngineOption {
+	return func(e *AnswerEngine) {
+		e.retrievalCfg = cfg
+	}
 }
 
 // NewAnswerEngine constructs an AnswerEngine instance. Nil seams fall back to
@@ -68,6 +81,7 @@ func NewAnswerEngine(
 	llm llmprovider.LLMProvider,
 	verifier qaverification.VerificationPipeline,
 	evidenceGate EvidenceGate,
+	opts ...AnswerEngineOption,
 ) *AnswerEngine {
 	if analyzer == nil {
 		analyzer = NewRuleBasedAnalyzer()
@@ -84,7 +98,7 @@ func NewAnswerEngine(
 	if verifier == nil {
 		verifier = qaverification.NewDefaultVerificationPipeline()
 	}
-	return &AnswerEngine{
+	engine := &AnswerEngine{
 		analyzer:       analyzer,
 		retriever:      retriever,
 		contextBuilder: ctxBuilder,
@@ -93,6 +107,10 @@ func NewAnswerEngine(
 		verifier:       verifier,
 		evidenceGate:   evidenceGate,
 	}
+	for _, opt := range opts {
+		opt(engine)
+	}
+	return engine
 }
 
 // evaluateGate runs the evidence gate with one bounded retry (ADR-0034).
@@ -129,14 +147,24 @@ func (e *AnswerEngine) Answer(ctx context.Context, query seam.RetrievalQuery) (*
 	draft.AnalyzedQuery = analyzed
 
 	if e.retriever != nil {
-		// M5 orchestration (ADR-0032): comparison queries detected by the
-		// existing analyzer signal retrieve each sub-query and merge
-		// deterministically; everything else takes the direct Balanced path.
-		if DecideRetrievalRouting(analyzed).Decompose {
+		// Retrieval Orchestrator (ADR-0037): the IntentHint is produced from
+		// the analyzer signal; comparison queries retrieve each sub-query and
+		// merge deterministically, everything else takes the direct path.
+		hint := AnalyzeIntentHint(analyzed)
+		decision := DecideRetrievalRouting(hint, e.retrievalCfg)
+		if decision.Decompose {
+			// The evidence budget applies consistently: each sub-query
+			// retrieves TopKOverride and the merge trims to TopKOverride,
+			// preserving the MergeRankedLists(topK) contract.
+			budget := query.TopK
+			if decision.TopKOverride > 0 {
+				budget = decision.TopKOverride
+			}
 			var lists [][]seam.SearchResult
 			for _, sub := range analyzed.SubQueries {
 				subQuery := query
 				subQuery.QueryText = sub
+				subQuery.TopK = budget
 				results, err := e.retriever.Retrieve(ctx, subQuery)
 				if err != nil {
 					return nil, fmt.Errorf("retrieval stage failed for sub-query %q: %w", sub, err)
@@ -145,7 +173,7 @@ func (e *AnswerEngine) Answer(ctx context.Context, query seam.RetrievalQuery) (*
 					lists = append(lists, results)
 				}
 			}
-			draft.SearchResults = seam.MergeRankedLists(lists, query.TopK)
+			draft.SearchResults = seam.MergeRankedLists(lists, budget)
 		} else {
 			draft.SearchResults, err = e.retriever.Retrieve(ctx, query)
 			if err != nil {

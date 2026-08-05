@@ -49,6 +49,10 @@ type Options struct {
 	Gate         qa.EvidenceGate
 	GateProvider string
 	GateModel    string
+	// ComparisonTopK is the M6 evidence budget for comparison-intent queries
+	// (ADR-0037): the effective TopK for those queries, mirroring the
+	// orchestrator's TopKOverride. Zero keeps TopK for every intent.
+	ComparisonTopK int
 }
 
 // Runner executes a gold set against a Retriever and produces a Report.
@@ -99,6 +103,7 @@ func (r *Runner) Run(ctx context.Context, gs *GoldSet) (*Report, error) {
 			FusionPolicy:      r.opts.FusionPolicy,
 			Reranker:          r.opts.Reranker,
 			Collection:        r.opts.Collection,
+			ComparisonTopK:    r.opts.ComparisonTopK,
 		},
 	}
 	if len(gs.Documents) > 0 {
@@ -148,6 +153,13 @@ func (r *Runner) Run(ctx context.Context, gs *GoldSet) (*Report, error) {
 			Mode:      r.opts.Mode,
 			MinScore:  r.opts.MinScore,
 			Stats:     &retrievalseam.RetrievalStats{},
+		}
+		// M6 evidence budget (ADR-0037): comparison-intent queries may
+		// retrieve deeper. The harness keys off the gold set's declared
+		// intent (the orchestrator keys off the analyzer's SubQueries signal);
+		// for calibration both identify the same query class.
+		if r.opts.ComparisonTopK > 0 && q.Intent == IntentComparison {
+			query.TopK = r.opts.ComparisonTopK
 		}
 		var results []retrievalseam.SearchResult
 		qres := QueryResult{ID: q.ID, Intent: q.Intent}

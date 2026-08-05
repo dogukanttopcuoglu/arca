@@ -1,22 +1,35 @@
 package qa
 
-// RetrievalRoutingDecision is the minimal internal M5 orchestration output:
-// the only runtime decision currently validated by benchmark evidence is
-// whether comparison decomposition applies (ADR-0031, ADR-0032). Retrieval
-// mode, TopK, thresholds, and fusion parameters are owned by existing
-// configuration and the frozen M4 machinery, not by orchestration.
-type RetrievalRoutingDecision struct {
-	Decompose bool
+// RetrievalDecision is the output of the Retrieval Orchestrator (ADR-0037).
+// It exposes only benchmark-validated decision fields: whether comparison
+// decomposition applies, and an optional evidence-budget TopK override.
+// Additional fields (e.g. a fusion Policy) require benchmark evidence before
+// they are added. A zero TopKOverride means "use the caller's TopK".
+type RetrievalDecision struct {
+	Decompose    bool
+	TopKOverride int
 }
 
-// DecideRetrievalRouting maps an analyzed query to the M5 routing decision.
-// Comparison queries are identified solely by the existing analyzer signal:
-// a non-empty SubQueries result means the deterministic comparison
-// decomposition (M4) applies. All other queries keep the Balanced path
-// without decomposition.
-func DecideRetrievalRouting(analyzed *AnalyzedQuery) RetrievalRoutingDecision {
-	if analyzed != nil && len(analyzed.SubQueries) > 0 {
-		return RetrievalRoutingDecision{Decompose: true}
+// RetrievalRuntimeConfig carries the benchmark-calibrated orchestration
+// parameters. ComparisonTopK is the evidence budget for comparison queries
+// (0 = unset; the caller's TopK applies). The concrete value freezes only
+// after benchmark calibration on Gold Set v2 (ADR-0037).
+type RetrievalRuntimeConfig struct {
+	ComparisonTopK int
+}
+
+// DecideRetrievalRouting is the Retrieval Orchestrator: a pure decision
+// function translating an IntentHint and runtime config into a
+// RetrievalDecision. Comparison hints may additionally receive the calibrated
+// evidence budget; all other hints keep the Balanced path without
+// decomposition or TopK override.
+func DecideRetrievalRouting(hint IntentHint, cfg RetrievalRuntimeConfig) RetrievalDecision {
+	if !hint.Decompose {
+		return RetrievalDecision{}
 	}
-	return RetrievalRoutingDecision{}
+	decision := RetrievalDecision{Decompose: true}
+	if cfg.ComparisonTopK > 0 {
+		decision.TopKOverride = cfg.ComparisonTopK
+	}
+	return decision
 }

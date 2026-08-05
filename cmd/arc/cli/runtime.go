@@ -91,6 +91,11 @@ type Config struct {
 	// retrieval (balanced | densebiased). Resolution happens in composition;
 	// the name is never interpreted at retrieval time.
 	FusionPolicyName string `mapstructure:"RETRIEVAL_FUSION_POLICY"`
+	// ComparisonTopK is the M6 evidence budget for comparison queries
+	// (ADR-0037): the orchestrator raises TopK for decomposed comparison
+	// sub-queries and trims the merge to the same value. Zero keeps the
+	// caller's TopK. The value freezes only after benchmark calibration.
+	ComparisonTopK int `mapstructure:"RETRIEVAL_COMPARISON_TOP_K"`
 	// HTTPTimeout is the client timeout for external service calls.
 	HTTPTimeout time.Duration `mapstructure:"HTTP_TIMEOUT"`
 }
@@ -114,6 +119,7 @@ func DefaultConfig() Config {
 		SparseIndex:           false,
 		RetrievalMode:         retrievalseam.RetrievalDense,
 		FusionPolicyName:      "balanced",
+		ComparisonTopK:        0, // unset until benchmark calibration (ADR-0037)
 		HTTPTimeout:           30 * time.Second,
 	}
 }
@@ -142,6 +148,7 @@ func LoadFromEnv() Config {
 	v.SetDefault("SPARSE_INDEX", base.SparseIndex)
 	v.SetDefault("RETRIEVAL_MODE", base.RetrievalMode.String())
 	v.SetDefault("RETRIEVAL_FUSION_POLICY", base.FusionPolicyName)
+	v.SetDefault("RETRIEVAL_COMPARISON_TOP_K", base.ComparisonTopK)
 	v.SetDefault("HTTP_TIMEOUT", base.HTTPTimeout)
 
 	return Config{
@@ -161,6 +168,7 @@ func LoadFromEnv() Config {
 		SparseIndex:           v.GetBool("SPARSE_INDEX"),
 		RetrievalMode:         parseRetrievalMode(v.GetString("RETRIEVAL_MODE")),
 		FusionPolicyName:      v.GetString("RETRIEVAL_FUSION_POLICY"),
+		ComparisonTopK:        v.GetInt("RETRIEVAL_COMPARISON_TOP_K"),
 		HTTPTimeout:           v.GetDuration("HTTP_TIMEOUT"),
 	}
 }
@@ -369,8 +377,9 @@ func buildLLMProvider(cfg Config) llmprovider.LLMProvider {
 
 // buildAnswerEngine wires the real AnswerEngine seams: ContextBuilder with the
 // configured budget, the RAG PromptBuilder, the OpenAI-compatible LLM adapter,
-// the default verification pipeline, and the real EvidenceGate (ADR-0030).
-// Retrieval stays on the provided seam.
+// the default verification pipeline, the real EvidenceGate (ADR-0030), and the
+// benchmark-calibrated retrieval runtime config (ADR-0037). Retrieval stays on
+// the provided seam.
 func buildAnswerEngine(cfg Config, retriever retrievalseam.Retriever) *qa.AnswerEngine {
 	return qa.NewAnswerEngine(
 		nil,
@@ -380,5 +389,6 @@ func buildAnswerEngine(cfg Config, retriever retrievalseam.Retriever) *qa.Answer
 		buildLLMProvider(cfg),
 		qaverification.NewDefaultVerificationPipeline(),
 		qa.NewLLMEvidenceGate(buildLLMProvider(cfg)),
+		qa.WithRetrievalRuntimeConfig(qa.RetrievalRuntimeConfig{ComparisonTopK: cfg.ComparisonTopK}),
 	)
 }

@@ -55,10 +55,12 @@ func (f fakeFingerprintSource) ContentHashes(documentID string) ([]string, error
 // fakeRetriever returns canned results per query and records calls.
 type fakeRetriever struct {
 	calls int
+	topKs []int
 }
 
 func (f *fakeRetriever) Retrieve(ctx context.Context, q retrievalseam.RetrievalQuery) ([]retrievalseam.SearchResult, error) {
 	f.calls++
+	f.topKs = append(f.topKs, q.TopK)
 	var ids []string
 	switch q.QueryText {
 	case "concept query one":

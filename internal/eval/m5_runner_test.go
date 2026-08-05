@@ -165,3 +165,48 @@ func newM5Runner(t *testing.T, gate qa.EvidenceGate) (*eval.Runner, *eval.GoldSe
 	})
 	return runner, gs, ret
 }
+
+func TestRunner_ComparisonEvidenceBudget(t *testing.T) {
+	// The gold set declares no comparison intent, so extend it in-memory to
+	// verify the override applies only to comparison queries.
+	gs, err := eval.LoadGoldSet(strings.NewReader(runnerGoldSet))
+	if err != nil {
+		t.Fatalf("failed to load gold set: %v", err)
+	}
+	gs.Queries = append(gs.Queries, eval.GoldQuery{
+		ID: "cmp", Intent: eval.IntentComparison, Query: "How do X and Y differ?",
+		ExpectedChunkIDs: []string{"a"}, ExpectedSections: []string{"S"}, ExpectedNoEvidence: false,
+	})
+
+	ret := &fakeRetriever{}
+	runner := eval.New(ret, fakeFingerprintSource{
+		hashes: []string{
+			"3333333333333333333333333333333333333333333333333333333333333333",
+			"1111111111111111111111111111111111111111111111111111111111111111",
+			"2222222222222222222222222222222222222222222222222222222222222222",
+		},
+	}, eval.Options{
+		Mode:           retrievalseam.RetrievalDense,
+		TopK:           5,
+		ComparisonTopK: 8,
+	})
+
+	report, err := runner.Run(context.Background(), gs)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if report.Retrieval.ComparisonTopK != 8 {
+		t.Errorf("expected comparison_top_k 8 in manifest, got %d", report.Retrieval.ComparisonTopK)
+	}
+
+	// 4 queries in order: q1, q2, q3 (TopK 5) then cmp (TopK 8).
+	want := []int{5, 5, 5, 8}
+	if len(ret.topKs) != len(want) {
+		t.Fatalf("expected %d retrieval calls, got %d (%v)", len(want), len(ret.topKs), ret.topKs)
+	}
+	for i := range want {
+		if ret.topKs[i] != want[i] {
+			t.Errorf("retrieval %d: expected TopK %d, got %d", i, want[i], ret.topKs[i])
+		}
+	}
+}

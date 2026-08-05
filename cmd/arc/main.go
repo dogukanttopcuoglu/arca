@@ -71,6 +71,7 @@ func main() {
 		sparseCap := fs.Int("sparse-cap", 0, "hybrid sparse candidate cap (0 = unlimited)")
 		decompose := fs.Bool("decompose", false, "run gold-set queries through rule-based decomposition")
 		m5gate := fs.Bool("m5-gate", false, "run the M5 semantic evidence gate over each query's context")
+		comparisonTopK := fs.Int("comparison-topk", 0, "M6 evidence budget: effective TopK for comparison-intent queries (0 = use --topk)")
 		if err := fs.Parse(os.Args[2:]); err != nil {
 			fmt.Printf("Error: %v\n", err)
 			os.Exit(1)
@@ -91,6 +92,7 @@ func main() {
 			SparseCap:        *sparseCap,
 			Decompose:        *decompose,
 			M5Gate:           *m5gate,
+			ComparisonTopK:   *comparisonTopK,
 		})
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)

@@ -12,6 +12,10 @@ var allowedIntentCategories = [...]string{
 	"single_fact", "concept", "procedural", "comparison", "entity", "abstention",
 }
 
+// IntentComparison is the gold set intent key for comparison queries; the
+// M6 evidence budget is keyed off it in the runner (ADR-0037).
+const IntentComparison = "comparison"
+
 // AllowedIntentCategories returns the six gold set query intents.
 func AllowedIntentCategories() []string {
 	return append([]string(nil), allowedIntentCategories[:]...)
@@ -22,10 +26,10 @@ func AllowedIntentCategories() []string {
 // The corpus is either a single document (legacy `corpus` field) or a list
 // of documents (`documents`, schema 1.2) when queries span multiple books.
 type GoldSet struct {
-	SchemaVersion string      `json:"schema_version"`
-	Corpus        CorpusInfo  `json:"corpus,omitempty"`
+	SchemaVersion string       `json:"schema_version"`
+	Corpus        CorpusInfo   `json:"corpus,omitempty"`
 	Documents     []CorpusInfo `json:"documents,omitempty"`
-	Queries       []GoldQuery `json:"queries"`
+	Queries       []GoldQuery  `json:"queries"`
 }
 
 // CorpusInfo identifies one indexed document of the corpus.

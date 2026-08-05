@@ -29,6 +29,9 @@ type EvalOptions struct {
 	// M5Gate enables the pre-generation semantic evidence gate over each
 	// query's assembled context, producing the M5 report section.
 	M5Gate bool
+	// ComparisonTopK is the M6 evidence budget for comparison queries
+	// (ADR-0037), applied by the runner for calibration runs.
+	ComparisonTopK int
 }
 
 // RunEval executes the retrieval benchmark against the real composition root:
@@ -101,6 +104,7 @@ func (a *App) RunEval(ctx context.Context, opts EvalOptions) (string, error) {
 			Gate:              m5GateFunc(opts, a.runtime.cfg),
 			GateProvider:      a.runtime.cfg.LLMProviderLabel,
 			GateModel:         a.runtime.cfg.LLMModel,
+			ComparisonTopK:    opts.ComparisonTopK,
 			CorpusTexts: func() ([]string, error) {
 				return corpusSource{store: a.runtime.vectorStore}.CorpusTexts(context.Background())
 			},

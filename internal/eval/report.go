@@ -11,13 +11,13 @@ import (
 // Report is the fully reproducible benchmark output (ADR-0027). It carries
 // every configuration input plus the metric results.
 type Report struct {
-	GitCommit  string          `json:"git_commit"`
-	Timestamp  time.Time       `json:"timestamp"`
-	Corpus     CorpusResult    `json:"corpus"`
+	GitCommit string       `json:"git_commit"`
+	Timestamp time.Time    `json:"timestamp"`
+	Corpus    CorpusResult `json:"corpus"`
 	// Documents records per-document identity for multi-document corpora
 	// (gold set schema 1.2); absent for single-document runs.
-	Documents []CorpusResult  `json:"documents,omitempty"`
-	Retrieval RetrievalConfig `json:"retrieval"`
+	Documents  []CorpusResult  `json:"documents,omitempty"`
+	Retrieval  RetrievalConfig `json:"retrieval"`
 	DurationMs int64           `json:"duration_ms"`
 	Metrics    Metrics         `json:"metrics"`
 	PerQuery   []QueryResult   `json:"per_query"`
@@ -44,6 +44,7 @@ type RetrievalConfig struct {
 	FusionPolicy      *hybrid.FusionPolicy `json:"fusion_policy,omitempty"`
 	Reranker          string               `json:"reranker,omitempty"`
 	Collection        string               `json:"collection"`
+	ComparisonTopK    int                  `json:"comparison_top_k,omitempty"`
 }
 
 // Metrics aggregates retrieval quality over the gold set. Recall, precision,
