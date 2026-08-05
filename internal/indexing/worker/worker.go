@@ -120,46 +120,27 @@ func (w *IndexingWorker) ExecuteSync(ctx context.Context, documentID string, chu
 	// 3b. Write entity graph state tied to the diff lifecycle (ADR-0038),
 	// BEFORE the vector upsert: a graph failure fails the job with nothing
 	// persisted, so a retry re-runs the same diff instead of silently
-	// leaving the graph stale. Removed chunks drop their evidence
-	// (document-scoped cleanup followed by a rewrite of the current chunk
-	// set); otherwise only new/changed chunks contribute, and unchanged
-	// evidence is preserved by the idempotent store union.
-	chunksToEmbed := diffPlan.ChunksToEmbed()
+	// leaving the graph stale. Removed chunks drop their evidence via the
+	// document-scoped cleanup; the current chunk set is then always written
+	// in full — idempotent (store union) and cheap (entity counts are
+	// small), and it covers the first graph bootstrap where the vector
+	// collection already exists but the graph is still empty.
 	if w.graphStore != nil {
-		var err error
 		if len(diffPlan.DeletedPointIDs) > 0 {
 			if derr := w.graphStore.DeleteByDocument(ctx, documentID); derr != nil {
-				err = fmt.Errorf("graph cleanup failed: %w", derr)
-			} else {
-				err = w.writeEntityNodes(ctx, chunks)
+				err := fmt.Errorf("graph cleanup failed: %w", derr)
+				jobObj.SetError(err)
+				return jobObj, err
 			}
-		} else if len(diffPlan.ChunksToEmbed()) > 0 {
-			err = w.writeEntityNodes(ctx, diffPlan.ChunksToEmbed())
 		}
-		if err != nil {
-			jobObj.SetError(err)
-			return jobObj, err
-		}
-	}
-
-	if w.graphStore != nil {
-		var err error
-		if len(diffPlan.DeletedPointIDs) > 0 {
-			if derr := w.graphStore.DeleteByDocument(ctx, documentID); derr != nil {
-				err = fmt.Errorf("graph cleanup failed: %w", derr)
-			} else {
-				err = w.writeEntityNodes(ctx, chunks)
-			}
-		} else if len(chunksToEmbed) > 0 {
-			err = w.writeEntityNodes(ctx, chunksToEmbed)
-		}
-		if err != nil {
+		if err := w.writeEntityNodes(ctx, chunks); err != nil {
 			jobObj.SetError(err)
 			return jobObj, err
 		}
 	}
 
 	// 4. Batch & Generate Embeddings for new/modified chunks
+	chunksToEmbed := diffPlan.ChunksToEmbed()
 	batchSize := caps.MaxBatchSize
 	if batchSize <= 0 {
 		batchSize = 50

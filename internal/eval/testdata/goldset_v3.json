@@ -1,0 +1,527 @@
+{
+  "schema_version": "1.2",
+  "documents": [
+    {
+      "document_id": "Browne, M. Neil_Keeley, Stuart M - Asking the Right Questions_ A Guide to Critical Thinking (2015_2014, Pearson) - libgen.li",
+      "corpus_fingerprint": "999342c3dc0c02d107b3e7f74648cc76c9dee92553999f01337f55b86c5a3995",
+      "chunk_count": 416
+    },
+    {
+      "document_id": "Matthew Boyle - Domain-Driven Design with Golang_ Use Golang to create simple, maintainable systems to solve complex business problems (Packt Publishing) - libgen.li",
+      "corpus_fingerprint": "da442d50937bbdffb6d6e6a0487d8dafc91fded0243d7652d9860e3c4d67ece3",
+      "chunk_count": 671
+    },
+    {
+      "document_id": "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li",
+      "corpus_fingerprint": "1bad1d654e47fb531f45ded86e34231d29b84e6f079f0b216a23c68b42eeceef",
+      "chunk_count": 397
+    },
+    {
+      "document_id": "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li",
+      "corpus_fingerprint": "f9f0b5fa1505abe3d2144383856a715942134c0ef0bb9269b5e830318e38fcbb",
+      "chunk_count": 1337
+    },
+    {
+      "document_id": "rick-rubin",
+      "corpus_fingerprint": "51b1909e1a2639b3114eb4e9afaeeafa58938cbdb0d195392dc65d06ac0b483d",
+      "chunk_count": 196
+    }
+  ],
+  "queries": [
+    {
+      "id": "g-ent-01",
+      "intent": "entity",
+      "query": "What does the book say about Bowling Green State University?",
+      "expected_chunk_ids": [
+        "Browne, M. Neil_Keeley, Stuart M - Asking the Right Questions_ A Guide to Critical Thinking (2015_2014, Pearson) - libgen.li/asking-the-right-questions-m-neil-browne-stuart-m-keeley-bowling-green-state-university/001",
+        "Browne, M. Neil_Keeley, Stuart M - Asking the Right Questions_ A Guide to Critical Thinking (2015_2014, Pearson) - libgen.li/asking-the-right-questions-m-neil-browne-stuart-m-keeley-bowling-green-state-university/003"
+      ],
+      "expected_sections": [
+        "Asking the Right Questions > M. Neil Browne Stuart M. Keeley > Bowling Green State University"
+      ],
+      "expected_no_evidence": false,
+      "frontmatter": false
+    },
+    {
+      "id": "g-ent-02",
+      "intent": "entity",
+      "query": "What does the book say about Bradstreet Corp?",
+      "expected_chunk_ids": [
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-system-traps-and-opportunities-policy-resistance-fixes-that-fail/001",
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-system-traps-and-opportunities-policy-resistance-fixes-that-fail/002"
+      ],
+      "expected_sections": [
+        "Thinking in Systems > System Traps... and Opportunities > Policy Resistance\u2014Fixes that Fail"
+      ],
+      "expected_no_evidence": false,
+      "frontmatter": false
+    },
+    {
+      "id": "g-ent-03",
+      "intent": "entity",
+      "query": "What does the book say about Johns Hopkins University?",
+      "expected_chunk_ids": [
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-notes/001",
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-notes/021"
+      ],
+      "expected_sections": [
+        "Thinking in Systems > Notes"
+      ],
+      "expected_no_evidence": false,
+      "frontmatter": true
+    },
+    {
+      "id": "g-ent-04",
+      "intent": "entity",
+      "query": "What does the book say about New York?",
+      "expected_chunk_ids": [
+        "Browne, M. Neil_Keeley, Stuart M - Asking the Right Questions_ A Guide to Critical Thinking (2015_2014, Pearson) - libgen.li/asking-the-right-questions-m-neil-browne-stuart-m-keeley-bowling-green-state-university/001",
+        "Browne, M. Neil_Keeley, Stuart M - Asking the Right Questions_ A Guide to Critical Thinking (2015_2014, Pearson) - libgen.li/asking-the-right-questions-m-neil-browne-stuart-m-keeley-bowling-green-state-university/002",
+        "Browne, M. Neil_Keeley, Stuart M - Asking the Right Questions_ A Guide to Critical Thinking (2015_2014, Pearson) - libgen.li/ilearn-to-ask-critical-questions-about-a-specific-part-of-the-reasoning-structure-app-eal-s-t-o-a-ut-horit-y-as-e-viden-ce/001",
+        "Browne, M. Neil_Keeley, Stuart M - Asking the Right Questions_ A Guide to Critical Thinking (2015_2014, Pearson) - libgen.li/ilearn-to-ask-critical-questions-about-a-specific-part-of-the-reasoning-structure-app-eal-s-t-o-a-ut-horit-y-as-e-viden-ce/002",
+        "Browne, M. Neil_Keeley, Stuart M - Asking the Right Questions_ A Guide to Critical Thinking (2015_2014, Pearson) - libgen.li/ilearn-to-ask-critical-questions-about-a-specific-part-of-the-reasoning-structure-passage-2/001",
+        "Browne, M. Neil_Keeley, Stuart M - Asking the Right Questions_ A Guide to Critical Thinking (2015_2014, Pearson) - libgen.li/ilearn-to-ask-critical-questions-about-a-specific-part-of-the-reasoning-structure-passage-2/002",
+        "Browne, M. Neil_Keeley, Stuart M - Asking the Right Questions_ A Guide to Critical Thinking (2015_2014, Pearson) - libgen.li/rthe-following-statements-identify-major-publications-t-hat-c-over-y-our-issue/001",
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-bibliography-of-systems-resources-systems-thinking-and-business/001",
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-bibliography-of-systems-resources-systems-thinking-society-and-social-change/001",
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-notes/001",
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-notes/003",
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-notes/005",
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-notes/007",
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-notes/009",
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-notes/011",
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-notes/012",
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-notes/013",
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-notes/015",
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-notes/019",
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-notes/021",
+        "rick-rubin/document-overview/001",
+        "rick-rubin/experimentation/001",
+        "rick-rubin/experimentation/002"
+      ],
+      "expected_sections": [
+        "Asking the Right Questions > M. Neil Browne Stuart M. Keeley > Bowling Green State University",
+        "Document Overview",
+        "Experimentation",
+        "Ilearn to ask critical questions about a specific part of the reasoning structure: > App eal s t o A ut horit y as E viden ce",
+        "Ilearn to ask critical questions about a specific part of the reasoning structure: > Passage 2",
+        "Rthe following statements: > Identify Major Publications T hat C over Y our Issue",
+        "Thinking in Systems > Bibliography of Systems Resources > Systems Thinking and Business",
+        "Thinking in Systems > Bibliography of Systems Resources > Systems Thinking, Society, and Social Change",
+        "Thinking in Systems > Notes"
+      ],
+      "expected_no_evidence": false,
+      "frontmatter": false
+    },
+    {
+      "id": "g-ent-05",
+      "intent": "entity",
+      "query": "What does the book say about Oxford University?",
+      "expected_chunk_ids": [
+        "Matthew Boyle - Domain-Driven Design with Golang_ Use Golang to create simple, maintainable systems to solve complex business problems (Packt Publishing) - libgen.li/table-of-contents-a-brief-history-of-domain-driven-design-so-what-are-ood-patterns/001",
+        "Matthew Boyle - Domain-Driven Design with Golang_ Use Golang to create simple, maintainable systems to solve complex business problems (Packt Publishing) - libgen.li/table-of-contents-a-brief-history-of-domain-driven-design-so-what-are-ood-patterns/002",
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-notes/001",
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-notes/005",
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-notes/011",
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-notes/021"
+      ],
+      "expected_sections": [
+        "Table of Contents > A Brief History of Domain-Driven Design > So, what are OOD patterns?",
+        "Thinking in Systems > Notes"
+      ],
+      "expected_no_evidence": false,
+      "frontmatter": true
+    },
+    {
+      "id": "g-ent-06",
+      "intent": "entity",
+      "query": "What does the book say about Rick Rubin?",
+      "expected_chunk_ids": [
+        "rick-rubin/about-the-author/001",
+        "rick-rubin/document-overview/001"
+      ],
+      "expected_sections": [
+        "About the Author",
+        "Document Overview"
+      ],
+      "expected_no_evidence": false,
+      "frontmatter": false
+    },
+    {
+      "id": "g-ent-07",
+      "intent": "entity",
+      "query": "What does the book say about Sons Inc?",
+      "expected_chunk_ids": [
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-notes/001",
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-notes/005"
+      ],
+      "expected_sections": [
+        "Thinking in Systems > Notes"
+      ],
+      "expected_no_evidence": false,
+      "frontmatter": true
+    },
+    {
+      "id": "g-ent-08",
+      "intent": "entity",
+      "query": "What does the book say about World Bank?",
+      "expected_chunk_ids": [
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-notes/001",
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-notes/011",
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-why-systems-surprise-us-bounded-rationality/001",
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-why-systems-surprise-us-bounded-rationality/003"
+      ],
+      "expected_sections": [
+        "Thinking in Systems > Notes",
+        "Thinking in Systems > Why Systems Surprise Us > Bounded Rationality"
+      ],
+      "expected_no_evidence": false,
+      "frontmatter": false
+    },
+    {
+      "id": "g-sf-01",
+      "intent": "single_fact",
+      "query": "Why is personal experience a weak form of evidence when evaluating claims?",
+      "expected_chunk_ids": [
+        "Browne, M. Neil_Keeley, Stuart M - Asking the Right Questions_ A Guide to Critical Thinking (2015_2014, Pearson) - libgen.li/ilearn-to-ask-critical-questions-about-a-specific-part-of-the-reasoning-structure-person-al-e-xp-erien-ce-as-e-viden-ce/006",
+        "Browne, M. Neil_Keeley, Stuart M - Asking the Right Questions_ A Guide to Critical Thinking (2015_2014, Pearson) - libgen.li/ilearn-to-ask-critical-questions-about-a-specific-part-of-the-reasoning-structure-person-al-e-xp-erien-ce-as-e-viden-ce/001"
+      ],
+      "expected_sections": [
+        "ilearn to ask critical questions about a specific part of the reasoning structure: > person al e xp erien ce as e viden ce"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "g-sf-02",
+      "intent": "single_fact",
+      "query": "What role do analogies play as evidence in arguments?",
+      "expected_chunk_ids": [
+        "Browne, M. Neil_Keeley, Stuart M - Asking the Right Questions_ A Guide to Critical Thinking (2015_2014, Pearson) - libgen.li/ithem-as-evidence-a-nalog-ies-as-e-vidence/006",
+        "Browne, M. Neil_Keeley, Stuart M - Asking the Right Questions_ A Guide to Critical Thinking (2015_2014, Pearson) - libgen.li/ithem-as-evidence-a-nalog-ies-as-e-vidence/001"
+      ],
+      "expected_sections": [
+        "ithem as evidence. > a nalog ies as e vidence"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "g-sf-03",
+      "intent": "concept",
+      "query": "What are some common reasoning fallacies described in the book?",
+      "expected_chunk_ids": [
+        "Browne, M. Neil_Keeley, Stuart M - Asking the Right Questions_ A Guide to Critical Thinking (2015_2014, Pearson) - libgen.li/asking-the-right-questions-contents-chapter-7-are-there-any-fallacies-in-the-reasoning-76/001",
+        "Browne, M. Neil_Keeley, Stuart M - Asking the Right Questions_ A Guide to Critical Thinking (2015_2014, Pearson) - libgen.li/tfrom-your-pan-as-well-as-how-to-discover-the-invisible-glue-that-a-questioning-approa-ch-to-finding-r-ea-soning-fa-lla-cies/001"
+      ],
+      "expected_sections": [
+        "asking the right questions > contents > chapter 7 are there any fallacies in the reasoning? 76",
+        "tfrom your pan as well as how to discover the \u201cinvisible glue\u201d that > a questioning approa ch to finding r ea soning fa lla cies"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "g-sf-04",
+      "intent": "concept",
+      "query": "How do entities differ from value objects in domain-driven design?",
+      "expected_chunk_ids": [
+        "Matthew Boyle - Domain-Driven Design with Golang_ Use Golang to create simple, maintainable systems to solve complex business problems (Packt Publishing) - libgen.li/table-of-contents-entities-value-objects-and-aggregates-working-with-entities/002",
+        "Matthew Boyle - Domain-Driven Design with Golang_ Use Golang to create simple, maintainable systems to solve complex business problems (Packt Publishing) - libgen.li/table-of-contents-entities-value-objects-and-aggregates-summary/001"
+      ],
+      "expected_sections": [
+        "table of contents > entities, value objects, and aggregates > summary",
+        "table of contents > entities, value objects, and aggregates > working with entities"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "g-sf-05",
+      "intent": "concept",
+      "query": "What is the purpose of bounded contexts in DDD?",
+      "expected_chunk_ids": [
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/table-of-contents-supporting-patterns-in-brief-bounded-contexts-are-a-difficult-concept/001",
+        "Matthew Boyle - Domain-Driven Design with Golang_ Use Golang to create simple, maintainable systems to solve complex business problems (Packt Publishing) - libgen.li/table-of-contents-bounded-contexts/001"
+      ],
+      "expected_sections": [
+        "table of contents > bounded contexts",
+        "table of contents > supporting patterns in brief > bounded contexts are a difficult concept"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "g-sf-06",
+      "intent": "single_fact",
+      "query": "What is CQRS and how does it relate to DDD?",
+      "expected_chunk_ids": [
+        "Matthew Boyle - Domain-Driven Design with Golang_ Use Golang to create simple, maintainable systems to solve complex business problems (Packt Publishing) - libgen.li/table-of-contents-ddd-for-distributed-systems-cqrs/002",
+        "Matthew Boyle - Domain-Driven Design with Golang_ Use Golang to create simple, maintainable systems to solve complex business problems (Packt Publishing) - libgen.li/table-of-contents-ddd-for-distributed-systems-cqrs/001"
+      ],
+      "expected_sections": [
+        "table of contents > ddd for distributed systems > cqrs"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "g-sf-07",
+      "intent": "concept",
+      "query": "What role do repositories play in DDD applications?",
+      "expected_chunk_ids": [
+        "Matthew Boyle - Domain-Driven Design with Golang_ Use Golang to create simple, maintainable systems to solve complex business problems (Packt Publishing) - libgen.li/table-of-contents-exploring-factories-repositories-and-services-implementing-the-repository-pattern-in-golang/001",
+        "Matthew Boyle - Domain-Driven Design with Golang_ Use Golang to create simple, maintainable systems to solve complex business problems (Packt Publishing) - libgen.li/table-of-contents-exploring-factories-repositories-and-services-implementing-the-repository-pattern-in-golang/002"
+      ],
+      "expected_sections": [
+        "table of contents > exploring factories, repositories, and services > implementing the repository pattern in golang"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "g-sf-08",
+      "intent": "concept",
+      "query": "What is the difference between a stock and a flow in a system?",
+      "expected_chunk_ids": [
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-the-basics-bathtubs-101-understanding-system-behavior-over-time/001",
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-the-basics-a-note-on-reading-graphs-of-behavior-over-time/006"
+      ],
+      "expected_sections": [
+        "thinking in systems > the basics > a note on reading graphs of behavior over time",
+        "thinking in systems > the basics > bathtubs 101\u2014understanding system behavior over time"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "g-sf-09",
+      "intent": "concept",
+      "query": "How does the tragedy of the commons emerge as a system trap?",
+      "expected_chunk_ids": [
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-system-traps-and-opportunities-the-tragedy-of-the-commons/002",
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-system-traps-and-opportunities-the-tragedy-of-the-commons/001"
+      ],
+      "expected_sections": [
+        "thinking in systems > system traps... and opportunities > the tragedy of the commons"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "g-sf-10",
+      "intent": "concept",
+      "query": "What are leverage points and where can one intervene in a system?",
+      "expected_chunk_ids": [
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-leverage-points-places-to-intervene-in-a-system-9-delays-the-lengths-of-time-relative-to-the-rates-of-system-changes/007",
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-leverage-points-places-to-intervene-in-a-system-7-reinforcing-feedback-loops-the-strength-of-the-gain-of-driving-loops/003"
+      ],
+      "expected_sections": [
+        "thinking in systems > leverage points\u2014 places to intervene in a system > 7. reinforcing feedback loops\u2014the strength of the gain of driving loops",
+        "thinking in systems > leverage points\u2014 places to intervene in a system > 9. delays\u2014the lengths of time relative to the rates of system changes"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "g-sf-11",
+      "intent": "concept",
+      "query": "How do feedback loops regulate the behavior of a system?",
+      "expected_chunk_ids": [
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-the-basics-how-the-system-runs-itself-feedback/002",
+        "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-the-basics-how-the-system-runs-itself-feedback/001"
+      ],
+      "expected_sections": [
+        "thinking in systems > the basics > how the system runs itself\u2014feedback"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "g-sf-12",
+      "intent": "single_fact",
+      "query": "What is event-carried state transfer in event-driven architecture?",
+      "expected_chunk_ids": [
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/table-of-contents-introduction-to-event-driven-architectures-event-carried-state-transfer/001",
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/consequences-what-becomes-easier-or-more-difficult-to-do-because-of-this-change-asynchronous-connections-integration-with-event-carried-state-transfer/001"
+      ],
+      "expected_sections": [
+        "consequences what becomes easier or more difficult to do because of this change > asynchronous connections > integration with event-carried state transfer",
+        "table of contents > introduction to event-driven architectures > event-carried state transfer"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "g-sf-13",
+      "intent": "concept",
+      "query": "Why are events described as the source of truth in event sourcing?",
+      "expected_chunk_ids": [
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/consequences-what-becomes-easier-or-more-difficult-to-do-because-of-this-change-tracking-changes-with-event-sourcing-events-are-our-source-of-truth/002",
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/consequences-what-becomes-easier-or-more-difficult-to-do-because-of-this-change-tracking-changes-with-event-sourcing-events-are-our-source-of-truth/001"
+      ],
+      "expected_sections": [
+        "consequences what becomes easier or more difficult to do because of this change > tracking changes with event sourcing > events are our source of truth"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "g-sf-14",
+      "intent": "concept",
+      "query": "How does transactional messaging work in event-driven systems?",
+      "expected_chunk_ids": [
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/consequences-what-becomes-easier-or-more-difficult-to-do-because-of-this-change-transactional-messaging-updating-the-depot-module-with-dependency-containers/004",
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/consequences-what-becomes-easier-or-more-difficult-to-do-because-of-this-change-transactional-messaging-identifying-problems-in-asynchronous-applications/004"
+      ],
+      "expected_sections": [
+        "consequences what becomes easier or more difficult to do because of this change > transactional messaging > identifying problems in asynchronous applications",
+        "consequences what becomes easier or more difficult to do because of this change > transactional messaging > updating the depot module with dependency containers"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "g-sf-15",
+      "intent": "concept",
+      "query": "What are the foundations of event-driven architecture?",
+      "expected_chunk_ids": [
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/table-of-contents-introduction-to-event-driven-architectures/001",
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/table-of-contents-introduction-to-event-driven-architectures/002"
+      ],
+      "expected_sections": [
+        "table of contents > introduction to event-driven architectures"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "g-sf-16",
+      "intent": "concept",
+      "query": "What is beginner's mind according to Rick Rubin?",
+      "expected_chunk_ids": [
+        "rick-rubin/beginner-s-mind/004"
+      ],
+      "expected_sections": [
+        "beginner\u2019s mind"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "g-sf-17",
+      "intent": "single_fact",
+      "query": "What is the role of the gatekeeper in the creative process?",
+      "expected_chunk_ids": [
+        "rick-rubin/the-gatekeeper/002",
+        "rick-rubin/the-gatekeeper/001"
+      ],
+      "expected_sections": [
+        "the gatekeeper"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "g-cmp-01",
+      "intent": "comparison",
+      "query": "Compare how bounded contexts in DDD and subsystems in systems thinking organize complexity.",
+      "expected_chunk_ids": [
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/table-of-contents-supporting-patterns-in-brief-bounded-contexts-are-a-difficult-concept/001",
+        "Matthew Boyle - Domain-Driven Design with Golang_ Use Golang to create simple, maintainable systems to solve complex business problems (Packt Publishing) - libgen.li/table-of-contents-bounded-contexts-summary/001"
+      ],
+      "expected_sections": [
+        "table of contents > bounded contexts > summary",
+        "table of contents > supporting patterns in brief > bounded contexts are a difficult concept"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "g-cmp-02",
+      "intent": "comparison",
+      "query": "Compare event-driven messaging with feedback loops as mechanisms for coordination.",
+      "expected_chunk_ids": [
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/consequences-what-becomes-easier-or-more-difficult-to-do-because-of-this-change-asynchronous-connections-summary/001"
+      ],
+      "expected_sections": [
+        "consequences what becomes easier or more difficult to do because of this change > asynchronous connections > summary"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "g-cmp-03",
+      "intent": "comparison",
+      "query": "Compare CQRS with event-carried state transfer.",
+      "expected_chunk_ids": [
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/consequences-what-becomes-easier-or-more-difficult-to-do-because-of-this-change-asynchronous-connections-integration-with-event-carried-state-transfer/002",
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/table-of-contents-introduction-to-event-driven-architectures-event-carried-state-transfer/001"
+      ],
+      "expected_sections": [
+        "consequences what becomes easier or more difficult to do because of this change > asynchronous connections > integration with event-carried state transfer",
+        "table of contents > introduction to event-driven architectures > event-carried state transfer"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "g-cmp-04",
+      "intent": "comparison",
+      "query": "Compare the role of inspiration in the creative act with the role of events in event-driven systems.",
+      "expected_chunk_ids": [
+        "rick-rubin/inspiration/001",
+        "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/table-of-contents-introduction-to-event-driven-architectures-agility/001"
+      ],
+      "expected_sections": [
+        "inspiration",
+        "table of contents > introduction to event-driven architectures > agility"
+      ],
+      "expected_no_evidence": false
+    },
+    {
+      "id": "g-ab-01",
+      "intent": "abstention",
+      "query": "What is the capital of Atlantis?",
+      "expected_chunk_ids": [],
+      "expected_sections": [],
+      "expected_no_evidence": true
+    },
+    {
+      "id": "g-ab-02",
+      "intent": "abstention",
+      "query": "How does quantum entanglement relate to information theory?",
+      "expected_chunk_ids": [],
+      "expected_sections": [],
+      "expected_no_evidence": true
+    },
+    {
+      "id": "g-ab-03",
+      "intent": "abstention",
+      "query": "What is the best programming language for machine learning?",
+      "expected_chunk_ids": [],
+      "expected_sections": [],
+      "expected_no_evidence": true
+    },
+    {
+      "id": "g-ab-04",
+      "intent": "abstention",
+      "query": "Explain the plot of The Great Gatsby.",
+      "expected_chunk_ids": [],
+      "expected_sections": [],
+      "expected_no_evidence": true
+    },
+    {
+      "id": "g-ab-05",
+      "intent": "abstention",
+      "query": "What is the population of Tokyo?",
+      "expected_chunk_ids": [],
+      "expected_sections": [],
+      "expected_no_evidence": true
+    },
+    {
+      "id": "g-ab-06",
+      "intent": "abstention",
+      "query": "What is the ISO standard that defines car tire dimensions?",
+      "expected_chunk_ids": [],
+      "expected_sections": [],
+      "expected_no_evidence": true
+    },
+    {
+      "id": "g-ab-07",
+      "intent": "abstention",
+      "query": "How does ARC handle multi-tenant billing?",
+      "expected_chunk_ids": [],
+      "expected_sections": [],
+      "expected_no_evidence": true
+    },
+    {
+      "id": "g-ab-08",
+      "intent": "abstention",
+      "query": "How does the book recommend preparing for a marathon?",
+      "expected_chunk_ids": [],
+      "expected_sections": [],
+      "expected_no_evidence": true
+    }
+  ]
+}

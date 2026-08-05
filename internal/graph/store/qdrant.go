@@ -298,6 +298,10 @@ func (s *QdrantGraphStore) doJSON(ctx context.Context, method, path string, body
 	req.SetRequestURI(s.baseURL + path)
 	req.Header.SetMethod(method)
 	req.Header.Set("Content-Type", "application/json")
+	// One connection per request: the Qdrant REST server closes pooled
+	// keep-alive connections mid-request under fasthttp, surfacing as
+	// "server closed connection before returning the first response byte".
+	req.Header.Set("Connection", "close")
 	if body != nil {
 		raw, err := json.Marshal(body)
 		if err != nil {
