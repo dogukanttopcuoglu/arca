@@ -1,0 +1,26 @@
+# M7 graph persistence: entity-only node store, benchmark-gated
+
+Status: accepted
+
+M7 stores the existing enrichment entity output as a persistent graph signal for retrieval. The decision set below is the first M7 ADR (wayfinder ticket 04); every choice is backed by measured evidence — the kill-gate prototype (+126%/+174% dense-baseline recall on entity queries) and the enrichment data-quality research.
+
+## Decisions
+
+- **Entity-only nodes.** Only entities are persisted as graph nodes. Concepts (100% coverage but section-path-driven attachment, H1 tier OCR-corrupt) and concept-based relations carry no measured retrieval signal and are deferred to a future iteration gated by their own benchmark.
+- **No relation persistence in v1.** The remaining entity→entity relation pool under an entity-only scope is 7/7 spurious `located_in` relations (publisher city lists) — noise, not signal. The `GraphStore` seam keeps its edge API for future use, but the v1 implementation does not support it.
+- **Entity score threshold ≥ 0.90.** Two independent evidence lines agree: the data-quality research (0.80 tier is 8/12 frontmatter/acknowledgment/bibliography noise) and the kill-gate prototype (the ≥0.90 slice yields the highest measured ceiling). Caveat, recorded deliberately: the score is a mention-count proxy (`0.8 + 0.1·mentions`), a frequency gate, not a quality estimate; it is re-calibrated when a real NER replaces the rule-based extractor.
+- **Node identity: `type:lower(name)`.** A deterministic key; same-named entities merge across documents into one node (the kill gate measured its ceiling on exactly this normalized behavior). Payload: canonical name, entity type, score, and `chunk_ids` evidence references. Scope out: alias resolution, entity disambiguation, advanced entity linking. Caveat: same-name-different-entity collisions are accepted in v1 and documented as a known limitation.
+- **Worker-level indexing integration.** A `WithGraphStore(graphstore.GraphStore)` worker option (mirroring `WithSparseEncoderProvider`). `ExecuteSync` writes graph state tied to the existing diff plan: upserted chunks → idempotent node upsert (chunk IDs union), deleted chunks → chunk IDs removed from nodes, nodes with no remaining evidence are deleted. `QdrantGraphStore` is node-only (one collection).
+- **Persistence target: Qdrant.** A dedicated node collection behind the `GraphStore` seam (research: payload-embedded edges go stale under diff-skip re-indexing; a separate collection keeps chunk payload schema and corpus fingerprint `8b21a664…` untouched — fingerprints hash chunk ContentHashes only).
+
+## Rationale
+
+- The milestone's purpose is "turn existing enrichment output into a measured retrieval signal". Every v1 scope decision (entities only, no relations, ≥0.90 floor, cross-doc merge, worker-level write) is the smallest set consistent with the measured ceiling; anything unmeasured (concepts, relations, aliasing) is excluded by the same rule that froze M4/M6 contracts.
+- Persistence lifecycle ties to the diff plan so the graph never drifts from the vector collection: one source of truth for what is indexed.
+
+## Consequences
+
+- `internal/graph/store`: `GraphStore` seam gains what the Qdrant adapter needs (`DeleteByDocument`, `FindNodeByName` per research); `QdrantGraphStore` implements node-only semantics; edge methods return not-supported.
+- `internal/indexing/worker`: `WithGraphStore` option; entity extraction from chunk metadata at the ≥0.90 floor; idempotent upsert; delete cleanup.
+- The `GraphRetriever` hardcoded scaffold (`chk-1`/`creativity`, in-memory type-assert) is replaced by a real strategy — decision in ticket 05.
+- Retrieval fusion path, benchmark dimension, and orchestration gate remain open tickets (06, 07, 08); the acceptance rule (entity-category ≥5% gain over dense, no >5% regression elsewhere, gate metrics preserved) is confirmed in ticket 07 before any fusion ships.
