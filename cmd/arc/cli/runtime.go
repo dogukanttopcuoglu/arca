@@ -7,6 +7,8 @@ import (
 	"sync"
 	"time"
 
+	graphretriever "arca/internal/graph/retriever"
+	graphstore "arca/internal/graph/store"
 	indexingmodel "arca/internal/indexing/model"
 	"arca/internal/indexing/provider"
 	"arca/internal/indexing/sparse"
@@ -207,6 +209,49 @@ type Runtime struct {
 	sparseErr       error
 	sparseRetriever retrievalseam.Retriever
 	hybridRetriever retrievalseam.Retriever
+
+	// Graph retrieval components (M7, ADR-0038): the entity-only graph store
+	// and the entity-overlap retriever, built lazily.
+	graphOnce      sync.Once
+	graphErr       error
+	graphRetriever retrievalseam.Retriever
+}
+
+// GraphRetriever builds the entity-only graph retriever (ADR-0038/0039):
+// QdrantGraphStore against the node collection when the vector store is
+// Qdrant, otherwise the in-memory graph store. A failed build is not cached.
+func (r *Runtime) GraphRetriever() (retrievalseam.Retriever, error) {
+	r.graphOnce.Do(func() {
+		var gs graphstore.GraphStore
+		if r.cfg.VectorStoreType == VectorStoreQdrant {
+			gs, r.graphErr = graphstore.NewQdrantGraphStore(graphRestBaseURL(r.cfg), "")
+		} else {
+			gs = graphstore.NewInMemoryGraphStore()
+		}
+		if r.graphErr == nil {
+			r.graphRetriever = graphretriever.NewGraphRetriever(gs, r.contentStore)
+		}
+	})
+	if r.graphErr != nil {
+		r.graphOnce = sync.Once{}
+	}
+	return r.graphRetriever, r.graphErr
+}
+
+// graphRestBaseURL derives the Qdrant REST base URL from the configured
+// vector store URL. The config points at the gRPC port (6334); the graph
+// store speaks REST (6333) because gRPC upsert rejects vectorless points.
+// The default gRPC port maps to the default REST port; non-default ports are
+// preserved verbatim.
+func graphRestBaseURL(cfg Config) string {
+	host := strings.TrimPrefix(strings.TrimPrefix(cfg.VectorStoreURL, "http://"), "https://")
+	if h, port, ok := strings.Cut(host, ":"); ok {
+		if port == "6334" {
+			return "http://" + h + ":6333"
+		}
+		return "http://" + host
+	}
+	return "http://" + host + ":6333"
 }
 
 // sparseQueryEncoder builds the corpus-bound query encoder. A failed build is

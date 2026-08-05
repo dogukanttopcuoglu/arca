@@ -11,6 +11,8 @@ import (
 	indexingmodel "arca/internal/indexing/model"
 	"arca/internal/indexing/store"
 	"arca/internal/qa"
+	"arca/internal/retrieval/dense"
+	"arca/internal/retrieval/graphfusion"
 	"arca/internal/retrieval/hybrid"
 	retrievalseam "arca/internal/retrieval/seam"
 )
@@ -32,6 +34,13 @@ type EvalOptions struct {
 	// ComparisonTopK is the M6 evidence budget for comparison queries
 	// (ADR-0037), applied by the runner for calibration runs.
 	ComparisonTopK int
+	// GraphWeight is the M7 graph fusion weight (ADR-0041): >0 fuses the
+	// dense and graph streams with the given weight; 0 keeps the mode's
+	// default retriever.
+	GraphWeight float64
+	// GraphOnly measures the graph stream alone (kill-gate graphA
+	// counterpart); it wins over GraphWeight.
+	GraphOnly bool
 }
 
 // RunEval executes the retrieval benchmark against the real composition root:
@@ -49,6 +58,32 @@ func (a *App) RunEval(ctx context.Context, opts EvalOptions) (string, error) {
 	retriever, err := a.runtime.RetrieverForMode(opts.Mode)
 	if err != nil {
 		return "", fmt.Errorf("retrieval mode %q unavailable: %w", opts.Mode, err)
+	}
+
+	// M7 graph surface (ADR-0041): --graph-only measures the graph stream
+	// alone; --graph-weight > 0 fuses the dense and graph streams. Both
+	// require the entity-only graph retriever; with neither, the mode's
+	// default retriever is used unchanged.
+	var graphFusionConfig *graphfusion.GraphFusionConfig
+	if opts.GraphOnly || opts.GraphWeight > 0 {
+		graphRet, err := a.runtime.GraphRetriever()
+		if err != nil {
+			return "", fmt.Errorf("graph retriever unavailable: %w", err)
+		}
+		switch {
+		case opts.GraphOnly:
+			retriever = graphRet
+		default:
+			denseRet, ok := retriever.(*dense.DenseRetriever)
+			if !ok {
+				return "", fmt.Errorf("graph fusion requires a dense base retriever, got %T", retriever)
+			}
+			graphFusionConfig = &graphfusion.GraphFusionConfig{
+				DenseWeight: 1.0,
+				GraphWeight: opts.GraphWeight,
+			}
+			retriever = graphfusion.NewGraphFusionRetriever(denseRet, graphRet, *graphFusionConfig)
+		}
 	}
 
 	// Apply the fusion policy for hybrid sweeps. A named policy sets the
@@ -105,6 +140,9 @@ func (a *App) RunEval(ctx context.Context, opts EvalOptions) (string, error) {
 			GateProvider:      a.runtime.cfg.LLMProviderLabel,
 			GateModel:         a.runtime.cfg.LLMModel,
 			ComparisonTopK:    opts.ComparisonTopK,
+			GraphWeight:       opts.GraphWeight,
+			GraphOnly:         opts.GraphOnly,
+			GraphFusionConfig: graphFusionConfig,
 			CorpusTexts: func() ([]string, error) {
 				return corpusSource{store: a.runtime.vectorStore}.CorpusTexts(context.Background())
 			},

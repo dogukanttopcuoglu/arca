@@ -9,6 +9,7 @@ import (
 	"arca/internal/indexing/sparse"
 	"arca/internal/qa"
 	qacontext "arca/internal/qa/context"
+	"arca/internal/retrieval/graphfusion"
 	"arca/internal/retrieval/hybrid"
 	retrievalseam "arca/internal/retrieval/seam"
 )
@@ -53,6 +54,13 @@ type Options struct {
 	// (ADR-0037): the effective TopK for those queries, mirroring the
 	// orchestrator's TopKOverride. Zero keeps TopK for every intent.
 	ComparisonTopK int
+	// GraphWeight, GraphOnly, and GraphFusionConfig record the M7 graph
+	// fusion surface (ADR-0041) in the manifest. The retriever itself is
+	// supplied by the caller — the runner only documents which configuration
+	// was measured.
+	GraphWeight       float64
+	GraphOnly         bool
+	GraphFusionConfig *graphfusion.GraphFusionConfig
 }
 
 // Runner executes a gold set against a Retriever and produces a Report.
@@ -104,6 +112,9 @@ func (r *Runner) Run(ctx context.Context, gs *GoldSet) (*Report, error) {
 			Reranker:          r.opts.Reranker,
 			Collection:        r.opts.Collection,
 			ComparisonTopK:    r.opts.ComparisonTopK,
+			GraphWeight:       r.opts.GraphWeight,
+			GraphOnly:         r.opts.GraphOnly,
+			GraphFusionConfig: r.opts.GraphFusionConfig,
 		},
 	}
 	if len(gs.Documents) > 0 {

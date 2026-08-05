@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"arca/internal/retrieval/graphfusion"
 	"arca/internal/retrieval/hybrid"
 	retrievalseam "arca/internal/retrieval/seam"
 )
@@ -36,15 +37,18 @@ type CorpusResult struct {
 
 // RetrievalConfig records the retrieval configuration of the run.
 type RetrievalConfig struct {
-	Mode              string               `json:"mode"`
-	EmbeddingProvider string               `json:"embedding_provider"`
-	EmbeddingModel    string               `json:"embedding_model"`
-	TopK              int                  `json:"top_k"`
-	MinScore          float32              `json:"min_score"`
-	FusionPolicy      *hybrid.FusionPolicy `json:"fusion_policy,omitempty"`
-	Reranker          string               `json:"reranker,omitempty"`
-	Collection        string               `json:"collection"`
-	ComparisonTopK    int                  `json:"comparison_top_k,omitempty"`
+	Mode              string                         `json:"mode"`
+	EmbeddingProvider string                         `json:"embedding_provider"`
+	EmbeddingModel    string                         `json:"embedding_model"`
+	TopK              int                            `json:"top_k"`
+	MinScore          float32                        `json:"min_score"`
+	FusionPolicy      *hybrid.FusionPolicy           `json:"fusion_policy,omitempty"`
+	Reranker          string                         `json:"reranker,omitempty"`
+	Collection        string                         `json:"collection"`
+	ComparisonTopK    int                            `json:"comparison_top_k,omitempty"`
+	GraphWeight       float64                        `json:"graph_weight,omitempty"`
+	GraphOnly         bool                           `json:"graph_only,omitempty"`
+	GraphFusionConfig *graphfusion.GraphFusionConfig `json:"graph_fusion_config,omitempty"`
 }
 
 // Metrics aggregates retrieval quality over the gold set. Recall, precision,

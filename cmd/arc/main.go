@@ -72,6 +72,8 @@ func main() {
 		decompose := fs.Bool("decompose", false, "run gold-set queries through rule-based decomposition")
 		m5gate := fs.Bool("m5-gate", false, "run the M5 semantic evidence gate over each query's context")
 		comparisonTopK := fs.Int("comparison-topk", 0, "M6 evidence budget: effective TopK for comparison-intent queries (0 = use --topk)")
+		graphWeight := fs.Float64("graph-weight", 0, "M7 graph fusion weight: >0 fuses dense + graph streams (0 = default retriever)")
+		graphOnly := fs.Bool("graph-only", false, "M7: measure the graph stream alone")
 		if err := fs.Parse(os.Args[2:]); err != nil {
 			fmt.Printf("Error: %v\n", err)
 			os.Exit(1)
@@ -93,6 +95,8 @@ func main() {
 			Decompose:        *decompose,
 			M5Gate:           *m5gate,
 			ComparisonTopK:   *comparisonTopK,
+			GraphWeight:      *graphWeight,
+			GraphOnly:        *graphOnly,
 		})
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)

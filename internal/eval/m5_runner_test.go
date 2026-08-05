@@ -9,6 +9,7 @@ import (
 	"arca/internal/eval"
 	"arca/internal/qa"
 	qacontext "arca/internal/qa/context"
+	"arca/internal/retrieval/graphfusion"
 	retrievalseam "arca/internal/retrieval/seam"
 )
 
@@ -141,6 +142,66 @@ func TestRunner_M5GateExhaustion(t *testing.T) {
 	if report.M5.GenerationSkipped != 1 || report.M5.FalseAbstentions != 0 {
 		t.Errorf("expected gate errors excluded from abstention counts, got %+v", report.M5)
 	}
+}
+
+func TestRunner_GraphManifest(t *testing.T) {
+	gs, err := eval.LoadGoldSet(strings.NewReader(runnerGoldSet))
+	if err != nil {
+		t.Fatalf("failed to load gold set: %v", err)
+	}
+
+	t.Run("graph_weight recorded in the manifest", func(t *testing.T) {
+		runner := eval.New(&fakeRetriever{}, fakeFingerprintSource{
+			hashes: []string{
+				"3333333333333333333333333333333333333333333333333333333333333333",
+				"1111111111111111111111111111111111111111111111111111111111111111",
+				"2222222222222222222222222222222222222222222222222222222222222222",
+			},
+		}, eval.Options{
+			Mode:        retrievalseam.RetrievalDense,
+			TopK:        5,
+			GraphWeight: 1.0,
+			GraphFusionConfig: &graphfusion.GraphFusionConfig{
+				DenseWeight: 1.0,
+				GraphWeight: 1.0,
+			},
+		})
+		report, err := runner.Run(context.Background(), gs)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if report.Retrieval.GraphWeight != 1.0 {
+			t.Errorf("expected graph_weight 1.0 in manifest, got %v", report.Retrieval.GraphWeight)
+		}
+		if report.Retrieval.GraphOnly {
+			t.Error("expected graph_only false in manifest")
+		}
+		if report.Retrieval.GraphFusionConfig == nil ||
+			report.Retrieval.GraphFusionConfig.GraphWeight != 1.0 {
+			t.Errorf("expected fusion config in manifest, got %+v", report.Retrieval.GraphFusionConfig)
+		}
+	})
+
+	t.Run("graph_only recorded in the manifest", func(t *testing.T) {
+		runner := eval.New(&fakeRetriever{}, fakeFingerprintSource{
+			hashes: []string{
+				"3333333333333333333333333333333333333333333333333333333333333333",
+				"1111111111111111111111111111111111111111111111111111111111111111",
+				"2222222222222222222222222222222222222222222222222222222222222222",
+			},
+		}, eval.Options{
+			Mode:      retrievalseam.RetrievalDense,
+			TopK:      5,
+			GraphOnly: true,
+		})
+		report, err := runner.Run(context.Background(), gs)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !report.Retrieval.GraphOnly {
+			t.Error("expected graph_only true in manifest")
+		}
+	})
 }
 
 // newM5Runner builds the standard fake-corpus runner with the M5 gate wired
