@@ -13,6 +13,10 @@ import (
 // covers only the weights; RRFK is out of sweep scope.
 const rrfK = 60
 
+// DefaultDenseWeight is the frozen dense-stream weight (1.0, ADR-0041): the
+// calibration sweep varied only the graph weight.
+const DefaultDenseWeight = 1.0
+
 // GraphFusionConfig is the independent weight surface for the graph fusion
 // path (ADR-0041). It mirrors the shape of the frozen M4 FusionPolicy but is
 // deliberately separate: runtime graph weighting is calibrated by the

@@ -40,7 +40,7 @@ func NewAppWithRuntime(runtime *Runtime) *App {
 	if err != nil {
 		panic(fmt.Sprintf("failed to construct retriever for mode %s: %v", runtime.cfg.RetrievalMode, err))
 	}
-	ansEng := buildAnswerEngine(runtime.cfg, retriever)
+	ansEng := buildAnswerEngine(runtime, retriever)
 	agentEng := agent.NewAgentEngine(agent.AgentPolicy{MaxSteps: 5, MaxToolCalls: 10}, []agenttool.Tool{
 		agenttool.NewKnowledgeTool(ansEng),
 	})

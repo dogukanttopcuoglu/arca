@@ -34,8 +34,13 @@ func NewRuleBasedAnalyzer() *RuleBasedAnalyzer {
 	return &RuleBasedAnalyzer{}
 }
 
+// entityQuestionPattern matches the benchmark-proven entity question forms
+// (M7 gold set v3 entity slice): "What does the book say about X?".
+var entityQuestionPattern = regexp.MustCompile(`(?i)^what does the (?:book|it) say about .+\??$`)
+
 // Analyze extracts basic query intent, keywords, and deterministic
-// sub-queries for comparison patterns (M4 decomposition experiment).
+// sub-queries for comparison patterns (M4 decomposition experiment). Entity
+// question forms are flagged for the M7 graph gate (ADR-0042).
 func (a *RuleBasedAnalyzer) Analyze(ctx context.Context, query string) (*AnalyzedQuery, error) {
 	trimmed := strings.TrimSpace(query)
 	if trimmed == "" {
@@ -44,6 +49,8 @@ func (a *RuleBasedAnalyzer) Analyze(ctx context.Context, query string) (*Analyze
 
 	intent := "concept_lookup"
 	if strings.HasPrefix(strings.ToLower(trimmed), "who") || strings.Contains(strings.ToLower(trimmed), "author") {
+		intent = "entity_lookup"
+	} else if entityQuestionPattern.MatchString(trimmed) {
 		intent = "entity_lookup"
 	} else if strings.HasPrefix(strings.ToLower(trimmed), "how") {
 		intent = "procedural_lookup"

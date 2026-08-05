@@ -46,6 +46,7 @@ type Answer struct {
 type AnswerEngine struct {
 	analyzer       QueryAnalyzer
 	retriever      seam.Retriever
+	graphRetriever seam.Retriever
 	contextBuilder qacontext.ContextBuilder
 	promptBuilder  qaprompt.PromptBuilder
 	llmProvider    llmprovider.LLMProvider
@@ -58,11 +59,20 @@ type AnswerEngine struct {
 type AnswerEngineOption func(*AnswerEngine)
 
 // WithRetrievalRuntimeConfig sets the benchmark-calibrated orchestration
-// parameters (evidence budget per intent, ADR-0037). The zero value keeps the
-// caller's TopK for every query.
+// parameters (evidence budget per intent, graph weight, ADR-0037/0042). The
+// zero value keeps the caller's TopK and closes the graph gate.
 func WithRetrievalRuntimeConfig(cfg RetrievalRuntimeConfig) AnswerEngineOption {
 	return func(e *AnswerEngine) {
 		e.retrievalCfg = cfg
+	}
+}
+
+// WithGraphRetriever injects the graph fusion retriever (ADR-0042): entity
+// queries whose decision carries UseGraph execute retrieval through it.
+// Without injection the graph gate is inert.
+func WithGraphRetriever(r seam.Retriever) AnswerEngineOption {
+	return func(e *AnswerEngine) {
+		e.graphRetriever = r
 	}
 }
 
@@ -147,11 +157,21 @@ func (e *AnswerEngine) Answer(ctx context.Context, query seam.RetrievalQuery) (*
 	draft.AnalyzedQuery = analyzed
 
 	if e.retriever != nil {
-		// Retrieval Orchestrator (ADR-0037): the IntentHint is produced from
-		// the analyzer signal; comparison queries retrieve each sub-query and
-		// merge deterministically, everything else takes the direct path.
+		// Retrieval Orchestrator (ADR-0037/0042): the IntentHint is produced
+		// from the analyzer signal; comparison queries retrieve each
+		// sub-query and merge deterministically, entity queries may route
+		// through the injected graph fusion retriever, everything else takes
+		// the direct path.
 		hint := AnalyzeIntentHint(analyzed)
 		decision := DecideRetrievalRouting(hint, e.retrievalCfg)
+
+		// Execution component selection (ADR-0042): only the retriever
+		// changes; decomposition and TopKOverride behavior is identical.
+		exec := e.retriever
+		if decision.UseGraph && e.graphRetriever != nil {
+			exec = e.graphRetriever
+		}
+
 		if decision.Decompose {
 			// The evidence budget applies consistently: each sub-query
 			// retrieves TopKOverride and the merge trims to TopKOverride,
@@ -165,7 +185,7 @@ func (e *AnswerEngine) Answer(ctx context.Context, query seam.RetrievalQuery) (*
 				subQuery := query
 				subQuery.QueryText = sub
 				subQuery.TopK = budget
-				results, err := e.retriever.Retrieve(ctx, subQuery)
+				results, err := exec.Retrieve(ctx, subQuery)
 				if err != nil {
 					return nil, fmt.Errorf("retrieval stage failed for sub-query %q: %w", sub, err)
 				}
@@ -175,7 +195,7 @@ func (e *AnswerEngine) Answer(ctx context.Context, query seam.RetrievalQuery) (*
 			}
 			draft.SearchResults = seam.MergeRankedLists(lists, budget)
 		} else {
-			draft.SearchResults, err = e.retriever.Retrieve(ctx, query)
+			draft.SearchResults, err = exec.Retrieve(ctx, query)
 			if err != nil {
 				return nil, fmt.Errorf("retrieval stage failed: %w", err)
 			}

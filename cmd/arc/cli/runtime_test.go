@@ -36,6 +36,17 @@ func TestDefaultConfig_LLMSettings(t *testing.T) {
 	if cfg.ComparisonTopK != 8 {
 		t.Errorf("expected default comparison TopK 8 (M6 calibrated evidence budget), got %d", cfg.ComparisonTopK)
 	}
+	if cfg.RetrievalGraphWeight != 1.0 {
+		t.Errorf("expected default graph weight 1.0 (M7 calibrated fusion weight), got %v", cfg.RetrievalGraphWeight)
+	}
+}
+
+func TestLoadFromEnv_RetrievalGraphWeight(t *testing.T) {
+	t.Setenv("RETRIEVAL_GRAPH_WEIGHT", "0")
+	cfg := LoadFromEnv()
+	if cfg.RetrievalGraphWeight != 0 {
+		t.Errorf("expected configured graph weight 0, got %v", cfg.RetrievalGraphWeight)
+	}
 }
 
 func TestLoadFromEnv_RetrievalMinScore(t *testing.T) {
@@ -100,11 +111,16 @@ func TestBuildAnswerEngine_Wiring(t *testing.T) {
 	t.Run("wires the real OpenAI-compatible adapter, never the mock", func(t *testing.T) {
 		cfg := DefaultConfig()
 		cfg.LLMModel = ""
-		engine := buildAnswerEngine(cfg, seededRetriever(ctx, t))
+		cfg.RetrievalGraphWeight = 0 // keep the gate closed for this wiring test
+		rt, err := NewRuntime(cfg)
+		if err != nil {
+			t.Fatalf("failed to construct runtime: %v", err)
+		}
+		engine := buildAnswerEngine(rt, seededRetriever(ctx, t))
 
 		// An unconfigured model must surface the real adapter's guard error,
 		// proving the mock LLM is not silently installed by composition.
-		_, err := engine.Answer(ctx, retrievalQuery("What is creativity?"))
+		_, err = engine.Answer(ctx, retrievalQuery("What is creativity?"))
 		if err == nil || !strings.Contains(err.Error(), "model identifier is not configured") {
 			t.Fatalf("expected real adapter model guard error, got %v", err)
 		}
@@ -118,9 +134,14 @@ func TestBuildAnswerEngine_Wiring(t *testing.T) {
 	t.Run("no_evidence path works without any model configured", func(t *testing.T) {
 		cfg := DefaultConfig()
 		cfg.LLMModel = ""
+		cfg.RetrievalGraphWeight = 0
+		rt, err := NewRuntime(cfg)
+		if err != nil {
+			t.Fatalf("failed to construct runtime: %v", err)
+		}
 		embProvider := provider.NewMockEmbeddingProvider("mock-provider", "mock-model-v1", 1536)
 		emptyRetriever := dense.NewDenseRetriever(embProvider, store.NewInMemoryVectorStore(), store.NewInMemoryContentStore())
-		engine := buildAnswerEngine(cfg, emptyRetriever)
+		engine := buildAnswerEngine(rt, emptyRetriever)
 
 		ans, err := engine.Answer(ctx, retrievalQuery("No matches anywhere"))
 		if err != nil {

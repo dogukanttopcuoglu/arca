@@ -97,10 +97,85 @@ func TestAnswerEngine_ComparisonEvidenceBudget(t *testing.T) {
 	})
 }
 
-// newM6TestEngine builds an AnswerEngine with a configurable runtime config
-// and injectable LLM; the gate stays nil (legacy test composition).
-func newM6TestEngine(t *testing.T, retriever seam.Retriever, cfg qa.RetrievalRuntimeConfig, llm llmprovider.LLMProvider) *qa.AnswerEngine {
+func TestAnswerEngine_GraphGateRouting(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("entity queries route through the graph retriever when injected", func(t *testing.T) {
+		base := &topKRecordingRetriever{byQuery: map[string][]seam.SearchResult{
+			"What does the book say about World Bank?": {sr("chk-dense")},
+		}}
+		graph := &topKRecordingRetriever{byQuery: map[string][]seam.SearchResult{
+			"What does the book say about World Bank?": {sr("chk-graph")},
+		}}
+		engine := newM6TestEngine(t, base, qa.RetrievalRuntimeConfig{GraphWeight: 1.0}, &fakeLLM{content: "Grounded [Ref 1]."}, graph)
+
+		ans, err := engine.Answer(ctx, seam.RetrievalQuery{QueryText: "What does the book say about World Bank?", TopK: 5})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if ans.Status != qaverification.StatusVerified {
+			t.Fatalf("expected verified answer, got %q", ans.Status)
+		}
+		if len(base.topKs) != 0 {
+			t.Errorf("expected base retriever untouched for entity queries, got %v", base.topKs)
+		}
+		if len(graph.topKs) != 1 {
+			t.Errorf("expected graph retriever to serve the entity query, got %v", graph.topKs)
+		}
+		if len(ans.Citations) != 1 || ans.Citations[0].ChunkID != "chk-graph" {
+			t.Errorf("expected graph-evidenced citation, got %+v", ans.Citations)
+		}
+	})
+
+	t.Run("non-entity queries keep the base retriever even with the graph injected", func(t *testing.T) {
+		base := &topKRecordingRetriever{byQuery: map[string][]seam.SearchResult{
+			"What is creativity?": {sr("chk-dense")},
+		}}
+		graph := &topKRecordingRetriever{byQuery: map[string][]seam.SearchResult{
+			"What is creativity?": {sr("chk-graph")},
+		}}
+		engine := newM6TestEngine(t, base, qa.RetrievalRuntimeConfig{GraphWeight: 1.0}, &fakeLLM{content: "Grounded [Ref 1]."}, graph)
+
+		_, err := engine.Answer(ctx, seam.RetrievalQuery{QueryText: "What is creativity?", TopK: 5})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(base.topKs) != 1 {
+			t.Errorf("expected base retriever for non-entity queries, got %v", base.topKs)
+		}
+		if len(graph.topKs) != 0 {
+			t.Errorf("expected graph retriever untouched for non-entity queries, got %v", graph.topKs)
+		}
+	})
+
+	t.Run("zero graph weight keeps the base retriever for entity queries", func(t *testing.T) {
+		base := &topKRecordingRetriever{byQuery: map[string][]seam.SearchResult{
+			"What does the book say about World Bank?": {sr("chk-dense")},
+		}}
+		graph := &topKRecordingRetriever{byQuery: map[string][]seam.SearchResult{
+			"What does the book say about World Bank?": {sr("chk-graph")},
+		}}
+		engine := newM6TestEngine(t, base, qa.RetrievalRuntimeConfig{}, &fakeLLM{content: "Grounded [Ref 1]."}, graph)
+
+		_, err := engine.Answer(ctx, seam.RetrievalQuery{QueryText: "What does the book say about World Bank?", TopK: 5})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(base.topKs) != 1 || len(graph.topKs) != 0 {
+			t.Errorf("expected base retriever with zero weight, base=%v graph=%v", base.topKs, graph.topKs)
+		}
+	})
+}
+
+// newM6TestEngine builds an AnswerEngine with a configurable runtime config,
+// injectable LLM, and an optional graph retriever (M7 gate); the evidence
+// gate stays nil (legacy test composition).
+func newM6TestEngine(t *testing.T, retriever seam.Retriever, cfg qa.RetrievalRuntimeConfig, llm llmprovider.LLMProvider, graph ...seam.Retriever) *qa.AnswerEngine {
 	t.Helper()
+	opts := []qa.AnswerEngineOption{qa.WithRetrievalRuntimeConfig(cfg)}
+	if len(graph) > 0 && graph[0] != nil {
+		opts = append(opts, qa.WithGraphRetriever(graph[0]))
+	}
 	return qa.NewAnswerEngine(
 		qa.NewRuleBasedAnalyzer(),
 		retriever,
@@ -109,6 +184,6 @@ func newM6TestEngine(t *testing.T, retriever seam.Retriever, cfg qa.RetrievalRun
 		llm,
 		qaverification.NewDefaultVerificationPipeline(),
 		nil,
-		qa.WithRetrievalRuntimeConfig(cfg),
+		opts...,
 	)
 }

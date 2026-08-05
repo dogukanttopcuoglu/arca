@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -27,6 +28,7 @@ import (
 	qaprompt "arca/internal/qa/prompt"
 	qaverification "arca/internal/qa/verification"
 	"arca/internal/retrieval/dense"
+	"arca/internal/retrieval/graphfusion"
 	"arca/internal/retrieval/hybrid"
 	retrievalseam "arca/internal/retrieval/seam"
 	retrievalsparse "arca/internal/retrieval/sparse"
@@ -100,6 +102,11 @@ type Config struct {
 	// abstentions 4/4 -> 2/4, abstention precision 0.615 -> 0.727, recall
 	// flat; TopK 10 rejected — upstream 429 rate limiting invalidated it).
 	ComparisonTopK int `mapstructure:"RETRIEVAL_COMPARISON_TOP_K"`
+	// RetrievalGraphWeight is the M7 graph fusion weight (ADR-0042): >0
+	// activates the graph gate for entity queries through the injected
+	// GraphFusionRetriever. Frozen at 1.0 by the Gold Set v3 calibration
+	// (ADR-0041); 0 keeps the graph gate closed.
+	RetrievalGraphWeight float64 `mapstructure:"RETRIEVAL_GRAPH_WEIGHT"`
 	// HTTPTimeout is the client timeout for external service calls.
 	HTTPTimeout time.Duration `mapstructure:"HTTP_TIMEOUT"`
 }
@@ -123,7 +130,8 @@ func DefaultConfig() Config {
 		SparseIndex:           false,
 		RetrievalMode:         retrievalseam.RetrievalDense,
 		FusionPolicyName:      "balanced",
-		ComparisonTopK:        8, // M6 calibrated evidence budget (ADR-0037)
+		ComparisonTopK:        8,   // M6 calibrated evidence budget (ADR-0037)
+		RetrievalGraphWeight:  1.0, // M7 calibrated graph fusion weight (ADR-0041)
 		HTTPTimeout:           30 * time.Second,
 	}
 }
@@ -153,6 +161,7 @@ func LoadFromEnv() Config {
 	v.SetDefault("RETRIEVAL_MODE", base.RetrievalMode.String())
 	v.SetDefault("RETRIEVAL_FUSION_POLICY", base.FusionPolicyName)
 	v.SetDefault("RETRIEVAL_COMPARISON_TOP_K", base.ComparisonTopK)
+	v.SetDefault("RETRIEVAL_GRAPH_WEIGHT", base.RetrievalGraphWeight)
 	v.SetDefault("HTTP_TIMEOUT", base.HTTPTimeout)
 
 	return Config{
@@ -173,6 +182,7 @@ func LoadFromEnv() Config {
 		RetrievalMode:         parseRetrievalMode(v.GetString("RETRIEVAL_MODE")),
 		FusionPolicyName:      v.GetString("RETRIEVAL_FUSION_POLICY"),
 		ComparisonTopK:        v.GetInt("RETRIEVAL_COMPARISON_TOP_K"),
+		RetrievalGraphWeight:  v.GetFloat64("RETRIEVAL_GRAPH_WEIGHT"),
 		HTTPTimeout:           v.GetDuration("HTTP_TIMEOUT"),
 	}
 }
@@ -215,6 +225,12 @@ type Runtime struct {
 	graphOnce      sync.Once
 	graphErr       error
 	graphRetriever retrievalseam.Retriever
+
+	// Graph fusion retriever (ADR-0042): dense + graph streams fused with
+	// the frozen weight, built lazily for the orchestration gate.
+	fusionOnce      sync.Once
+	fusionErr       error
+	fusionRetriever retrievalseam.Retriever
 }
 
 // GraphRetriever builds the entity-only graph retriever (ADR-0038/0039):
@@ -236,6 +252,31 @@ func (r *Runtime) GraphRetriever() (retrievalseam.Retriever, error) {
 		r.graphOnce = sync.Once{}
 	}
 	return r.graphRetriever, r.graphErr
+}
+
+// GraphFusionRetriever builds the graph fusion retriever (ADR-0042): the
+// dense stream fused with the entity graph stream at the frozen calibration
+// weight (RETRIEVAL_GRAPH_WEIGHT). A failed build is not cached.
+func (r *Runtime) GraphFusionRetriever() (retrievalseam.Retriever, error) {
+	r.fusionOnce.Do(func() {
+		graphRet, err := r.GraphRetriever()
+		if err != nil {
+			r.fusionErr = err
+			return
+		}
+		r.fusionRetriever = graphfusion.NewGraphFusionRetriever(
+			r.denseRetriever,
+			graphRet,
+			graphfusion.GraphFusionConfig{
+				DenseWeight: graphfusion.DefaultDenseWeight,
+				GraphWeight: r.cfg.RetrievalGraphWeight,
+			},
+		)
+	})
+	if r.fusionErr != nil {
+		r.fusionOnce = sync.Once{}
+	}
+	return r.fusionRetriever, r.fusionErr
 }
 
 // graphRestBaseURL derives the Qdrant REST base URL from the configured
@@ -424,10 +465,29 @@ func buildLLMProvider(cfg Config) llmprovider.LLMProvider {
 
 // buildAnswerEngine wires the real AnswerEngine seams: ContextBuilder with the
 // configured budget, the RAG PromptBuilder, the OpenAI-compatible LLM adapter,
-// the default verification pipeline, the real EvidenceGate (ADR-0030), and the
-// benchmark-calibrated retrieval runtime config (ADR-0037). Retrieval stays on
-// the provided seam.
-func buildAnswerEngine(cfg Config, retriever retrievalseam.Retriever) *qa.AnswerEngine {
+// the default verification pipeline, the real EvidenceGate (ADR-0030), the
+// benchmark-calibrated retrieval runtime config, and the graph fusion
+// retriever when the frozen graph weight is active (ADR-0042). Retrieval stays
+// on the provided seam.
+func buildAnswerEngine(rt *Runtime, retriever retrievalseam.Retriever) *qa.AnswerEngine {
+	cfg := rt.cfg
+	opts := []qa.AnswerEngineOption{
+		qa.WithRetrievalRuntimeConfig(qa.RetrievalRuntimeConfig{
+			ComparisonTopK: cfg.ComparisonTopK,
+			GraphWeight:    cfg.RetrievalGraphWeight,
+		}),
+	}
+	if cfg.RetrievalGraphWeight > 0 {
+		fusionRet, err := rt.GraphFusionRetriever()
+		if err != nil {
+			// The gate must never fail silently: a graph build failure with a
+			// positive configured weight is surfaced (ADR-0042 composition).
+			fmt.Fprintf(os.Stderr, "warning: graph fusion unavailable (RETRIEVAL_GRAPH_WEIGHT=%.1f): %v; falling back to %s\n",
+				cfg.RetrievalGraphWeight, err, cfg.RetrievalMode)
+		} else {
+			opts = append(opts, qa.WithGraphRetriever(fusionRet))
+		}
+	}
 	return qa.NewAnswerEngine(
 		nil,
 		retriever,
@@ -436,6 +496,6 @@ func buildAnswerEngine(cfg Config, retriever retrievalseam.Retriever) *qa.Answer
 		buildLLMProvider(cfg),
 		qaverification.NewDefaultVerificationPipeline(),
 		qa.NewLLMEvidenceGate(buildLLMProvider(cfg)),
-		qa.WithRetrievalRuntimeConfig(qa.RetrievalRuntimeConfig{ComparisonTopK: cfg.ComparisonTopK}),
+		opts...,
 	)
 }

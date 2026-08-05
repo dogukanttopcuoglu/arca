@@ -1,6 +1,7 @@
 package qa_test
 
 import (
+	"context"
 	"testing"
 
 	"arca/internal/qa"
@@ -22,6 +23,18 @@ func TestAnalyzeIntentHint(t *testing.T) {
 		}
 	})
 
+	t.Run("entity question forms produce an entity hint", func(t *testing.T) {
+		analyzer := qa.NewRuleBasedAnalyzer()
+		analyzed, err := analyzer.Analyze(context.Background(), "What does the book say about World Bank?")
+		if err != nil {
+			t.Fatalf("analyze: %v", err)
+		}
+		hint := qa.AnalyzeIntentHint(analyzed)
+		if hint.Intent != qa.HintIntentEntity || hint.Decompose {
+			t.Errorf("expected entity hint without decomposition, got %+v", hint)
+		}
+	})
+
 	t.Run("plain queries produce an other hint without decomposition", func(t *testing.T) {
 		analyzed := &qa.AnalyzedQuery{RawQuery: "What is creativity?", Intent: "concept_lookup"}
 		hint := qa.AnalyzeIntentHint(analyzed)
@@ -34,6 +47,44 @@ func TestAnalyzeIntentHint(t *testing.T) {
 		hint := qa.AnalyzeIntentHint(nil)
 		if hint.Intent != qa.HintIntentOther || hint.Decompose {
 			t.Errorf("expected other hint for nil analysis, got %+v", hint)
+		}
+	})
+}
+
+func TestDecideRetrievalRouting_UseGraph(t *testing.T) {
+	cfg := qa.RetrievalRuntimeConfig{ComparisonTopK: 8, GraphWeight: 1.0}
+
+	t.Run("entity hints with a positive graph weight open the graph gate", func(t *testing.T) {
+		hint := qa.IntentHint{Intent: qa.HintIntentEntity, Source: qa.HintSourceRuleBased}
+		got := qa.DecideRetrievalRouting(hint, cfg)
+		if !got.UseGraph {
+			t.Error("expected UseGraph=true for entity hint with graph weight")
+		}
+	})
+
+	t.Run("zero graph weight keeps the gate closed even for entity hints", func(t *testing.T) {
+		hint := qa.IntentHint{Intent: qa.HintIntentEntity, Source: qa.HintSourceRuleBased}
+		if got := qa.DecideRetrievalRouting(hint, qa.RetrievalRuntimeConfig{}); got.UseGraph {
+			t.Error("expected UseGraph=false without graph weight")
+		}
+	})
+
+	t.Run("non-entity hints never open the graph gate", func(t *testing.T) {
+		for _, hint := range []qa.IntentHint{
+			{Intent: qa.HintIntentOther, Source: qa.HintSourceRuleBased},
+			{Intent: qa.HintIntentComparison, Decompose: true, Source: qa.HintSourceRuleBased},
+		} {
+			if got := qa.DecideRetrievalRouting(hint, cfg); got.UseGraph {
+				t.Errorf("expected UseGraph=false for %+v", hint)
+			}
+		}
+	})
+
+	t.Run("comparison hints keep the calibrated TopK override", func(t *testing.T) {
+		hint := qa.IntentHint{Intent: qa.HintIntentComparison, Decompose: true, Source: qa.HintSourceRuleBased}
+		got := qa.DecideRetrievalRouting(hint, cfg)
+		if !got.Decompose || got.TopKOverride != 8 {
+			t.Errorf("expected comparison decomposition with override, got %+v", got)
 		}
 	})
 }
