@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"os"
+	"sync"
 	"testing"
 	"time"
 
@@ -148,6 +149,71 @@ func TestQdrantGraphStore_Live(t *testing.T) {
 		// must not have created a duplicate point for rick rubin.
 		if len(out.Result.Points) != 2 {
 			t.Errorf("expected 2 points after re-upserts, got %d", len(out.Result.Points))
+		}
+	})
+
+	t.Run("concurrent AddNode never loses chunk evidence", func(t *testing.T) {
+		// Two writers (simulating parallel indexing processes) upsert the
+		// SAME node with chunk evidence from DIFFERENT documents. The union
+		// must survive: QdrantGraphStore.AddNode must be race-free (M7 audit
+		// A1). Different document prefixes keep the per-document score fields
+		// disjoint, mirroring real parallel ingestion.
+		lost := 0
+		const iterations = 10
+		for i := 0; i < iterations; i++ {
+			_ = qs.DeleteByDocument(ctx, "racea")
+			_ = qs.DeleteByDocument(ctx, "raceb")
+			var wg sync.WaitGroup
+			wg.Add(2)
+			go func() {
+				defer wg.Done()
+				_ = qs.AddNode(ctx, graphmodel.Node{
+					ID:   "organization:race node",
+					Type: graphmodel.NodeTypeEntity,
+					Properties: map[string]any{
+						"name":      "race node",
+						"score":     1.0,
+						"chunk_ids": []string{"racea/doc-a/notes/001"},
+					},
+				})
+			}()
+			go func() {
+				defer wg.Done()
+				_ = qs.AddNode(ctx, graphmodel.Node{
+					ID:   "organization:race node",
+					Type: graphmodel.NodeTypeEntity,
+					Properties: map[string]any{
+						"name":      "race node",
+						"score":     0.9,
+						"chunk_ids": []string{"raceb/doc-b/notes/001"},
+					},
+				})
+			}()
+			wg.Wait()
+			node, err := qs.GetNode(ctx, "organization:race node")
+			if err != nil {
+				t.Fatalf("get after concurrent writes: %v", err)
+			}
+			hasA, hasB := false, false
+			for _, cid := range node.ChunkIDs() {
+				if cid == "racea/doc-a/notes/001" {
+					hasA = true
+				}
+				if cid == "raceb/doc-b/notes/001" {
+					hasB = true
+				}
+			}
+			if !hasA || !hasB {
+				lost++
+				t.Logf("iter %d: LOST UPDATE — node has %v", i, node.ChunkIDs())
+			}
+			// The higher score must survive (score never regresses).
+			if node.Score() < 1.0 {
+				t.Errorf("iter %d: score regressed to %v", i, node.Score())
+			}
+		}
+		if lost > 0 {
+			t.Fatalf("lost updates: %d/%d", lost, iterations)
 		}
 	})
 

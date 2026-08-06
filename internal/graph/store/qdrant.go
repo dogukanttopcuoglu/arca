@@ -2,9 +2,11 @@ package store
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 
@@ -57,57 +59,128 @@ func NewQdrantGraphStore(baseURL, collection string) (*QdrantGraphStore, error) 
 // Close releases resources held by the store.
 func (s *QdrantGraphStore) Close() error { return nil }
 
-// AddNode upserts an entity node idempotently: existing chunk evidence is
-// unioned with the incoming chunk IDs, and the score never regresses on a
-// partial-set write (the higher of existing and incoming wins) — ADR-0038.
+// AddNode appends chunk evidence to an entity node atomically (M7 audit A1):
+// every incoming chunk becomes its own payload field via set_payload, so
+// concurrent writers never overwrite each other's evidence (the previous
+// read-modify-write lost updates 19/20 under concurrency). The score is
+// recorded per document; reads take the max, so it never regresses. Node
+// identity and the Node model are unchanged (ADR-0038; persistence schema
+// errata 2026-08-05).
 func (s *QdrantGraphStore) AddNode(ctx context.Context, node graphmodel.Node) error {
-	chunks := node.ChunkIDs()
-	if existing, err := s.GetNode(ctx, node.ID); err == nil && existing != nil {
-		chunks = unionStrings(existing.ChunkIDs(), chunks)
-		if existing.Score() > node.Score() {
-			node.Properties["score"] = existing.Score()
-		}
-	}
-	return s.upsertNode(ctx, node, chunks)
-}
-
-// upsertNode writes the node point with the given chunk evidence, replacing
-// whatever the point currently holds.
-func (s *QdrantGraphStore) upsertNode(ctx context.Context, node graphmodel.Node, chunks []string) error {
 	if node.ID == "" {
 		return fmt.Errorf("node ID cannot be empty")
 	}
 	if err := s.ensureCollection(ctx); err != nil {
 		return err
 	}
+	if err := s.ensurePoint(ctx, node); err != nil {
+		return err
+	}
 
 	payload := map[string]any{
-		"id":             node.ID,
-		"node_type":      string(node.Type),
 		"name":           strings.ToLower(strings.TrimSpace(node.Name())),
 		"canonical_name": canonicalNameOf(node),
 		"entity_type":    entityTypeOf(node),
-		"score":          node.Score(),
-		"chunk_ids":      chunks,
+	}
+	scoredDocs := make(map[string]bool)
+	for _, cid := range node.ChunkIDs() {
+		payload[chunkField(cid)] = true
+		doc := docFromChunkID(cid)
+		// Defensive: chunks from multiple documents each stamp their own
+		// per-document score field; readers take the max.
+		if !scoredDocs[doc] {
+			scoredDocs[doc] = true
+			payload[scoreField(doc)] = node.Score()
+		}
+	}
+	return s.setPayload(ctx, node.ID, payload)
+}
+
+// ensurePoint creates the node point if missing, with only static fields.
+// Concurrent creators write identical content, so the last-write-wins
+// outcome is harmless; variable evidence is appended atomically afterwards
+// via set_payload (M7 audit A1). Only the not-found (HTTP 404) outcome
+// triggers creation: transient errors abort instead of replacing an existing
+// point's evidence (M7 audit A2).
+func (s *QdrantGraphStore) ensurePoint(ctx context.Context, node graphmodel.Node) error {
+	_, err := s.GetNode(ctx, node.ID)
+	if err == nil {
+		return nil
+	}
+	if !strings.Contains(err.Error(), "status 404") {
+		return fmt.Errorf("graph node existence check failed: %w", err)
 	}
 	var out struct {
 		Result struct {
 			Status string `json:"status"`
 		} `json:"result"`
 	}
-	err := s.doJSON(ctx, http.MethodPut, "/collections/"+s.collection+"/points", map[string]any{
+	err = s.doJSON(ctx, http.MethodPut, "/collections/"+s.collection+"/points", map[string]any{
 		"points": []map[string]any{{
-			"id":      graphmodel.CalculatePointID(node.ID),
-			"payload": payload,
+			"id": graphmodel.CalculatePointID(node.ID),
+			"payload": map[string]any{
+				"id":        node.ID,
+				"node_type": string(node.Type),
+			},
 			// Empty object: Qdrant requires an explicit (empty) vector field
 			// on vectorless collections (verified on Qdrant 1.18).
 			"vector": map[string]any{},
 		}},
 	}, &out)
 	if err != nil {
-		return fmt.Errorf("graph node upsert failed: %w", err)
+		return fmt.Errorf("graph node creation failed: %w", err)
 	}
 	return nil
+}
+
+// Payload field prefixes for the atomic field-per-chunk schema. The field
+// codec is the single place that owns the protocol: writers and readers must
+// use chunkField/scoreField rather than string literals.
+const (
+	chunkFieldPrefix = "chunk_"
+	scoreFieldPrefix = "score_"
+)
+
+// chunkField maps a chunk ID to its payload evidence field. The ID is
+// hex-encoded because Qdrant payload keys are JSON paths: "/" and "." in raw
+// chunk IDs break set_payload/clear_payload (verified on Qdrant 1.18).
+func chunkField(chunkID string) string {
+	return chunkFieldPrefix + hex.EncodeToString([]byte(chunkID))
+}
+
+// scoreField maps a document ID to its per-document score field (hex-encoded
+// for the same JSON-path reason).
+func scoreField(documentID string) string {
+	return scoreFieldPrefix + hex.EncodeToString([]byte(documentID))
+}
+
+// docFromChunkID derives the document ID from a chunk ID ("doc/section/NNN").
+func docFromChunkID(chunkID string) string {
+	if i := strings.Index(chunkID, "/"); i > 0 {
+		return chunkID[:i]
+	}
+	return chunkID
+}
+
+// setPayload atomically sets payload fields on the node point; existing
+// fields are preserved.
+func (s *QdrantGraphStore) setPayload(ctx context.Context, nodeID string, payload map[string]any) error {
+	return s.doJSON(ctx, http.MethodPost, "/collections/"+s.collection+"/points/payload", map[string]any{
+		"payload": payload,
+		"points":  []string{graphmodel.CalculatePointID(nodeID)},
+	}, nil)
+}
+
+// clearPayload atomically removes the given payload fields from the node
+// point; other fields are preserved.
+func (s *QdrantGraphStore) clearPayload(ctx context.Context, nodeID string, fields []string) error {
+	if len(fields) == 0 {
+		return nil
+	}
+	return s.doJSON(ctx, http.MethodPost, "/collections/"+s.collection+"/points/payload/delete", map[string]any{
+		"keys":   fields,
+		"points": []string{graphmodel.CalculatePointID(nodeID)},
+	}, nil)
 }
 
 // GetNode retrieves a Node by its graph node ID (deterministic point ID).
@@ -165,7 +238,8 @@ func (s *QdrantGraphStore) FindNodeByName(ctx context.Context, name string) (*gr
 }
 
 // DeleteByDocument removes every chunk evidence reference belonging to the
-// document from all nodes; nodes left without evidence are deleted.
+// document from all nodes via atomic field clears; nodes left without
+// evidence are deleted.
 func (s *QdrantGraphStore) DeleteByDocument(ctx context.Context, documentID string) error {
 	nodes, err := s.scrollNodes(ctx, nil)
 	if err != nil {
@@ -173,24 +247,25 @@ func (s *QdrantGraphStore) DeleteByDocument(ctx context.Context, documentID stri
 	}
 	for i := range nodes {
 		node := nodes[i]
-		var kept []string
+		var clear []string
+		kept := 0
 		for _, cid := range node.ChunkIDs() {
 			if chunkBelongsToDocument(cid, documentID) {
-				continue
+				clear = append(clear, chunkField(cid))
+			} else {
+				kept++
 			}
-			kept = append(kept, cid)
 		}
-		if len(kept) == 0 {
+		if len(clear) > 0 {
+			clear = append(clear, scoreField(documentID))
+			if err := s.clearPayload(ctx, node.ID, clear); err != nil {
+				return err
+			}
+		}
+		if kept == 0 {
 			if err := s.deletePoint(ctx, graphmodel.CalculatePointID(node.ID)); err != nil {
 				return err
 			}
-			continue
-		}
-		node.Properties["chunk_ids"] = kept
-		// Direct upsert (no union): AddNode would re-merge the removed
-		// evidence back into the node.
-		if err := s.upsertNode(ctx, node, kept); err != nil {
-			return err
 		}
 	}
 	return nil
@@ -342,32 +417,31 @@ func propString(payload map[string]any, key string) string {
 	return ""
 }
 
-func propDouble(payload map[string]any, key string) float64 {
-	if v, ok := payload[key].(float64); ok {
-		return v
-	}
-	return 0
-}
-
-func propStrings(payload map[string]any, key string) []string {
-	raw, ok := payload[key].([]any)
-	if !ok {
-		return nil
-	}
-	var out []string
-	for _, item := range raw {
-		if s, ok := item.(string); ok {
-			out = append(out, s)
-		}
-	}
-	return out
-}
-
+// nodeFromPayload reconstructs a Node from the atomic field-per-chunk
+// payload schema: chunk evidence fields are "chunk_<id>", per-document score
+// fields are "score_<doc>", and the node score is the max of all document
+// scores (never regresses). Chunk order is sorted for determinism (payload
+// map iteration is unordered).
 func nodeFromPayload(payload map[string]any) (*graphmodel.Node, error) {
 	id := propString(payload, "id")
 	if id == "" {
 		return nil, fmt.Errorf("graph point payload missing id")
 	}
+	var chunks []string
+	maxScore := 0.0
+	for key, v := range payload {
+		switch {
+		case strings.HasPrefix(key, chunkFieldPrefix) && key != "chunk_ids":
+			if raw, err := hex.DecodeString(strings.TrimPrefix(key, chunkFieldPrefix)); err == nil {
+				chunks = append(chunks, string(raw))
+			}
+		case strings.HasPrefix(key, scoreFieldPrefix):
+			if f, ok := v.(float64); ok && f > maxScore {
+				maxScore = f
+			}
+		}
+	}
+	sort.Strings(chunks)
 	return &graphmodel.Node{
 		ID:   id,
 		Type: graphmodel.NodeType(propString(payload, "node_type")),
@@ -375,8 +449,8 @@ func nodeFromPayload(payload map[string]any) (*graphmodel.Node, error) {
 			"name":           propString(payload, "name"),
 			"canonical_name": propString(payload, "canonical_name"),
 			"entity_type":    propString(payload, "entity_type"),
-			"score":          propDouble(payload, "score"),
-			"chunk_ids":      propStrings(payload, "chunk_ids"),
+			"score":          maxScore,
+			"chunk_ids":      chunks,
 		},
 	}, nil
 }

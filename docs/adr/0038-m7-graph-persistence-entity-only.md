@@ -13,6 +13,18 @@ M7 stores the existing enrichment entity output as a persistent graph signal for
 - **Worker-level indexing integration.** A `WithGraphStore(graphstore.GraphStore)` worker option (mirroring `WithSparseEncoderProvider`). `ExecuteSync` writes graph state tied to the existing diff plan: upserted chunks → idempotent node upsert (chunk IDs union), deleted chunks → chunk IDs removed from nodes, nodes with no remaining evidence are deleted. `QdrantGraphStore` is node-only (one collection).
 - **Persistence target: Qdrant.** A dedicated node collection behind the `GraphStore` seam (research: payload-embedded edges go stale under diff-skip re-indexing; a separate collection keeps chunk payload schema and corpus fingerprint `8b21a664…` untouched — fingerprints hash chunk ContentHashes only).
 
+## Persistence schema errata (2026-08-05, M7 audit A1)
+
+The original node payload stored `chunk_ids` as a list and `score` as a single value, written via read-modify-write (`GetNode` → union → upsert). Under concurrent writers — parallel indexing processes touching the same cross-document node — this lost updates (measured 19/20) and could regress the score. The Qdrant persistence schema now uses atomic field appends:
+
+- **Chunk evidence** is stored as one payload field per chunk, `chunk_<hex(chunkID)>: true`, appended atomically via `POST /points/payload` (`set_payload`). Concurrent writers add disjoint fields; the union is structural, not client-computed.
+- **Score** is stored per document as `score_<hex(documentID)>: <score>`; reads take the max across documents, so the score never regresses under concurrent writes.
+- **Removal** uses atomic field clears (`clear_payload`) per document in `DeleteByDocument`; nodes left without evidence fields are deleted.
+- **Hex encoding** avoids Qdrant's JSON-path interpretation of `/` and `.` in raw chunk/document IDs (verified on Qdrant 1.18).
+- **Point creation** (`ensurePoint`) creates the point with only static fields and only on HTTP 404; transient errors abort (M7 audit A2 closure) instead of replacing an existing point's evidence.
+- **Same-document concurrency boundary:** the per-document score field is last-write-wins within one document; concurrent writers to the *same* document could still race the score. The supported indexing model is one writer per document (ARC ingestion is document-sequential); cross-document concurrency — the case A1 fixed — is fully race-free.
+- The Node domain model and the `chunk_ids`/`score` properties it exposes are unchanged; the `InMemoryGraphStore` keeps the list schema behind its mutex. ADR-0039, 0040, 0041, 0042 are unaffected.
+
 ## Rationale
 
 - The milestone's purpose is "turn existing enrichment output into a measured retrieval signal". Every v1 scope decision (entities only, no relations, ≥0.90 floor, cross-doc merge, worker-level write) is the smallest set consistent with the measured ceiling; anything unmeasured (concepts, relations, aliasing) is excluded by the same rule that froze M4/M6 contracts.
