@@ -4,7 +4,7 @@
 
 **Blocked by:** 06 — Probe run and freeze/closure decision.
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [ ] Benchmark report committed (metrics per combination, CI report-only, gate outcome)
 - [ ] Acceptance: frozen (model, N) recorded against the artifact fingerprint

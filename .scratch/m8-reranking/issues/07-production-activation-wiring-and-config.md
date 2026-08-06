@@ -4,7 +4,7 @@
 
 **Blocked by:** 06 — Probe run and freeze/closure decision.
 
-**Status:** ready-for-agent
+**Status:** cancelled
 
 - [ ] Wrapper wired into the graph slot by composition only — engine concept unchanged
 - [ ] `RETRIEVAL_RERANK_MODEL=""` == feature off (no ENABLED flag)

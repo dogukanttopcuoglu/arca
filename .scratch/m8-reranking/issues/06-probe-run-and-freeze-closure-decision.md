@@ -4,7 +4,7 @@
 
 **Blocked by:** 04 — Probe simulation runs and metrics; 05 — MPI/MAR gate and benchmark manifest.
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [ ] Probe executes end-to-end with the frozen manifest (fingerprint, gold set v3, budgets)
 - [ ] Report records every combination's metrics, CI, and gate outcome
@@ -13,3 +13,6 @@
 - [ ] Artifacts and manifest committed as the benchmark's evidence trail
 
 ## Comments
+
+## Resolution
+Probe executed on GPU with verified content path (fingerprint 8b21a664…): v3 baseline nDCG@5 0.886 vs reranked 0.698–0.724 — MPI (−16pp) and MAR (−15pp MRR) violated. v4 heading slice gained (+13pp nDCG) but cannot override. **Decision: REJECT** (ADR-0045 gate, recorded in docs/benchmarks/M8_CLOSEOUT.md). No production change.
