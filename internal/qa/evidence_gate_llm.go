@@ -48,8 +48,9 @@ func (g *LLMEvidenceGate) Evaluate(ctx context.Context, query string, win *qacon
 
 	// MaxTokens must leave room for reasoning-capable models (e.g. DeepSeek
 	// flash) to finish their reasoning_content before emitting the decision
-	// JSON; 32 tokens get fully consumed by reasoning on such models.
-	options := qaprompt.GenerationOptions{Temperature: 0, MaxTokens: 256}
+	// JSON; too little budget cuts reasoning off with finish_reason=length,
+	// leaving content empty (observed with graph-augmented contexts).
+	options := qaprompt.GenerationOptions{Temperature: 0, MaxTokens: 512}
 	prompt := qaprompt.PromptMessage{
 		System: evidenceGateSystemInstruction,
 		Messages: []qaprompt.Message{

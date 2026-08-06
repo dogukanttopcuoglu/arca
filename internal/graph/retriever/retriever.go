@@ -20,15 +20,34 @@ import (
 type GraphRetriever struct {
 	store        graphstore.GraphStore
 	contentStore store.ContentStore
+	vectorStore  store.VectorStore
+}
+
+// GraphRetrieverOption configures a GraphRetriever instance.
+type GraphRetrieverOption func(*GraphRetriever)
+
+// WithVectorStore attaches the vector store so chunk content is resolved
+// from the point payload — the same source of truth as the dense retriever
+// (production: indexing and querying run in different processes, so the
+// process-local ContentStore is empty). Without it, the ContentStore remains
+// the only content source (legacy/test composition).
+func WithVectorStore(vs store.VectorStore) GraphRetrieverOption {
+	return func(g *GraphRetriever) {
+		g.vectorStore = vs
+	}
 }
 
 // NewGraphRetriever constructs a GraphRetriever over the graph store and the
 // content store used for chunk markdown resolution.
-func NewGraphRetriever(store graphstore.GraphStore, contentStore store.ContentStore) *GraphRetriever {
-	return &GraphRetriever{
+func NewGraphRetriever(store graphstore.GraphStore, contentStore store.ContentStore, opts ...GraphRetrieverOption) *GraphRetriever {
+	g := &GraphRetriever{
 		store:        store,
 		contentStore: contentStore,
 	}
+	for _, opt := range opts {
+		opt(g)
+	}
+	return g
 }
 
 // stopwords are stripped from queries before entity matching. The list is
@@ -123,9 +142,9 @@ func (g *GraphRetriever) Retrieve(ctx context.Context, query retrievalseam.Retri
 	}
 
 	if len(resolveContent) > 0 {
-		contents, err := g.contentStore.GetContent(ctx, resolveContent)
+		contents, err := g.resolveContent(ctx, resolveContent)
 		if err != nil {
-			return nil, fmt.Errorf("failed to resolve chunk content: %w", err)
+			return nil, err
 		}
 		for i := range results {
 			results[i].ContentMarkdown = contents[results[i].ChunkID]
@@ -133,6 +152,46 @@ func (g *GraphRetriever) Retrieve(ctx context.Context, query retrievalseam.Retri
 	}
 
 	return results, nil
+}
+
+// resolveContent fills chunk markdown from the vector store point payload
+// first (the production source of truth, shared with the dense retriever),
+// falling back to the ContentStore for anything the payload lacks. Content
+// resolution never changes result ordering.
+func (g *GraphRetriever) resolveContent(ctx context.Context, chunkIDs []string) (map[string]string, error) {
+	contents := make(map[string]string, len(chunkIDs))
+	var missing []string
+
+	if g.vectorStore != nil {
+		points, err := g.vectorStore.ListPoints(ctx, indexingmodel.MetadataFilter{ChunkIDs: chunkIDs})
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve chunk content: %w", err)
+		}
+		for _, pt := range points {
+			if pt.ContentMarkdown != "" {
+				contents[pt.Metadata.ChunkID] = pt.ContentMarkdown
+			}
+		}
+		for _, cid := range chunkIDs {
+			if contents[cid] == "" {
+				missing = append(missing, cid)
+			}
+		}
+	} else {
+		missing = chunkIDs
+	}
+
+	if len(missing) > 0 {
+		fallback, err := g.contentStore.GetContent(ctx, missing)
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve chunk content: %w", err)
+		}
+		for cid, text := range fallback {
+			contents[cid] = text
+		}
+	}
+
+	return contents, nil
 }
 
 // unique returns the input tokens without duplicates, preserving order.

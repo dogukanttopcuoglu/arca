@@ -7,6 +7,7 @@ import (
 	graphmodel "arca/internal/graph/model"
 	graphretriever "arca/internal/graph/retriever"
 	graphstore "arca/internal/graph/store"
+	indexingmodel "arca/internal/indexing/model"
 	"arca/internal/indexing/store"
 	"arca/internal/retrieval/seam"
 )
@@ -203,6 +204,129 @@ func TestGraphRetriever_TopKAndNoMatch(t *testing.T) {
 		_, err := r.Retrieve(context.Background(), seam.RetrievalQuery{QueryText: ""})
 		if err == nil {
 			t.Error("expected error for empty query")
+		}
+	})
+}
+
+// vectorSeededGraph builds the graph with a vector store carrying chunk
+// content in the point payload — the production arrangement where indexing
+// and querying run in different processes and the ContentStore is empty.
+func vectorSeededGraph(t *testing.T) (*graphstore.InMemoryGraphStore, *store.InMemoryContentStore, *store.InMemoryVectorStore) {
+	t.Helper()
+	ctx := context.Background()
+	gs := graphstore.NewInMemoryGraphStore()
+	cs := store.NewInMemoryContentStore()
+	vs := store.NewInMemoryVectorStore()
+
+	if err := gs.AddNode(ctx, entityNode("organization:world bank", "world bank", 1.0, "doc-a/notes/001", "doc-a/notes/005")); err != nil {
+		t.Fatalf("seed node: %v", err)
+	}
+	// Content lives only in the vector store payload (as in production).
+	pts := []store.VectorPoint{
+		{ID: "11111111-1111-5111-8111-111111111111", Vector: make([]float32, 4), ContentMarkdown: "World Bank lending payload.", Metadata: indexingmodel.VectorMetadata{DocumentID: "doc-a", ChunkID: "doc-a/notes/001"}},
+		{ID: "22222222-2222-5222-8222-222222222222", Vector: make([]float32, 4), ContentMarkdown: "World Bank report payload.", Metadata: indexingmodel.VectorMetadata{DocumentID: "doc-a", ChunkID: "doc-a/notes/005"}},
+	}
+	if err := vs.UpsertPoints(ctx, pts); err != nil {
+		t.Fatalf("seed vector store: %v", err)
+	}
+	return gs, cs, vs
+}
+
+func TestGraphRetriever_ContentResolution(t *testing.T) {
+	t.Run("resolves content from the vector store payload when ContentStore is empty", func(t *testing.T) {
+		gs, cs, vs := vectorSeededGraph(t)
+		// ContentStore deliberately empty: the production process-local case.
+		r := graphretriever.NewGraphRetriever(gs, cs, graphretriever.WithVectorStore(vs))
+
+		results := retrieve(t, r, "What does the book say about World Bank?", 5, 0)
+		if len(results) != 2 {
+			t.Fatalf("expected 2 chunks, got %v", ids(results))
+		}
+		for _, res := range results {
+			if res.ContentMarkdown == "" {
+				t.Errorf("expected payload content for %s, got empty", res.ChunkID)
+			}
+		}
+	})
+
+	t.Run("ContentStore remains the fallback without a vector store", func(t *testing.T) {
+		gs, cs, _ := vectorSeededGraph(t)
+		_ = cs.PutContent(context.Background(), []store.ChunkContent{{
+			ChunkID: "doc-a/notes/001", ContentMarkdown: "World Bank content store text.",
+		}})
+		r := graphretriever.NewGraphRetriever(gs, cs)
+
+		results := retrieve(t, r, "What does the book say about World Bank?", 5, 0)
+		if len(results) != 2 {
+			t.Fatalf("expected 2 chunks, got %v", ids(results))
+		}
+		byID := map[string]string{}
+		for _, res := range results {
+			byID[res.ChunkID] = res.ContentMarkdown
+		}
+		if byID["doc-a/notes/001"] != "World Bank content store text." {
+			t.Errorf("expected ContentStore fallback content, got %q", byID["doc-a/notes/001"])
+		}
+		// The other chunk has no content anywhere: stays empty.
+		if byID["doc-a/notes/005"] != "" {
+			t.Errorf("expected empty content for missing chunk, got %q", byID["doc-a/notes/005"])
+		}
+	})
+
+	t.Run("payload gaps fall back to the ContentStore when a vector store is attached", func(t *testing.T) {
+		ctx := context.Background()
+		gs := graphstore.NewInMemoryGraphStore()
+		cs := store.NewInMemoryContentStore()
+		vs := store.NewInMemoryVectorStore()
+		if err := gs.AddNode(ctx, entityNode("organization:world bank", "world bank", 1.0, "doc-a/notes/001", "doc-a/notes/005")); err != nil {
+			t.Fatalf("seed node: %v", err)
+		}
+		// Payload content exists only for notes/001; notes/005 content comes
+		// from the ContentStore — the hybrid production path.
+		if err := vs.UpsertPoints(ctx, []store.VectorPoint{{
+			ID: "11111111-1111-5111-8111-111111111111", Vector: make([]float32, 4),
+			ContentMarkdown: "World Bank lending payload.",
+			Metadata:        indexingmodel.VectorMetadata{DocumentID: "doc-a", ChunkID: "doc-a/notes/001"},
+		}}); err != nil {
+			t.Fatalf("seed vector store: %v", err)
+		}
+		_ = cs.PutContent(ctx, []store.ChunkContent{{
+			ChunkID: "doc-a/notes/005", ContentMarkdown: "World Bank report content store text.",
+		}})
+		r := graphretriever.NewGraphRetriever(gs, cs, graphretriever.WithVectorStore(vs))
+
+		results := retrieve(t, r, "What does the book say about World Bank?", 5, 0)
+		if len(results) != 2 {
+			t.Fatalf("expected 2 chunks, got %v", ids(results))
+		}
+		byID := map[string]string{}
+		for _, res := range results {
+			byID[res.ChunkID] = res.ContentMarkdown
+		}
+		if byID["doc-a/notes/001"] != "World Bank lending payload." {
+			t.Errorf("expected payload content for notes/001, got %q", byID["doc-a/notes/001"])
+		}
+		if byID["doc-a/notes/005"] != "World Bank report content store text." {
+			t.Errorf("expected ContentStore fallback for notes/005, got %q", byID["doc-a/notes/005"])
+		}
+	})
+
+	t.Run("content resolution preserves deterministic ordering", func(t *testing.T) {
+		gs, cs, vs := vectorSeededGraph(t)
+		r := graphretriever.NewGraphRetriever(gs, cs, graphretriever.WithVectorStore(vs))
+
+		first := retrieve(t, r, "What does the book say about World Bank?", 5, 0)
+		for i := 0; i < 3; i++ {
+			again := retrieve(t, r, "What does the book say about World Bank?", 5, 0)
+			if len(again) != len(first) {
+				t.Fatalf("length drift: %d vs %d", len(again), len(first))
+			}
+			for j := range first {
+				if again[j].ChunkID != first[j].ChunkID || again[j].Score != first[j].Score ||
+					again[j].ContentMarkdown != first[j].ContentMarkdown {
+					t.Fatalf("content/order drift at %d: %+v vs %+v", j, again[j], first[j])
+				}
+			}
 		}
 	})
 }

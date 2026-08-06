@@ -235,7 +235,9 @@ type Runtime struct {
 
 // GraphRetriever builds the entity-only graph retriever (ADR-0038/0039):
 // QdrantGraphStore against the node collection when the vector store is
-// Qdrant, otherwise the in-memory graph store. A failed build is not cached.
+// Qdrant, otherwise the in-memory graph store. Chunk content is resolved
+// from the vector store payload (production: the process-local ContentStore
+// is empty). A failed build is not cached.
 func (r *Runtime) GraphRetriever() (retrievalseam.Retriever, error) {
 	r.graphOnce.Do(func() {
 		var gs graphstore.GraphStore
@@ -245,7 +247,8 @@ func (r *Runtime) GraphRetriever() (retrievalseam.Retriever, error) {
 			gs = graphstore.NewInMemoryGraphStore()
 		}
 		if r.graphErr == nil {
-			r.graphRetriever = graphretriever.NewGraphRetriever(gs, r.contentStore)
+			r.graphRetriever = graphretriever.NewGraphRetriever(gs, r.contentStore,
+				graphretriever.WithVectorStore(r.vectorStore))
 		}
 	})
 	if r.graphErr != nil {
