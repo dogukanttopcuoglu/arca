@@ -22,4 +22,9 @@ type RetrievalStats struct {
 	DenseCandidates  int     `json:"dense_candidates,omitempty"`  // hybrid only
 	SparseCandidates int     `json:"sparse_candidates,omitempty"` // hybrid only
 	FusedCandidates  int     `json:"fused_candidates,omitempty"`  // hybrid only
+	// Reranked reports that a second-stage reranker produced the final
+	// ordering (M8, ADR-0044). RerankerFailed marks a graceful-degradation
+	// fallback to the inner retriever's ordering.
+	Reranked       bool `json:"reranked,omitempty"`
+	RerankerFailed bool `json:"reranker_failed,omitempty"`
 }
