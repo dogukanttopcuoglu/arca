@@ -20,9 +20,13 @@ import (
 
 // Combination is one probe measurement: a reranker model applied to the
 // candidate top N (the first N candidates of each recorded artifact list).
+// Intents, when non-empty, gates the reranker to queries of those intents
+// (research E1/E2 selective reranking): queries outside the set keep the
+// baseline ordering. Empty means the reranker applies to every query.
 type Combination struct {
-	Model string
-	N     int
+	Model   string
+	N       int
+	Intents []string
 }
 
 // Options wires optional end-to-end measurement: content resolution for the
@@ -216,45 +220,61 @@ func (r *Runner) evaluateCombination(
 		}
 
 		candidates := make([]retrievalseam.SearchResult, 0, combo.N)
-		for _, id := range sliceString(aq.Candidates, combo.N) {
-			candidates = append(candidates, retrievalseam.SearchResult{ChunkID: id, Score: 1.0})
+		for i, id := range sliceString(aq.Candidates, combo.N) {
+			score := float32(1.0)
+			if i < len(aq.CandidateScores) {
+				score = aq.CandidateScores[i]
+			}
+			candidates = append(candidates, retrievalseam.SearchResult{ChunkID: id, Score: score})
 		}
+
+		// Selective reranking (research E1/E2): when the combination gates
+		// on intents, queries outside the set keep the baseline ordering —
+		// they are measured exactly as the artifact recorded them.
+		gated := len(combo.Intents) > 0 && !contains(combo.Intents, aq.Intent)
 
 		var rerankedIDs []string
 		if len(candidates) > 0 {
-			// Rerankers score (query, document) pairs, so candidates carry
-			// their content when a content provider is wired; ranking-only
-			// probes run with empty content.
-			if r.options.Content != nil {
-				ids := make([]string, len(candidates))
-				for i, c := range candidates {
-					ids[i] = c.ChunkID
+			if !gated {
+				// Rerankers score (query, document) pairs, so candidates carry
+				// their content when a content provider is wired; ranking-only
+				// probes run with empty content.
+				if r.options.Content != nil {
+					ids := make([]string, len(candidates))
+					for i, c := range candidates {
+						ids[i] = c.ChunkID
+					}
+					contents, err := r.options.Content(ctx, ids)
+					if err != nil {
+						return res, fmt.Errorf("content resolution failed: %w", err)
+					}
+					if len(contents) != len(candidates) {
+						return res, fmt.Errorf("content provider returned %d entries for %d ids", len(contents), len(candidates))
+					}
+					for i := range candidates {
+						candidates[i].ContentMarkdown = contents[i]
+					}
 				}
-				contents, err := r.options.Content(ctx, ids)
+
+				start := time.Now()
+				ordered, err := rr.Rerank(ctx, q.Query, candidates)
+				latencies = append(latencies, time.Since(start).Milliseconds())
 				if err != nil {
-					return res, fmt.Errorf("content resolution failed: %w", err)
+					return res, err
 				}
-				if len(contents) != len(candidates) {
-					return res, fmt.Errorf("content provider returned %d entries for %d ids", len(contents), len(candidates))
-				}
-				for i := range candidates {
-					candidates[i].ContentMarkdown = contents[i]
-				}
-			}
 
-			start := time.Now()
-			ordered, err := rr.Rerank(ctx, q.Query, candidates)
-			latencies = append(latencies, time.Since(start).Milliseconds())
-			if err != nil {
-				return res, err
-			}
-
-			// Single enforcement point of the ADR-0044 tie-break contract,
-			// shared with the production wrapper.
-			stabilized := rerank.StabilizeOrdering(candidates, ordered, combo.N)
-			rerankedIDs = make([]string, 0, len(stabilized))
-			for _, c := range stabilized {
-				rerankedIDs = append(rerankedIDs, c.ChunkID)
+				// Single enforcement point of the ADR-0044 tie-break contract,
+				// shared with the production wrapper.
+				stabilized := rerank.StabilizeOrdering(candidates, ordered, combo.N)
+				rerankedIDs = make([]string, 0, len(stabilized))
+				for _, c := range stabilized {
+					rerankedIDs = append(rerankedIDs, c.ChunkID)
+				}
+			} else {
+				// Gated out: baseline ordering (candidate list as recorded).
+				for _, c := range candidates {
+					rerankedIDs = append(rerankedIDs, c.ChunkID)
+				}
 			}
 		}
 		res.RerankerOrdering[q.ID] = rerankedIDs
@@ -407,6 +427,16 @@ func (r *Runner) validate(art *eval.CandidateArtifact, gs *eval.GoldSet) error {
 		}
 	}
 	return nil
+}
+
+// contains reports whether the slice contains the value.
+func contains(s []string, v string) bool {
+	for _, x := range s {
+		if x == v {
+			return true
+		}
+	}
+	return false
 }
 
 // sliceString returns the first n elements of a string slice, or the whole

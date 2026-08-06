@@ -30,14 +30,19 @@ type ProbeCollectOptions struct {
 // over the recorded artifact, the kill gate, and the frozen operational
 // budget.
 type ProbeRunOptions struct {
-	ArtifactPath string
-	GoldSetPath  string
-	BGECommand   string
-	CandidateNs  []int
-	MaxP95Ms     int64
-	MaxRSSBytes  int64
-	ReportPath   string
-	M5Gate       bool
+	ArtifactPath    string
+	GoldSetPath     string
+	BGECommand      string
+	CandidateNs     []int
+	MaxP95Ms        int64
+	MaxRSSBytes     int64
+	ReportPath      string
+	M5Gate          bool
+	// Structure enables the deterministic structure-bonus reranker
+	// (research E2): model-free heading-overlap reordering. StructureIntents
+	// gates it to the given intent set (comma-separated); empty = all.
+	Structure        bool
+	StructureIntents string
 }
 
 // RunProbeCollect generates the candidate artifact from the production
@@ -128,6 +133,15 @@ func (a *App) RunProbe(ctx context.Context, opts ProbeRunOptions) (string, error
 	defer execReranker.Close()
 
 	rerankerMap := map[string]rerank.Reranker{"bge": execReranker}
+	var structureIntents []string
+	if opts.Structure {
+		rerankerMap["structure"] = &probe.StructureReranker{BonusAlpha: 0.5}
+		for _, part := range strings.Split(opts.StructureIntents, ",") {
+			if p := strings.TrimSpace(part); p != "" {
+				structureIntents = append(structureIntents, p)
+			}
+		}
+	}
 
 	runner := probe.NewRunner(rerankerMap, probe.Options{
 		Content:        a.probeContent(),
@@ -138,6 +152,9 @@ func (a *App) RunProbe(ctx context.Context, opts ProbeRunOptions) (string, error
 	var combos []probe.Combination
 	for _, n := range opts.CandidateNs {
 		combos = append(combos, probe.Combination{Model: "bge", N: n})
+		if opts.Structure {
+			combos = append(combos, probe.Combination{Model: "structure", N: n, Intents: structureIntents})
+		}
 	}
 	if len(combos) == 0 {
 		return "", fmt.Errorf("no candidate budgets configured (--n)")

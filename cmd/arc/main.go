@@ -158,6 +158,8 @@ func runProbe(ctx context.Context, app *arccli.App, args []string) {	if len(args
 		maxRSS := fs.Int64("budget-rss-bytes", 0, "frozen model memory budget (bytes)")
 		report := fs.String("report", "", "path to write the JSON manifest")
 		m5gate := fs.Bool("m5-gate", true, "evaluate the M5 semantic evidence gate per combination (ADR-0045: answer quality is measured on every combination; disable only for ranking-only runs)")
+		structure := fs.Bool("structure", false, "add the deterministic structure-bonus reranker (research E2, model-free heading overlap)")
+		structureIntents := fs.String("structure-intents", "", "gate the structure reranker to these intents (comma-separated; empty = all)")
 		if err := fs.Parse(args[1:]); err != nil {
 			fmt.Printf("Error: %v\n", err)
 			os.Exit(1)
@@ -172,14 +174,16 @@ func runProbe(ctx context.Context, app *arccli.App, args []string) {	if len(args
 			ns = append(ns, n)
 		}
 		out, err := app.RunProbe(ctx, arccli.ProbeRunOptions{
-			ArtifactPath:   *artifact,
-			GoldSetPath:    *goldset,
-			BGECommand:     *bgeCommand,
-			CandidateNs:    ns,
-			MaxP95Ms:       *maxP95,
-			MaxRSSBytes:    *maxRSS,
-			ReportPath:     *report,
-			M5Gate:         *m5gate,
+			ArtifactPath:    *artifact,
+			GoldSetPath:     *goldset,
+			BGECommand:      *bgeCommand,
+			CandidateNs:     ns,
+			MaxP95Ms:        *maxP95,
+			MaxRSSBytes:     *maxRSS,
+			ReportPath:      *report,
+			M5Gate:          *m5gate,
+			Structure:       *structure,
+			StructureIntents: *structureIntents,
 		})
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)
