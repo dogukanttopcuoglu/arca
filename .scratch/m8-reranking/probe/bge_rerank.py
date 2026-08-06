@@ -12,12 +12,14 @@ import resource
 import sys
 import time
 
+import torch
+
 from sentence_transformers import CrossEncoder
 
 
 def main() -> None:
     start = time.time()
-    model = CrossEncoder("BAAI/bge-reranker-v2-m3")
+    model = CrossEncoder("BAAI/bge-reranker-v2-m3", max_length=1024)
     load_ms = int((time.time() - start) * 1000)
 
     for line in sys.stdin:
@@ -26,7 +28,10 @@ def main() -> None:
             continue
         req = json.loads(line)
         pairs = [(req["query"], c.get("content", "")) for c in req["candidates"]]
-        scores = model.predict(pairs).tolist()
+        # Small batches + per-request cache eviction keep the long-lived
+        # process stable on WSL/CUDA (CUBLAS execution failures appeared on
+        # later requests of the same process).
+        scores = model.predict(pairs, batch_size=16)
         scored = sorted(
             zip([c["chunk_id"] for c in req["candidates"]], scores),
             key=lambda x: -x[1],
@@ -40,6 +45,8 @@ def main() -> None:
         }
         sys.stdout.write(json.dumps(resp) + "\n")
         sys.stdout.flush()
+        del scores
+        torch.cuda.empty_cache()
 
 
 if __name__ == "__main__":
