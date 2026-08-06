@@ -60,6 +60,10 @@ func main() {
 		fmt.Println(out)
 
 	case "eval":
+		if len(os.Args) > 2 && os.Args[2] == "probe" {
+			runProbe(ctx, app, os.Args[3:])
+			return
+		}
 		fs := flag.NewFlagSet("eval", flag.ExitOnError)
 		goldset := fs.String("goldset", "internal/eval/testdata/goldset_v1.json", "path to the gold set JSON")
 		mode := fs.String("mode", "dense", "retrieval mode: dense|sparse|hybrid")
@@ -108,6 +112,82 @@ func main() {
 
 	default:
 		fmt.Printf("Unknown command %q\n", cmd)
+		os.Exit(1)
+	}
+}
+
+// runProbe dispatches the M8 probe subcommands: `arc eval probe collect`
+// records the candidate artifact; `arc eval probe run` simulates rerankers
+// and evaluates the kill gate (ADR-0045).
+func runProbe(ctx context.Context, app *arccli.App, args []string) {
+	if len(args) < 1 {
+		fmt.Println("Usage: arc eval probe [collect|run] <args>")
+		os.Exit(1)
+	}
+	switch args[0] {
+	case "collect":
+		fs := flag.NewFlagSet("probe collect", flag.ExitOnError)
+		goldset := fs.String("goldset", "", "path to the gold set JSON (required)")
+		artifact := fs.String("artifact-out", "", "path to write the candidate artifact (required)")
+		candidateTopN := fs.Int("candidate-top-n", 100, "candidate top N recorded by the baseline")
+		if err := fs.Parse(args[1:]); err != nil {
+			fmt.Printf("Error: %v\n", err)
+			os.Exit(1)
+		}
+		out, err := app.RunProbeCollect(ctx, arccli.ProbeCollectOptions{
+			GoldSetPath:   *goldset,
+			ArtifactPath:  *artifact,
+			CandidateTopN: *candidateTopN,
+		})
+		if err != nil {
+			fmt.Printf("Error: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Println(out)
+
+	case "run":
+		fs := flag.NewFlagSet("probe run", flag.ExitOnError)
+		artifact := fs.String("artifact", "", "path to the candidate artifact (required)")
+		goldset := fs.String("goldset", "", "path to the gold set JSON (required)")
+		bgeCommand := fs.String("bge-command", "", "command running the BGE cross-encoder reranker script")
+		colbertCommand := fs.String("colbert-command", "", "command running the ColBERTv2 late-interaction reranker script")
+		candidateNs := fs.String("n", "20,50,100", "comma-separated candidate budgets N to sweep")
+		maxP95 := fs.Int64("budget-p95-ms", 0, "frozen p95 rerank latency budget (ms)")
+		maxRSS := fs.Int64("budget-rss-bytes", 0, "frozen model memory budget (bytes)")
+		report := fs.String("report", "", "path to write the JSON manifest")
+		m5gate := fs.Bool("m5-gate", false, "evaluate the M5 semantic evidence gate per combination")
+		if err := fs.Parse(args[1:]); err != nil {
+			fmt.Printf("Error: %v\n", err)
+			os.Exit(1)
+		}
+		var ns []int
+		for _, part := range strings.Split(*candidateNs, ",") {
+			var n int
+			if _, err := fmt.Sscanf(strings.TrimSpace(part), "%d", &n); err != nil || n <= 0 {
+				fmt.Printf("Error: invalid candidate N %q\n", part)
+				os.Exit(1)
+			}
+			ns = append(ns, n)
+		}
+		out, err := app.RunProbe(ctx, arccli.ProbeRunOptions{
+			ArtifactPath:   *artifact,
+			GoldSetPath:    *goldset,
+			BGECommand:     *bgeCommand,
+			ColbertCommand: *colbertCommand,
+			CandidateNs:    ns,
+			MaxP95Ms:       *maxP95,
+			MaxRSSBytes:    *maxRSS,
+			ReportPath:     *report,
+			M5Gate:         *m5gate,
+		})
+		if err != nil {
+			fmt.Printf("Error: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Println(out)
+
+	default:
+		fmt.Printf("Unknown probe subcommand %q\n", args[0])
 		os.Exit(1)
 	}
 }
