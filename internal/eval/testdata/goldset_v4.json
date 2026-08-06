@@ -195,7 +195,7 @@
   {
    "id": "h-ab-01",
    "intent": "abstention",
-   "query": "What does Rick Rubin mean by sonic architecture?",
+   "query": "What is the capital of Atlantis?",
    "expected_chunk_ids": [],
    "expected_sections": [],
    "expected_no_evidence": true
