@@ -34,7 +34,11 @@ func TestGoldSetV1Lint(t *testing.T) {
 	for _, q := range gs.Queries {
 		counts[q.Intent]++
 	}
-	for _, intent := range eval.AllowedIntentCategories() {
+	// v1 predates the heading category (ADR-0047, goldset v4): lint the six
+	// categories v1 actually declares, so category additions don't break
+	// older committed gold sets.
+	v1Categories := []string{"single_fact", "concept", "procedural", "comparison", "entity", "abstention"}
+	for _, intent := range v1Categories {
 		if counts[intent] < 8 {
 			t.Errorf("intent %q has %d queries, expected at least 8", intent, counts[intent])
 		}

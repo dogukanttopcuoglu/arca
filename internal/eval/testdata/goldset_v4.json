@@ -1,0 +1,204 @@
+{
+ "schema_version": "1.2",
+ "documents": [
+  {
+   "document_id": "Browne, M. Neil_Keeley, Stuart M - Asking the Right Questions_ A Guide to Critical Thinking (2015_2014, Pearson) - libgen.li",
+   "corpus_fingerprint": "999342c3dc0c02d107b3e7f74648cc76c9dee92553999f01337f55b86c5a3995",
+   "chunk_count": 416
+  },
+  {
+   "document_id": "Matthew Boyle - Domain-Driven Design with Golang_ Use Golang to create simple, maintainable systems to solve complex business problems (Packt Publishing) - libgen.li",
+   "corpus_fingerprint": "da442d50937bbdffb6d6e6a0487d8dafc91fded0243d7652d9860e3c4d67ece3",
+   "chunk_count": 671
+  },
+  {
+   "document_id": "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li",
+   "corpus_fingerprint": "1bad1d654e47fb531f45ded86e34231d29b84e6f079f0b216a23c68b42eeceef",
+   "chunk_count": 397
+  },
+  {
+   "document_id": "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li",
+   "corpus_fingerprint": "f9f0b5fa1505abe3d2144383856a715942134c0ef0bb9269b5e830318e38fcbb",
+   "chunk_count": 1337
+  },
+  {
+   "document_id": "rick-rubin",
+   "corpus_fingerprint": "51b1909e1a2639b3114eb4e9afaeeafa58938cbdb0d195392dc65d06ac0b483d",
+   "chunk_count": 196
+  }
+ ],
+ "queries": [
+  {
+   "id": "h-rr-01",
+   "intent": "heading",
+   "query": "What does the book say about Tuning In?",
+   "expected_chunk_ids": [
+    "rick-rubin/tuning-in/002",
+    "rick-rubin/tuning-in/003",
+    "rick-rubin/tuning-in/004"
+   ],
+   "expected_sections": [
+    "Tuning In"
+   ],
+   "expected_no_evidence": false
+  },
+  {
+   "id": "h-rr-02",
+   "intent": "heading",
+   "query": "How does Rubin describe the artist’s connection to the creative flow?",
+   "expected_chunk_ids": [
+    "rick-rubin/tuning-in/002",
+    "rick-rubin/tuning-in/003"
+   ],
+   "expected_sections": [
+    "Tuning In"
+   ],
+   "expected_no_evidence": false
+  },
+  {
+   "id": "h-rr-03",
+   "intent": "heading",
+   "query": "Explain what Rubin means by the unseen",
+   "expected_chunk_ids": [
+    "rick-rubin/the-unseen/001"
+   ],
+   "expected_sections": [
+    "The Unseen"
+   ],
+   "expected_no_evidence": false
+  },
+  {
+   "id": "h-bk-01",
+   "intent": "heading",
+   "query": "What does Asking the Right Questions say in its Preface?",
+   "expected_chunk_ids": [
+    "Browne, M. Neil_Keeley, Stuart M - Asking the Right Questions_ A Guide to Critical Thinking (2015_2014, Pearson) - libgen.li/asking-the-right-questions-preface/001",
+    "Browne, M. Neil_Keeley, Stuart M - Asking the Right Questions_ A Guide to Critical Thinking (2015_2014, Pearson) - libgen.li/asking-the-right-questions-preface/002"
+   ],
+   "expected_sections": [
+    "Asking the Right Questions > Preface"
+   ],
+   "expected_no_evidence": false
+  },
+  {
+   "id": "h-bk-02",
+   "intent": "heading",
+   "query": "What did the authors say about how readers should use the book?",
+   "expected_chunk_ids": [
+    "Browne, M. Neil_Keeley, Stuart M - Asking the Right Questions_ A Guide to Critical Thinking (2015_2014, Pearson) - libgen.li/asking-the-right-questions-preface/001",
+    "Browne, M. Neil_Keeley, Stuart M - Asking the Right Questions_ A Guide to Critical Thinking (2015_2014, Pearson) - libgen.li/asking-the-right-questions-preface/002"
+   ],
+   "expected_sections": [
+    "Asking the Right Questions > Preface"
+   ],
+   "expected_no_evidence": false
+  },
+  {
+   "id": "h-me-01",
+   "intent": "heading",
+   "query": "What does Thinking in Systems say about one-stock systems?",
+   "expected_chunk_ids": [
+    "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-a-brief-visit-to-the-systems-zoo-one-stock-systems/001",
+    "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-a-brief-visit-to-the-systems-zoo-one-stock-systems/002"
+   ],
+   "expected_sections": [
+    "Thinking in Systems > A Brief Visit to the Systems Zoo > One-Stock Systems"
+   ],
+   "expected_no_evidence": false
+  },
+  {
+   "id": "h-me-02",
+   "intent": "heading",
+   "query": "How does Meadows explain the behavior of simple stock and flow systems?",
+   "expected_chunk_ids": [
+    "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-a-brief-visit-to-the-systems-zoo-one-stock-systems/001",
+    "Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li/thinking-in-systems-a-brief-visit-to-the-systems-zoo-one-stock-systems/002"
+   ],
+   "expected_sections": [
+    "Thinking in Systems > A Brief Visit to the Systems Zoo > One-Stock Systems"
+   ],
+   "expected_no_evidence": false
+  },
+  {
+   "id": "h-bd-01",
+   "intent": "heading",
+   "query": "What is a distributed system?",
+   "expected_chunk_ids": [
+    "Matthew Boyle - Domain-Driven Design with Golang_ Use Golang to create simple, maintainable systems to solve complex business problems (Packt Publishing) - libgen.li/table-of-contents-ddd-for-distributed-systems-what-is-a-distributed-system/001",
+    "Matthew Boyle - Domain-Driven Design with Golang_ Use Golang to create simple, maintainable systems to solve complex business problems (Packt Publishing) - libgen.li/table-of-contents-ddd-for-distributed-systems-what-is-a-distributed-system/002"
+   ],
+   "expected_sections": [
+    "Table of Contents > DDD for Distributed Systems > What is a distributed system"
+   ],
+   "expected_no_evidence": false
+  },
+  {
+   "id": "h-bd-02",
+   "intent": "heading",
+   "query": "What does the Preface of Domain-Driven Design with Golang say?",
+   "expected_chunk_ids": [
+    "Matthew Boyle - Domain-Driven Design with Golang_ Use Golang to create simple, maintainable systems to solve complex business problems (Packt Publishing) - libgen.li/table-of-contents-preface/001"
+   ],
+   "expected_sections": [
+    "Table of Contents > Preface"
+   ],
+   "expected_no_evidence": false
+  },
+  {
+   "id": "h-bd-03",
+   "intent": "heading",
+   "query": "Summarize what the book says about the CAP theorem and databases",
+   "expected_chunk_ids": [
+    "Matthew Boyle - Domain-Driven Design with Golang_ Use Golang to create simple, maintainable systems to solve complex business problems (Packt Publishing) - libgen.li/table-of-contents-ddd-for-distributed-systems-cap-theorem-and-databases/001"
+   ],
+   "expected_sections": [
+    "Table of Contents > DDD for Distributed Systems > CAP theorem and databases"
+   ],
+   "expected_no_evidence": false
+  },
+  {
+   "id": "h-es-01",
+   "intent": "heading",
+   "query": "What does the Preface of Event-Driven Architecture in Golang say?",
+   "expected_chunk_ids": [
+    "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/table-of-contents-preface/001"
+   ],
+   "expected_sections": [
+    "Table of Contents > Preface"
+   ],
+   "expected_no_evidence": false
+  },
+  {
+   "id": "h-es-02",
+   "intent": "heading",
+   "query": "What does Event-Driven Architecture in Golang say about message workflows?",
+   "expected_chunk_ids": [
+    "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/table-of-contents-part-2-components-of-event-driven-architecture-4-message-workflows/001"
+   ],
+   "expected_sections": [
+    "Table of Contents > Part 2: Components of Event-Driven Architecture 4 > Message workflows"
+   ],
+   "expected_no_evidence": false
+  },
+  {
+   "id": "h-es-03",
+   "intent": "heading",
+   "query": "Explain what event sourcing is according to the book",
+   "expected_chunk_ids": [
+    "Michael Stack - Event-Driven Architecture in Golang_ Building complex systems with asynchronicity and eventual consistency (2022, Packt Publishing) - libgen.li/table-of-contents-part-2-components-of-event-driven-architecture-4-adding-event-sourcing-to-the/001"
+   ],
+   "expected_sections": [
+    "Table of Contents > Part 2: Components of Event-Driven Architecture 4 > Adding event sourcing to the"
+   ],
+   "expected_no_evidence": false
+  },
+  {
+   "id": "h-ab-01",
+   "intent": "abstention",
+   "query": "What does Rick Rubin mean by sonic architecture?",
+   "expected_chunk_ids": [],
+   "expected_sections": [],
+   "expected_no_evidence": true
+  }
+ ]
+}

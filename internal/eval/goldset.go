@@ -8,13 +8,20 @@ import (
 )
 
 // allowedIntentCategories are the six gold set query intents (ADR-0027).
+// heading was added for the ADR-0047 heading-aware embedding benchmark:
+// section-title-driven queries that require heading context in the
+// embedding input.
 var allowedIntentCategories = [...]string{
-	"single_fact", "concept", "procedural", "comparison", "entity", "abstention",
+	"single_fact", "concept", "procedural", "comparison", "entity", "abstention", "heading",
 }
 
 // IntentComparison is the gold set intent key for comparison queries; the
 // M6 evidence budget is keyed off it in the runner (ADR-0037).
 const IntentComparison = "comparison"
+
+// IntentHeading is the gold set intent key for heading-aware queries
+// (ADR-0047 benchmark slice).
+const IntentHeading = "heading"
 
 // AllowedIntentCategories returns the six gold set query intents.
 func AllowedIntentCategories() []string {
