@@ -201,6 +201,27 @@ Rationale:
 3. E3 is the composition test; if E1 or E2 individually fails, E3 is not attempted.
 4. The "do not implement" bar is low and explicit: if E2's v4 gain does not clear MPI (+1pp), the heading path closes and only E1 remains; if E1's entity gain also fails, structure-aware reranking is closed with a research record, matching the M8 closeout pattern.
 
+## 8a. E2 executed — results (2026-08-06, GPU, fingerprint-gated)
+
+**Hypothesis tested:** a deterministic heading-overlap bonus (query tokens ∩ most-specific heading, score = content × (1 + 0.5·overlap)) recovers the v4 heading gain with zero model.
+
+| configuration | v4 nDCG@5 | v4 MRR | v3 (gated) | v3 (ungated) |
+|---|---|---|---|---|
+| baseline | 0.225 | 0.192 | 0.886 | 0.886 |
+| structure N=20 | **0.267 (+3.85pp)** | 0.246 | 0.886 (+0.00) | 0.879 (−0.66pp) |
+| structure N=50 | 0.237 (+1.15pp) | 0.231 | 0.886 (+0.00) | 0.867 (−1.78pp) |
+| structure N=100 | 0.237 (+1.15pp) | 0.231 | 0.886 (+0.00) | 0.867 (−1.78pp) |
+| BGE N=50 (reference) | 0.356 (+13.1pp) | 0.346 | −16.2pp (rejected) | — |
+
+**Findings:**
+
+1. **The heading gain is mostly model-driven, not lexical.** The deterministic bonus captures only ~30% of BGE's v4 gain (+3.85pp vs +13.1pp at best N). The cross-encoder's semantic (query, section-content) matching is doing most of the work; heading-token overlap alone is a weak signal on this corpus.
+2. **The gate is selective-safe.** Intent-gating works exactly as designed: v3 heading-gated results are bit-identical to baseline (delta +0.00 on recall/nDCG/MRR — verified). Ungated, the bonus costs only −0.66..−1.78pp nDCG (vs BGE's −16..−19pp), with MRR at the MAR boundary (−1.7pp at N≥50).
+3. **v4 BGE passes every acceptance threshold once the abstention defect is fixed** (nDCG +13.1pp, MRR +15.4pp, verified +15.4pp, abstention 0 candidates, p95 4.7s ≤ 8s, RSS 3.5GB ≤ 4GiB) — but the M8 decision stands: acceptance is defined on the production distribution (v3), where BGE fails MPI/MAR. The v4-only acceptance is a slice artifact, not a production green light.
+4. Gold set v4 abstention query was defective (name collision: "Rick Rubin" matched the author bio at 0.635); replaced with the proven abstention from v3 ("capital of Atlantis", 0 candidates) — committed.
+
+**E2 verdict:** the deterministic structure path clears MPI on the heading slice but is far weaker than the model path and does not change the M8 rejection. E1 (entity-gated BGE) remains the only untested candidate; E3 is meaningful only if E1 passes.
+
 ## 9. Explicit non-goals
 
 - **No global reranking** over all retrieved chunks (M8 rejected; E4 is a control, not a candidate).
