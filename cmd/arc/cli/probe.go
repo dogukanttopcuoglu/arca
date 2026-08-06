@@ -9,6 +9,7 @@ import (
 
 	"arca/internal/eval"
 	"arca/internal/eval/probe"
+	indexingmodel "arca/internal/indexing/model"
 	"arca/internal/qa"
 	qacontext "arca/internal/qa/context"
 	"arca/internal/retrieval/dense"
@@ -29,15 +30,14 @@ type ProbeCollectOptions struct {
 // over the recorded artifact, the kill gate, and the frozen operational
 // budget.
 type ProbeRunOptions struct {
-	ArtifactPath    string
-	GoldSetPath     string
-	BGECommand      string
-	ColbertCommand  string
-	CandidateNs     []int
-	MaxP95Ms        int64
-	MaxRSSBytes     int64
-	ReportPath      string
-	M5Gate          bool
+	ArtifactPath string
+	GoldSetPath  string
+	BGECommand   string
+	CandidateNs  []int
+	MaxP95Ms     int64
+	MaxRSSBytes  int64
+	ReportPath   string
+	M5Gate       bool
 }
 
 // RunProbeCollect generates the candidate artifact from the production
@@ -121,31 +121,13 @@ func (a *App) RunProbe(ctx context.Context, opts ProbeRunOptions) (string, error
 
 	// Model adapters are probe-side exec rerankers; each command speaks the
 	// NDJSON protocol of the probe exec adapter.
-	type execSpec struct {
-		name    string
-		command string
+	if opts.BGECommand == "" {
+		return "", fmt.Errorf("no reranker command configured (--bge-command)")
 	}
-	specs := []execSpec{
-		{name: "bge", command: opts.BGECommand},
-		{name: "colbert", command: opts.ColbertCommand},
-	}
-	execRerankers := make(map[string]*probe.ExecReranker)
-	for _, s := range specs {
-		if s.command == "" {
-			continue
-		}
-		execRerankers[s.name] = probe.NewExecReranker(parseCommand(s.command)...)
-	}
+	execReranker := probe.NewExecReranker(parseCommand(opts.BGECommand)...)
+	defer execReranker.Close()
 
-	rerankerMap := make(map[string]rerank.Reranker, len(execRerankers))
-	for name, e := range execRerankers {
-		rerankerMap[name] = e
-	}
-	defer func() {
-		for _, e := range execRerankers {
-			e.Close()
-		}
-	}()
+	rerankerMap := map[string]rerank.Reranker{"bge": execReranker}
 
 	runner := probe.NewRunner(rerankerMap, probe.Options{
 		Content: a.probeContent(),
@@ -153,13 +135,11 @@ func (a *App) RunProbe(ctx context.Context, opts ProbeRunOptions) (string, error
 	})
 
 	var combos []probe.Combination
-	for name := range execRerankers {
-		for _, n := range opts.CandidateNs {
-			combos = append(combos, probe.Combination{Model: name, N: n})
-		}
+	for _, n := range opts.CandidateNs {
+		combos = append(combos, probe.Combination{Model: "bge", N: n})
 	}
 	if len(combos) == 0 {
-		return "", fmt.Errorf("no reranker commands configured (--bge-command / --colbert-command)")
+		return "", fmt.Errorf("no candidate budgets configured (--n)")
 	}
 
 	rep, err := runner.Run(ctx, &art, gs, combos)
@@ -229,17 +209,23 @@ func (a *App) productionFusionRetriever() (retrievalseam.Retriever, error) {
 	}), nil
 }
 
-// probeContent resolves chunk content from the runtime content store for
-// rerankers and the gate (probe-only path: the artifact records IDs only).
+// probeContent resolves chunk content from the vector store payload
+// (probe-only path: the artifact records IDs only; the production ContentStore
+// is process-local and empty in a fresh probe process — the payload is the
+// durable content source, mirroring the M7 GraphRetriever fix).
 func (a *App) probeContent() func(ctx context.Context, ids []string) ([]string, error) {
 	return func(ctx context.Context, ids []string) ([]string, error) {
-		contents, err := a.runtime.contentStore.GetContent(ctx, ids)
+		points, err := a.runtime.vectorStore.ListPoints(ctx, indexingmodel.MetadataFilter{ChunkIDs: ids})
 		if err != nil {
 			return nil, err
 		}
+		byID := make(map[string]string, len(points))
+		for _, pt := range points {
+			byID[pt.Metadata.ChunkID] = pt.ContentMarkdown
+		}
 		out := make([]string, len(ids))
 		for i, id := range ids {
-			out[i] = contents[id]
+			out[i] = byID[id]
 		}
 		return out, nil
 	}

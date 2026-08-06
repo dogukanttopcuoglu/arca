@@ -20,9 +20,9 @@ type ScoredCandidate struct {
 }
 
 // Reranker abstracts model behavior only: it reorders a candidate list for a
-// query. Adapters (cross-encoder, late-interaction) may use arbitrary score
-// scales; they are never shared across adapters. The wrapper enforces
-// deterministic ordering.
+// query. Adapters (e.g. a cross-encoder) may use arbitrary score scales;
+// they are never shared across adapters. The wrapper enforces deterministic
+// ordering.
 type Reranker interface {
 	// Rerank returns the candidates in reranked order. All input ChunkIDs
 	// must be present exactly once; any missing or extra IDs are ignored.

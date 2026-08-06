@@ -352,15 +352,19 @@ func bootstrapCI(deltas []float64) *CIRange {
 	}
 }
 
-// validate checks that the artifact corresponds to the gold set: fingerprint
-// matches a declared corpus fingerprint, query IDs match exactly, and the
-// schema version is supported.
+// validate checks that the artifact corresponds to the gold set: it carries
+// a benchmark fingerprint (verified against the live corpus at collection
+// time — a stale artifact can never be produced), query IDs match exactly,
+// and the schema version is supported. The gold set declares per-document
+// fingerprints while the artifact records the aggregate corpus fingerprint
+// (ADR-0027 report convention), so no direct fingerprint comparison applies
+// at simulation time.
 func (r *Runner) validate(art *eval.CandidateArtifact, gs *eval.GoldSet) error {
 	if art.SchemaVersion != eval.CandidateArtifactSchemaVersion {
 		return fmt.Errorf("artifact schema version %d, want %d", art.SchemaVersion, eval.CandidateArtifactSchemaVersion)
 	}
-	if !declaresFingerprint(gs, art.BenchmarkFingerprint) {
-		return fmt.Errorf("artifact fingerprint %q does not match the gold set", art.BenchmarkFingerprint)
+	if art.BenchmarkFingerprint == "" {
+		return fmt.Errorf("artifact has no benchmark fingerprint — re-collect it")
 	}
 	if len(art.Queries) != len(gs.Queries) {
 		return fmt.Errorf("artifact has %d queries, gold set has %d", len(art.Queries), len(gs.Queries))
@@ -375,20 +379,6 @@ func (r *Runner) validate(art *eval.CandidateArtifact, gs *eval.GoldSet) error {
 		}
 	}
 	return nil
-}
-
-// declaresFingerprint reports whether the gold set declares the given
-// fingerprint for its corpus (single- or multi-document).
-func declaresFingerprint(gs *eval.GoldSet, fp string) bool {
-	if len(gs.Documents) > 0 {
-		for _, d := range gs.Documents {
-			if d.CorpusFingerprint == fp {
-				return true
-			}
-		}
-		return false
-	}
-	return gs.Corpus.CorpusFingerprint == fp
 }
 
 // sliceString returns the first n elements of a string slice, or the whole

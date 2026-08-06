@@ -167,6 +167,17 @@ func TestProbeFailsOnArtifactGoldSetMismatch(t *testing.T) {
 	}
 }
 
+func TestProbeFailsOnArtifactWithoutFingerprint(t *testing.T) {
+	art, gs := probeArtifact(t)
+	art.BenchmarkFingerprint = ""
+	r := NewRunner(map[string]rerank.Reranker{"reverse": &recordingReranker{}}, Options{})
+
+	_, err := r.Run(context.Background(), art, gs, combos())
+	if err == nil {
+		t.Fatal("expected missing-fingerprint error, got nil")
+	}
+}
+
 func TestProbeRerankerFailureFailsRun(t *testing.T) {
 	art, gs := probeArtifact(t)
 	r := NewRunner(map[string]rerank.Reranker{"reverse": &recordingReranker{fail: true}}, Options{})

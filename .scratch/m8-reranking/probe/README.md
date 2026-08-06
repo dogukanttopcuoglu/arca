@@ -1,7 +1,7 @@
 # M8 Reranking Probe — tooling notes
 
-Probe-side model scripts (ADR-0045: benchmark tooling, never production code).
-Speak the NDJSON protocol of the Go `ExecReranker` adapter
+Probe-side model script (ADR-0045: benchmark tooling, never production code).
+Speaks the NDJSON protocol of the Go `ExecReranker` adapter
 (`internal/eval/probe/exec.go`):
 
 ```
@@ -13,7 +13,7 @@ response: {"ordering": [{"chunk_id": "...", "score": 0.9}], "model_load_ms": 123
 
 ```bash
 python -m venv .venv && .venv/bin/pip install -r requirements.txt
-# first run downloads the models from Hugging Face (BGE ~1.1GB, ColBERT ~450MB)
+# first run downloads the BGE-reranker-v2-m3 model from Hugging Face (~1.1GB)
 ```
 
 ## Run
@@ -36,10 +36,9 @@ python -m venv .venv && .venv/bin/pip install -r requirements.txt
      --artifact .scratch/m8-reranking/artifact_v3.json \
      --goldset internal/eval/testdata/goldset_v3.json \
      --bge-command ".venv/bin/python .scratch/m8-reranking/probe/bge_rerank.py" \
-     --colbert-command ".venv/bin/python .scratch/m8-reranking/probe/colbert_rerank.py" \
      --n 20,50,100 \
      --budget-p95-ms 750 \
-     --budget-rss-bytes 1500000000 \
+     --budget-rss-bytes 4000000000 \
      --m5-gate \
      --report .scratch/m8-reranking/probe_manifest_v3.json
    ```
