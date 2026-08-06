@@ -39,7 +39,7 @@ func TestIndexingWorker_ExecuteSync(t *testing.T) {
 	}
 
 	t.Run("successfully executes sync indexing job end to end", func(t *testing.T) {
-		jobObj, err := w.ExecuteSync(ctx, docID, chunks)
+		jobObj, err := w.ExecuteSync(ctx, docID, "Doc Title", chunks)
 		if err != nil {
 			t.Fatalf("unexpected error during sync execution: %v", err)
 		}
@@ -66,7 +66,7 @@ func TestIndexingWorker_ExecuteSync(t *testing.T) {
 	})
 
 	t.Run("skips unchanged chunks on re-index call", func(t *testing.T) {
-		jobObj, err := w.ExecuteSync(ctx, docID, chunks)
+		jobObj, err := w.ExecuteSync(ctx, docID, "Doc Title", chunks)
 		if err != nil {
 			t.Fatalf("unexpected error during re-index execution: %v", err)
 		}
@@ -116,13 +116,13 @@ func TestIndexingWorker_DeletesRemovedChunkPoints(t *testing.T) {
 		},
 	}
 
-	if _, err := w.ExecuteSync(ctx, docID, threeChunks); err != nil {
+	if _, err := w.ExecuteSync(ctx, docID, "Doc Title", threeChunks); err != nil {
 		t.Fatalf("initial index failed: %v", err)
 	}
 
 	// Section C is removed from the document; only A and B remain.
 	remaining := []pdfmodel.KnowledgeChunk{threeChunks[0], threeChunks[1]}
-	jobObj, err := w.ExecuteSync(ctx, docID, remaining)
+	jobObj, err := w.ExecuteSync(ctx, docID, "Doc Title", remaining)
 	if err != nil {
 		t.Fatalf("re-index failed: %v", err)
 	}
@@ -198,7 +198,7 @@ func TestIndexingWorker_EnumeratesExistingPointsViaListPoints(t *testing.T) {
 		},
 	}
 
-	if _, err := w.ExecuteSync(ctx, docID, chunks); err != nil {
+	if _, err := w.ExecuteSync(ctx, docID, "Doc Title", chunks); err != nil {
 		t.Fatalf("unexpected error during sync execution: %v", err)
 	}
 

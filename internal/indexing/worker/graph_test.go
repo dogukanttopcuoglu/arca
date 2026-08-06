@@ -48,7 +48,7 @@ func TestIndexingWorker_GraphWrites(t *testing.T) {
 			entityChunk("doc-x/notes/003", "Notes", 2, "A passing mention.",
 				mention("Oxford University", pdfmodel.EntityTypeOrganization)),
 		}
-		if _, err := w.ExecuteSync(ctx, "doc-x", chunks); err != nil {
+		if _, err := w.ExecuteSync(ctx, "doc-x", "Doc X", chunks); err != nil {
 			t.Fatalf("execute: %v", err)
 		}
 
@@ -84,7 +84,7 @@ func TestIndexingWorker_GraphWrites(t *testing.T) {
 		if err != nil {
 			t.Fatalf("node before re-index: %v", err)
 		}
-		if _, err := w.ExecuteSync(ctx, "doc-x", chunks); err != nil {
+		if _, err := w.ExecuteSync(ctx, "doc-x", "Doc X", chunks); err != nil {
 			t.Fatalf("re-index: %v", err)
 		}
 		node, err := gs.FindNodeByName(ctx, "World Bank")
@@ -109,7 +109,7 @@ func TestIndexingWorker_GraphWrites(t *testing.T) {
 			entityChunk("doc-w/notes/003", "Notes", 2, "World Bank policy.",
 				mention("World Bank", pdfmodel.EntityTypeOrganization)),
 		}
-		if _, err := w.ExecuteSync(ctx, "doc-w", chunks); err != nil {
+		if _, err := w.ExecuteSync(ctx, "doc-w", "Doc W", chunks); err != nil {
 			t.Fatalf("full index: %v", err)
 		}
 		node, err := gs.FindNodeByName(ctx, "World Bank")
@@ -129,7 +129,7 @@ func TestIndexingWorker_GraphWrites(t *testing.T) {
 			entityChunk("doc-w/notes/003", "Notes", 2, "World Bank policy updated.",
 				mention("World Bank", pdfmodel.EntityTypeOrganization)),
 		}
-		if _, err := w.ExecuteSync(ctx, "doc-w", modified); err != nil {
+		if _, err := w.ExecuteSync(ctx, "doc-w", "Doc W", modified); err != nil {
 			t.Fatalf("partial re-index: %v", err)
 		}
 		node, err = gs.FindNodeByName(ctx, "World Bank")
@@ -160,7 +160,7 @@ func TestIndexingWorker_GraphWrites(t *testing.T) {
 				mention("World Bank", pdfmodel.EntityTypeOrganization),
 				mention("World Bank", pdfmodel.EntityTypeOrganization)),
 		}
-		if _, err := w.ExecuteSync(ctx, "doc-x", chunks); err != nil {
+		if _, err := w.ExecuteSync(ctx, "doc-x", "Doc X", chunks); err != nil {
 			t.Fatalf("re-index with removal: %v", err)
 		}
 		node, err := gs.FindNodeByName(ctx, "World Bank")
@@ -189,7 +189,7 @@ func TestIndexingWorker_GraphWritesOffByDefault(t *testing.T) {
 		entityChunk("doc-y/body/001", "Body", 0, "Content with an entity.",
 			mention("World Bank", pdfmodel.EntityTypeOrganization)),
 	}
-	if _, err := w.ExecuteSync(ctx, "doc-y", chunks); err != nil {
+	if _, err := w.ExecuteSync(ctx, "doc-y", "Doc Y", chunks); err != nil {
 		t.Fatalf("execute without graph store: %v", err)
 	}
 }
@@ -232,7 +232,7 @@ func TestIndexingWorker_GraphFailureFailsJobBeforeVectorUpsert(t *testing.T) {
 			mention("World Bank", pdfmodel.EntityTypeOrganization),
 			mention("World Bank", pdfmodel.EntityTypeOrganization)),
 	}
-	jobObj, err := w.ExecuteSync(ctx, "doc-z", chunks)
+	jobObj, err := w.ExecuteSync(ctx, "doc-z", "Doc Z", chunks)
 	if err == nil {
 		t.Fatal("expected graph failure to fail the job")
 	}

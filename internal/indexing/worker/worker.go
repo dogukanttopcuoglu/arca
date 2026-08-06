@@ -28,6 +28,7 @@ type IndexingWorker struct {
 	contentStore   store.ContentStore
 	sparseProvider sparse.EncoderProvider
 	graphStore     graphstore.GraphStore
+	representation EmbeddingInputRepresentation
 }
 
 // IndexingWorkerOption configures an IndexingWorker instance.
@@ -52,6 +53,15 @@ func WithGraphStore(gs graphstore.GraphStore) IndexingWorkerOption {
 	}
 }
 
+// WithEmbeddingInputRepresentation selects the embedding input representation
+// (ADR-0047). The default is RepresentationContent — production behavior is
+// byte-identical until the ADR-0047 probe accepts a representation.
+func WithEmbeddingInputRepresentation(rep EmbeddingInputRepresentation) IndexingWorkerOption {
+	return func(w *IndexingWorker) {
+		w.representation = rep
+	}
+}
+
 // NewIndexingWorker constructs an IndexingWorker instance.
 func NewIndexingWorker(p provider.EmbeddingProvider, s store.VectorStore, c store.ContentStore, opts ...IndexingWorkerOption) *IndexingWorker {
 	w := &IndexingWorker{
@@ -66,7 +76,9 @@ func NewIndexingWorker(p provider.EmbeddingProvider, s store.VectorStore, c stor
 }
 
 // ExecuteSync executes document indexing synchronously and returns the completed IndexingJob.
-func (w *IndexingWorker) ExecuteSync(ctx context.Context, documentID string, chunks []pdfmodel.KnowledgeChunk) (*indexingjob.IndexingJob, error) {
+// documentTitle feeds the ADR-0047 embedding input representation (BookPath);
+// it is passed through to the embedding input builder, never stored.
+func (w *IndexingWorker) ExecuteSync(ctx context.Context, documentID, documentTitle string, chunks []pdfmodel.KnowledgeChunk) (*indexingjob.IndexingJob, error) {
 	if documentID == "" {
 		return nil, fmt.Errorf("documentID cannot be empty")
 	}
@@ -157,7 +169,7 @@ func (w *IndexingWorker) ExecuteSync(ctx context.Context, documentID string, chu
 		batchChunks := chunksToEmbed[idx:end]
 		texts := make([]string, len(batchChunks))
 		for bIdx, chk := range batchChunks {
-			texts[bIdx] = chk.ContentMarkdown
+			texts[bIdx] = BuildEmbeddingInput(chk, documentTitle, w.representation)
 		}
 
 		embRes, err := w.provider.EmbedDocuments(ctx, texts)
@@ -201,7 +213,7 @@ func (w *IndexingWorker) ExecuteSync(ctx context.Context, documentID string, chu
 	if w.sparseProvider != nil && len(chunksToEmbed) > 0 {
 		docChunks := make([]sparse.DocumentChunk, len(chunksToEmbed))
 		for i, chk := range chunksToEmbed {
-			docChunks[i] = sparse.DocumentChunk{ID: chk.ChunkID, Content: chk.ContentMarkdown}
+			docChunks[i] = sparse.DocumentChunk{ID: chk.ChunkID, Content: BuildEmbeddingInput(chk, documentTitle, w.representation)}
 		}
 		encoder, err := w.sparseProvider.Encoder(ctx, docChunks)
 		if err != nil {
@@ -209,7 +221,7 @@ func (w *IndexingWorker) ExecuteSync(ctx context.Context, documentID string, chu
 			return jobObj, err
 		}
 		for i := range newPoints {
-			vec, err := encoder.Encode(ctx, chunksToEmbed[i].ContentMarkdown)
+			vec, err := encoder.Encode(ctx, BuildEmbeddingInput(chunksToEmbed[i], documentTitle, w.representation))
 			if err != nil {
 				jobObj.SetError(err)
 				return jobObj, err

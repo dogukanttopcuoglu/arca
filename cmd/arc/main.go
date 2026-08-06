@@ -64,6 +64,10 @@ func main() {
 			runProbe(ctx, app, os.Args[3:])
 			return
 		}
+		if len(os.Args) > 2 && os.Args[2] == "embed-probe" {
+			runEmbedProbe(ctx, app, os.Args[3:])
+			return
+		}
 		fs := flag.NewFlagSet("eval", flag.ExitOnError)
 		goldset := fs.String("goldset", "internal/eval/testdata/goldset_v1.json", "path to the gold set JSON")
 		mode := fs.String("mode", "dense", "retrieval mode: dense|sparse|hybrid")
@@ -119,8 +123,7 @@ func main() {
 // runProbe dispatches the M8 probe subcommands: `arc eval probe collect`
 // records the candidate artifact; `arc eval probe run` simulates rerankers
 // and evaluates the kill gate (ADR-0045).
-func runProbe(ctx context.Context, app *arccli.App, args []string) {
-	if len(args) < 1 {
+func runProbe(ctx context.Context, app *arccli.App, args []string) {	if len(args) < 1 {
 		fmt.Println("Usage: arc eval probe [collect|run] <args>")
 		os.Exit(1)
 	}
@@ -150,7 +153,6 @@ func runProbe(ctx context.Context, app *arccli.App, args []string) {
 		artifact := fs.String("artifact", "", "path to the candidate artifact (required)")
 		goldset := fs.String("goldset", "", "path to the gold set JSON (required)")
 		bgeCommand := fs.String("bge-command", "", "command running the BGE cross-encoder reranker script")
-		colbertCommand := fs.String("colbert-command", "", "command running the ColBERTv2 late-interaction reranker script")
 		candidateNs := fs.String("n", "20,50,100", "comma-separated candidate budgets N to sweep")
 		maxP95 := fs.Int64("budget-p95-ms", 0, "frozen p95 rerank latency budget (ms)")
 		maxRSS := fs.Int64("budget-rss-bytes", 0, "frozen model memory budget (bytes)")
@@ -173,7 +175,6 @@ func runProbe(ctx context.Context, app *arccli.App, args []string) {
 			ArtifactPath:   *artifact,
 			GoldSetPath:    *goldset,
 			BGECommand:     *bgeCommand,
-			ColbertCommand: *colbertCommand,
 			CandidateNs:    ns,
 			MaxP95Ms:       *maxP95,
 			MaxRSSBytes:    *maxRSS,
@@ -204,4 +205,32 @@ func parseMode(s string) (retrievalseam.RetrievalMode, error) {
 	default:
 		return 0, fmt.Errorf("unknown retrieval mode %q", s)
 	}
+}
+
+// runEmbedProbe dispatches the ADR-0047 embedding representation probe:
+// re-embeds the live corpus per representation into probe collections and
+// measures Gold Set v3 + v4 (heading slice) against each.
+func runEmbedProbe(ctx context.Context, app *arccli.App, args []string) {
+	fs := flag.NewFlagSet("eval embed-probe", flag.ExitOnError)
+	goldsetV3 := fs.String("goldset-v3", "internal/eval/testdata/goldset_v3.json", "path to Gold Set v3 (regression canary)")
+	goldsetV4 := fs.String("goldset-v4", "internal/eval/testdata/goldset_v4.json", "path to Gold Set v4 (heading slice)")
+	inspectionDir := fs.String("inspection-dir", "", "directory of inspection results for document titles (optional)")
+	reps := fs.String("reps", "a,b,c,d", "representations to probe: a,b,c,d")
+	report := fs.String("report", "", "path to write the JSON probe report")
+	if err := fs.Parse(args); err != nil {
+		fmt.Printf("Error: %v\n", err)
+		os.Exit(1)
+	}
+	out, err := app.RunEmbedProbe(ctx, arccli.EmbedProbeOptions{
+		GoldSetV3Path:   *goldsetV3,
+		GoldSetV4Path:   *goldsetV4,
+		InspectionDir:   *inspectionDir,
+		ReportPath:      *report,
+		Representations: *reps,
+	})
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		os.Exit(1)
+	}
+	fmt.Println(out)
 }

@@ -101,7 +101,7 @@ func TestIndexingWorker_EncodesSparseVectors(t *testing.T) {
 		},
 	}
 
-	job, err := w.ExecuteSync(ctx, "doc-1", chunks)
+	job, err := w.ExecuteSync(ctx, "doc-1", "Doc 1", chunks)
 	require.NoError(t, err)
 	require.Equal(t, 2, job.IndexedChunks)
 
@@ -137,7 +137,7 @@ func TestIndexingWorker_WithoutSparseProvider(t *testing.T) {
 		},
 	}
 
-	job, err := w.ExecuteSync(ctx, "doc-1", chunks)
+	job, err := w.ExecuteSync(ctx, "doc-1", "Doc 1", chunks)
 	require.NoError(t, err)
 	require.Equal(t, 1, job.IndexedChunks)
 	require.Len(t, storeImpl.lastUpserted, 1)

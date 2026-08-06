@@ -74,7 +74,7 @@ func (a *App) RunInspect(ctx context.Context, filePath string) (string, error) {
 		return "", fmt.Errorf("inspection failed: %w", err)
 	}
 
-	jobObj, err := a.runtime.indexingWorker.ExecuteSync(ctx, result.Document.DocumentID, result.Chunks)
+	jobObj, err := a.runtime.indexingWorker.ExecuteSync(ctx, result.Document.DocumentID, result.Document.Title, result.Chunks)
 	if err != nil {
 		return "", fmt.Errorf("indexing failed: %w", err)
 	}
