@@ -31,6 +31,9 @@ type EvalOptions struct {
 	// M5Gate enables the pre-generation semantic evidence gate over each
 	// query's assembled context, producing the M5 report section.
 	M5Gate bool
+	// GateRuns repeats each gate evaluation (default 1) and records the
+	// median decision, stabilizing gate metrics against LLM variance.
+	GateRuns int
 	// ComparisonTopK is the M6 evidence budget for comparison queries
 	// (ADR-0037), applied by the runner for calibration runs.
 	ComparisonTopK int
@@ -143,6 +146,7 @@ func (a *App) RunEval(ctx context.Context, opts EvalOptions) (string, error) {
 			GraphWeight:       opts.GraphWeight,
 			GraphOnly:         opts.GraphOnly,
 			GraphFusionConfig: graphFusionConfig,
+			GateRuns:          opts.GateRuns,
 			CorpusTexts: func() ([]string, error) {
 				return corpusSource{store: a.runtime.vectorStore}.CorpusTexts(context.Background())
 			},

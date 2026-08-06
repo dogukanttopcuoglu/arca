@@ -30,3 +30,4 @@ M7's "does the graph signal work" question is settled by a dedicated benchmark d
 
 - A new gold set file (schema 1.2 multi-doc, own fingerprint) is produced during build from this specification; gold set v2 and its fingerprint `8b21a664…` remain untouched.
 - Ticket 06 (fusion path) is the remaining open decision; ticket 08 (orchestration gate) depends on 06 + this benchmark's outcome.
+- **Gate-metric variance (errata 2026-08-05):** the M5 gate metrics (no_evidence_precision, abstention recall/precision, generation-skipped) come from LLM decisions and vary between runs — observed precision 0.500 vs 0.444 on identical retrieval. Retrieval metrics are deterministic. To stabilize the acceptance surface, `arc eval --gate-runs N` repeats each gate evaluation and records the median decision (retrieval runs once, retrieval metrics unchanged). Gate-metric acceptance should be read against this variance band; retrieval metrics remain the primary acceptance surface.

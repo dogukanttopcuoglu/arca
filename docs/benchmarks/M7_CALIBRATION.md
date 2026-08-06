@@ -32,3 +32,7 @@
 **GraphWeight freezes at 1.0** (highest-gain accepting point, regression-free). Production activation follows ADR-0042: `RETRIEVAL_GRAPH_WEIGHT=1.0`, entity intent + `UseGraph` gate, `WithGraphRetriever` engine injection. The eval flags remain the experiment surface for future re-calibration.
 
 Reports: `m7_dense_v1.json`, `m7_graphonly_v1.json`, `m7_fusion_w05.json`, `m7_fusion_w10.json`, `m7_fusion_w20.json`. Gold set: `internal/eval/testdata/goldset_v3.json`.
+
+## Gate-metric variance (M7 review BULGU-2, 2026-08-05)
+
+The M5 gate metrics are LLM decisions and vary between runs: a repeat of the frozen w1.0 config reproduced the retrieval metrics byte-identically (entity 0.840/0.938, outside 1.000/0.873) but gate precision differed 0.500 → 0.444. Retrieval metrics are deterministic; gate metrics are not. Mitigation introduced: `arc eval --gate-runs N` repeats each gate evaluation (median decision wins) without touching retrieval metrics or the gate contract; acceptance should read gate metrics against this variance band, with retrieval metrics as the primary surface.

@@ -3,6 +3,7 @@ package eval
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -50,6 +51,11 @@ type Options struct {
 	Gate         qa.EvidenceGate
 	GateProvider string
 	GateModel    string
+	// GateRuns repeats each gate evaluation (default 1) and records the
+	// median decision, stabilizing gate metrics against LLM variance
+	// (M7 review BULGU-2). Retrieval runs once; retrieval metrics are
+	// unaffected.
+	GateRuns int
 	// ComparisonTopK is the M6 evidence budget for comparison-intent queries
 	// (ADR-0037): the effective TopK for those queries, mirroring the
 	// orchestrator's TopKOverride. Zero keeps TopK for every intent.
@@ -115,6 +121,7 @@ func (r *Runner) Run(ctx context.Context, gs *GoldSet) (*Report, error) {
 			GraphWeight:       r.opts.GraphWeight,
 			GraphOnly:         r.opts.GraphOnly,
 			GraphFusionConfig: r.opts.GraphFusionConfig,
+			GateRuns:          effectiveGateRuns(r.opts.GateRuns),
 		},
 	}
 	if len(gs.Documents) > 0 {
@@ -222,17 +229,15 @@ func (r *Runner) Run(ctx context.Context, gs *GoldSet) (*Report, error) {
 
 		// M5 evidence gate (ADR-0034): empty retrieval abstains immediately
 		// without a gate call, mirroring the AnswerEngine flow. Only real
-		// gate evaluations are recorded as observations.
+		// gate evaluations are recorded as observations. With GateRuns > 1
+		// the gate is evaluated repeatedly and the median decision wins —
+		// stabilizing the gate metrics against LLM variance (M7 review
+		// BULGU-2); retrieval runs once and its metrics are unchanged.
 		if r.opts.Gate != nil && len(results) > 0 {
 			win := &qacontext.ContextWindow{Content: content.String()}
-			decision, retries, latency, gateErr := r.evaluateGate(ctx, q.Query, win)
-			obs := &GateObservation{
-				Decision:  string(decision),
-				LatencyMs: latency,
-				Retries:   retries,
-			}
-			if gateErr != nil {
-				obs.Error = gateErr.Error()
+			obs, err := r.evaluateGateRepeated(ctx, q.Query, win)
+			if err != nil {
+				return nil, err
 			}
 			qres.Gate = obs
 		}
@@ -282,6 +287,15 @@ func (r *Runner) Run(ctx context.Context, gs *GoldSet) (*Report, error) {
 	return report, nil
 }
 
+// effectiveGateRuns normalizes the configured run count (0 or negative ->
+// 1), so the manifest always records what actually ran.
+func effectiveGateRuns(runs int) int {
+	if runs <= 0 {
+		return 1
+	}
+	return runs
+}
+
 // evaluateGate runs the M5 gate with the same one-retry policy as the
 // AnswerEngine: supported and unsupported decisions return immediately;
 // operational failures retry once and surface as GateError.
@@ -301,6 +315,73 @@ func (r *Runner) evaluateGate(ctx context.Context, query string, win *qacontext.
 		return decision, retries, time.Since(start).Milliseconds(), nil
 	}
 	return qa.EvidenceGateFailed, retries, time.Since(start).Milliseconds(), lastErr
+}
+
+// evaluateGateRepeated evaluates the gate GateRuns times (default 1) and
+// records the median decision with mean latency and the surviving decision's
+// retry count. The median stabilizes gate metrics against LLM variance;
+// decisions are ordered supported < unsupported < gate_error, and even run
+// counts take the lower median so a tie never tips toward gate_error.
+func (r *Runner) evaluateGateRepeated(ctx context.Context, query string, win *qacontext.ContextWindow) (*GateObservation, error) {
+	runs := r.opts.GateRuns
+	if runs <= 0 {
+		runs = 1
+	}
+
+	type gateRun struct {
+		decision qa.EvidenceDecision
+		retries  int
+		latency  int64
+		err      error
+	}
+	runData := make([]gateRun, 0, runs)
+	for i := 0; i < runs; i++ {
+		decision, retries, latency, err := r.evaluateGate(ctx, query, win)
+		runData = append(runData, gateRun{decision: decision, retries: retries, latency: latency, err: err})
+	}
+
+	decisions := make([]qa.EvidenceDecision, len(runData))
+	for i, rd := range runData {
+		decisions[i] = rd.decision
+	}
+	median := medianDecision(decisions)
+
+	var latencySum int64
+	retries := 0
+	var medianErr error
+	for _, rd := range runData {
+		latencySum += rd.latency
+		if rd.decision == median {
+			// The surviving decision's first occurrence carries its retry
+			// count and error (later runs with the same decision may differ).
+			retries = rd.retries
+			medianErr = rd.err
+			break
+		}
+	}
+	obs := &GateObservation{
+		Decision:  string(median),
+		LatencyMs: latencySum / int64(len(runData)),
+		Retries:   retries,
+	}
+	if median == qa.EvidenceGateFailed && medianErr != nil {
+		obs.Error = medianErr.Error()
+	}
+	return obs, nil
+}
+
+// medianDecision returns the lower median of the given decisions under the
+// total order supported < unsupported < gate_error: even counts take the
+// lower of the two middle values, so a tie never tips toward gate_error.
+func medianDecision(decisions []qa.EvidenceDecision) qa.EvidenceDecision {
+	rank := map[qa.EvidenceDecision]int{
+		qa.EvidenceSupported:   0,
+		qa.EvidenceUnsupported: 1,
+		qa.EvidenceGateFailed:  2,
+	}
+	sorted := append([]qa.EvidenceDecision(nil), decisions...)
+	sort.Slice(sorted, func(i, j int) bool { return rank[sorted[i]] < rank[sorted[j]] })
+	return sorted[(len(sorted)-1)/2]
 }
 
 // computeM5Metrics derives semantic-abstention measurements from the recorded

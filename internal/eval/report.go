@@ -49,6 +49,7 @@ type RetrievalConfig struct {
 	GraphWeight       float64                        `json:"graph_weight,omitempty"`
 	GraphOnly         bool                           `json:"graph_only,omitempty"`
 	GraphFusionConfig *graphfusion.GraphFusionConfig `json:"graph_fusion_config,omitempty"`
+	GateRuns          int                            `json:"gate_runs,omitempty"`
 }
 
 // Metrics aggregates retrieval quality over the gold set. Recall, precision,
