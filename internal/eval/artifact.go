@@ -29,8 +29,10 @@ type CandidateArtifact struct {
 
 // ArtifactQuery is one gold set query's recorded candidate list.
 // CandidateScores are informational only (ADR-0044 ordering contract —
-// scales are never comparable across rerankers). RerankerOrdering is filled
-// by the probe simulation, never by collection.
+// scales are never comparable across rerankers). Reranker output orderings
+// are recorded per combination in the probe report, not here: six
+// combinations cannot share one field, and the artifact must stay a
+// re-runnable, immutable baseline record (ADR-0045).
 type ArtifactQuery struct {
 	QueryID            string           `json:"query_id"`
 	Query              string           `json:"query"`
@@ -39,7 +41,6 @@ type ArtifactQuery struct {
 	Candidates         []string         `json:"candidates"`
 	CandidateScores    []float32        `json:"candidate_scores"`
 	BaselineStats      *retrievalseam.RetrievalStats `json:"baseline_stats,omitempty"`
-	RerankerOrdering   []string         `json:"reranker_ordering,omitempty"`
 }
 
 // CollectCandidateArtifact runs the gold set through the given retriever at

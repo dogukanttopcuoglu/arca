@@ -238,6 +238,59 @@ func TestProbeBootstrapCIDeterministic(t *testing.T) {
 	}
 }
 
+func TestProbePairsDeltasWithEmptyCandidateQueries(t *testing.T) {
+	art, gs := probeArtifact(t)
+	// q1 has empty candidates (artifact anomaly): the reranked result is
+	// empty, and its delta must pair with q1's own baseline (0), not shift
+	// q2's pairing (probe review finding C1).
+	art.Queries[0].Candidates = nil
+	art.Queries[0].CandidateScores = nil
+	r := NewRunner(map[string]rerank.Reranker{"reverse": &recordingReranker{}}, Options{})
+
+	rep, err := r.Run(context.Background(), art, gs, []Combination{{Model: "reverse", N: 5}})
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	c := rep.Combinations[0]
+	if c.BootstrapCI == nil {
+		t.Fatal("bootstrap CI must still be computed with an empty-candidate query")
+	}
+	// q1: 0-0 = 0 pp; q2: 0.5-1.0 = -50 pp; median strictly negative.
+	if c.BootstrapCI.DeltaMedianPp >= 0 {
+		t.Fatalf("median delta = %.3f pp, want negative (q1 pairing preserved)", c.BootstrapCI.DeltaMedianPp)
+	}
+	// Every non-abstention query is recorded in the ordering map, including
+	// the empty one.
+	if orderings, ok := c.RerankerOrdering["q1"]; !ok || len(orderings) != 0 {
+		t.Fatalf("q1 reranker ordering = %v (present=%v), want empty entry", orderings, ok)
+	}
+}
+
+// reportingReranker records operational metrics like the exec adapter.
+type reportingReranker struct {
+	recordingReranker
+}
+
+func (r *reportingReranker) RSSBytes() int64   { return 2048 }
+func (r *reportingReranker) LoadTimeMs() int64 { return 42 }
+
+func TestProbeReportsColdLoadAndRSS(t *testing.T) {
+	art, gs := probeArtifact(t)
+	r := NewRunner(map[string]rerank.Reranker{"reverse": &reportingReranker{recordingReranker: recordingReranker{}}}, Options{})
+
+	rep, err := r.Run(context.Background(), art, gs, []Combination{{Model: "reverse", N: 5}})
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	c := rep.Combinations[0]
+	if c.ColdLoadMs != 42 {
+		t.Fatalf("cold load = %d, want 42 from loadReporter", c.ColdLoadMs)
+	}
+	if c.MaxRSSBytes != 2048 {
+		t.Fatalf("rss = %d, want 2048 from loadReporter", c.MaxRSSBytes)
+	}
+}
+
 func TestPercentile(t *testing.T) {
 	values := []int64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
 	if got := percentile(values, 50); got != 5 {

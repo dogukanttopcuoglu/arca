@@ -104,9 +104,6 @@ func TestCollectCandidateArtifactRecordsCandidates(t *testing.T) {
 	if len(q1.CandidateScores) != 3 || q1.CandidateScores[0] != 0.95 {
 		t.Fatalf("q1 scores = %v, want informational scores", q1.CandidateScores)
 	}
-	if q1.RerankerOrdering != nil {
-		t.Fatalf("reranker ordering must be empty before simulation, got %v", q1.RerankerOrdering)
-	}
 }
 
 func TestCollectCandidateArtifactRequestsCandidateTopK(t *testing.T) {

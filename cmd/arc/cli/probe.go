@@ -141,6 +141,11 @@ func (a *App) RunProbe(ctx context.Context, opts ProbeRunOptions) (string, error
 	for name, e := range execRerankers {
 		rerankerMap[name] = e
 	}
+	defer func() {
+		for _, e := range execRerankers {
+			e.Close()
+		}
+	}()
 
 	runner := probe.NewRunner(rerankerMap, probe.Options{
 		Content: a.probeContent(),
@@ -160,9 +165,6 @@ func (a *App) RunProbe(ctx context.Context, opts ProbeRunOptions) (string, error
 	rep, err := runner.Run(ctx, &art, gs, combos)
 	if err != nil {
 		return "", err
-	}
-	for _, e := range execRerankers {
-		e.Close()
 	}
 
 	budget := probe.Budget{MaxRerankP95Ms: opts.MaxP95Ms, MaxRSSBytes: opts.MaxRSSBytes}

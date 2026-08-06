@@ -155,7 +155,7 @@ func runProbe(ctx context.Context, app *arccli.App, args []string) {
 		maxP95 := fs.Int64("budget-p95-ms", 0, "frozen p95 rerank latency budget (ms)")
 		maxRSS := fs.Int64("budget-rss-bytes", 0, "frozen model memory budget (bytes)")
 		report := fs.String("report", "", "path to write the JSON manifest")
-		m5gate := fs.Bool("m5-gate", false, "evaluate the M5 semantic evidence gate per combination")
+		m5gate := fs.Bool("m5-gate", true, "evaluate the M5 semantic evidence gate per combination (ADR-0045: answer quality is measured on every combination; disable only for ranking-only runs)")
 		if err := fs.Parse(args[1:]); err != nil {
 			fmt.Printf("Error: %v\n", err)
 			os.Exit(1)

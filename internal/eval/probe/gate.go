@@ -35,48 +35,48 @@ type Outcome struct {
 }
 
 // Evaluate applies the frozen acceptance thresholds to the probe report and
-// selects the winning combination deterministically: highest quality among
-// accepted combinations; within the selection tolerance, the smallest N.
-// "None accepted" is a first-class outcome — no forced winner.
+// selects the winning combination deterministically (ADR-0045): among
+// accepted combinations, the highest quality wins; combinations within the
+// selection tolerance of the best quality are ranked by smallest N. The
+// selection is order-independent: it first finds the best accepted quality,
+// then picks among the tolerance band by N. "None accepted" is a first-class
+// outcome — no forced winner.
 func Evaluate(rep *ProbeReport, budget Budget) Outcome {
-	best := -1
 	bestNDCG := 0.0
+	hasAccepted := false
 	for i := range rep.Combinations {
 		c := &rep.Combinations[i]
-		if !c.AbstentionAligned {
+		if !accepts(c, rep, budget) {
 			continue
 		}
-		ndcgDeltaPp := (c.NDCGAt5 - rep.Baseline.NDCGAt5) * 100
-		if ndcgDeltaPp < MPI {
-			continue
-		}
-		if (c.MRR-rep.Baseline.MRR)*100 < -MARMRR {
-			continue
-		}
-		if c.GateEvaluations > 0 && rep.Baseline.GateEvaluations > 0 {
-			if (c.VerifiedRate-rep.Baseline.VerifiedRate)*100 < -MARVerified {
-				continue
-			}
-		}
-		if c.P95LatencyMs > float64(budget.MaxRerankP95Ms) || c.MaxRSSBytes > budget.MaxRSSBytes {
-			continue
-		}
-		if best == -1 || c.NDCGAt5 > bestNDCG*(1+selectionTolerance) {
-			best = i
-			bestNDCG = c.NDCGAt5
-		} else if c.NDCGAt5 >= bestNDCG && rep.Combinations[best].CandidateN > c.CandidateN {
-			// Within tolerance of the best nDCG: the smallest N wins.
-			best = i
+		hasAccepted = true
+		if c.NDCGAt5 > bestNDCG {
 			bestNDCG = c.NDCGAt5
 		}
 	}
 
-	if best == -1 {
+	if !hasAccepted {
 		return Outcome{
 			Accepted: false,
 			Reason:   "no combination passes the frozen thresholds (MPI/MAR/abstention/budget)",
 		}
 	}
+
+	// Within tolerance of the best quality, the smallest N wins.
+	best := -1
+	for i := range rep.Combinations {
+		c := &rep.Combinations[i]
+		if !accepts(c, rep, budget) {
+			continue
+		}
+		if c.NDCGAt5 < bestNDCG*(1-selectionTolerance) {
+			continue
+		}
+		if best == -1 || rep.Combinations[best].CandidateN > c.CandidateN {
+			best = i
+		}
+	}
+
 	w := rep.Combinations[best]
 	return Outcome{
 		Accepted:      true,
@@ -84,4 +84,28 @@ func Evaluate(rep *ProbeReport, budget Budget) Outcome {
 		SelectedModel: w.Model,
 		SelectedN:     w.CandidateN,
 	}
+}
+
+// accepts reports whether a combination passes every frozen threshold:
+// MPI on nDCG@5, MAR on MRR and verified rate, abstention alignment, and the
+// operational budget.
+func accepts(c *CombinationResult, rep *ProbeReport, budget Budget) bool {
+	if !c.AbstentionAligned {
+		return false
+	}
+	if (c.NDCGAt5-rep.Baseline.NDCGAt5)*100 < MPI {
+		return false
+	}
+	if (c.MRR-rep.Baseline.MRR)*100 < -MARMRR {
+		return false
+	}
+	if c.GateEvaluations > 0 && rep.Baseline.GateEvaluations > 0 {
+		if (c.VerifiedRate-rep.Baseline.VerifiedRate)*100 < -MARVerified {
+			return false
+		}
+	}
+	if c.P95LatencyMs > float64(budget.MaxRerankP95Ms) || c.MaxRSSBytes > budget.MaxRSSBytes {
+		return false
+	}
+	return true
 }

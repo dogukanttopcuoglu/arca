@@ -188,13 +188,35 @@ func TestRerankedRetrieverScaleIndependentOrdering(t *testing.T) {
 		return ids(got)
 	}
 
-	bigScale := &fakeReranker{preference: []string{"b", "a", "c"}}
-	smallScale := &fakeReranker{preference: []string{"b", "a", "c"}}
+	bigScale := &scoredReranker{preference: []string{"b", "a", "c"}, scale: func(i int) float32 { return float32(i) * 1000 }}
+	smallScale := &scoredReranker{preference: []string{"b", "a", "c"}, scale: func(i int) float32 { return float32(i) / 1000 }}
 	first := run(NewRerankedRetriever(inner, Config{CandidateBudget: 10, Reranker: bigScale}))
 	second := run(NewRerankedRetriever(inner, Config{CandidateBudget: 10, Reranker: smallScale}))
 	if !equal(first, second) {
 		t.Fatalf("scale dependence: %v vs %v", first, second)
 	}
+}
+
+// scoredReranker assigns each candidate a score from the given scale
+// function, ordered by preference; it exists to prove the wrapper never
+// interprets absolute scores (ADR-0044 ordering contract).
+type scoredReranker struct {
+	preference []string
+	scale      func(index int) float32
+}
+
+func (f *scoredReranker) Rerank(ctx context.Context, query string, candidates []retrievalseam.SearchResult) ([]ScoredCandidate, error) {
+	byID := make(map[string]float32, len(candidates))
+	for i, c := range candidates {
+		byID[c.ChunkID] = f.scale(i)
+	}
+	out := make([]ScoredCandidate, 0, len(candidates))
+	for _, id := range f.preference {
+		if score, ok := byID[id]; ok {
+			out = append(out, ScoredCandidate{ChunkID: id, Score: score})
+		}
+	}
+	return out, nil
 }
 
 func TestRerankedRetrieverDeterministicAcrossRuns(t *testing.T) {

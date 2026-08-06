@@ -126,3 +126,35 @@ func TestGateNoneAccepted(t *testing.T) {
 		t.Fatalf("selection = %s N=%d, want empty on rejection", out.SelectedModel, out.SelectedN)
 	}
 }
+
+func TestGateSelectsSmallestNAmongToleranceBelowBest(t *testing.T) {
+	rep := gateFixture()
+	// N=20 at 0.910 sits within 5% below the best (0.938*0.95 = 0.8911):
+	// the smallest N must win over the better-quality N=50 (ADR-0045
+	// selection rule).
+	rep.Combinations[0].NDCGAt5 = 0.910
+	rep.Combinations[1].NDCGAt5 = 0.938
+
+	out := Evaluate(rep, Budget{MaxRerankP95Ms: 500, MaxRSSBytes: 1 << 30})
+	if !out.Accepted {
+		t.Fatalf("expected acceptance, got reject: %s", out.Reason)
+	}
+	if out.SelectedN != 20 {
+		t.Fatalf("selection = N=%d, want 20 (within tolerance of best)", out.SelectedN)
+	}
+}
+
+func TestGateSelectionIsOrderIndependent(t *testing.T) {
+	rep := gateFixture()
+	rep.Combinations[0].NDCGAt5 = 0.910
+	rep.Combinations[1].NDCGAt5 = 0.938
+	rep.Combinations = []CombinationResult{rep.Combinations[1], rep.Combinations[0]}
+
+	out := Evaluate(rep, Budget{MaxRerankP95Ms: 500, MaxRSSBytes: 1 << 30})
+	if !out.Accepted {
+		t.Fatalf("expected acceptance, got reject: %s", out.Reason)
+	}
+	if out.SelectedN != 20 {
+		t.Fatalf("selection = N=%d, want 20 regardless of combination order", out.SelectedN)
+	}
+}

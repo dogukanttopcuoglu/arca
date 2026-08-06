@@ -86,13 +86,15 @@ func (r *RerankedRetriever) Retrieve(ctx context.Context, query retrievalseam.Re
 		query.Stats.Reranked = true
 	}
 
-	return applyOrdering(innerResults, ordered, query.TopK), nil
+	return StabilizeOrdering(innerResults, ordered, query.TopK), nil
 }
 
-// applyOrdering maps the reranker's ordered candidates back to SearchResults
-// and stabilizes equal-score groups deterministically by ChunkID ASC. Scores
-// in the output are the reranker's informational scores.
-func applyOrdering(inner []retrievalseam.SearchResult, ordered []ScoredCandidate, topK int) []retrievalseam.SearchResult {
+// StabilizeOrdering maps the reranker's ordered candidates back to
+// SearchResults and stabilizes equal-score groups deterministically by
+// ChunkID ASC (ADR-0044 tie-break contract). Scores in the output are the
+// reranker's informational scores. It is the single enforcement point of the
+// ordering contract, shared by the wrapper and the probe harness.
+func StabilizeOrdering(inner []retrievalseam.SearchResult, ordered []ScoredCandidate, topK int) []retrievalseam.SearchResult {
 	byID := make(map[string]retrievalseam.SearchResult, len(inner))
 	for _, res := range inner {
 		byID[res.ChunkID] = res

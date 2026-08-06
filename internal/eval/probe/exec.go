@@ -94,9 +94,12 @@ func (e *ExecReranker) Close() error {
 	if e.proc == nil {
 		return nil
 	}
-	e.stdin.Close()
+	if e.stdin != nil {
+		e.stdin.Close()
+	}
 	err := e.proc.Wait()
 	e.proc = nil
+	e.stdin = nil
 	return err
 }
 
@@ -148,6 +151,9 @@ func (e *ExecReranker) spawn() error {
 	}
 	e.proc.Stderr = os.Stderr
 	if err := e.proc.Start(); err != nil {
+		// Leave proc nil on failure so a later call retries spawning
+		// instead of panicking on a half-initialized process.
+		e.proc = nil
 		return fmt.Errorf("spawn model process: %w", err)
 	}
 	e.stdin = stdin

@@ -69,18 +69,20 @@ type CIRange struct {
 
 // CombinationResult is one (model, N) measurement (ADR-0045).
 type CombinationResult struct {
-	Model             string   `json:"model"`
-	CandidateN        int      `json:"candidate_n"`
-	NDCGAt5           float64  `json:"ndcg_at_5"`
-	MRR               float64  `json:"mrr"`
-	RerankedQueries   int      `json:"reranked_queries"`
-	AbstentionAligned bool     `json:"abstention_aligned"`
-	P50LatencyMs      float64  `json:"p50_latency_ms"`
-	P95LatencyMs      float64  `json:"p95_latency_ms"`
-	MaxRSSBytes       int64    `json:"max_rss_bytes,omitempty"`
-	BootstrapCI       *CIRange `json:"bootstrap_ci,omitempty"`
-	GateEvaluations   int      `json:"gate_evaluations,omitempty"`
-	VerifiedRate      float64  `json:"verified_rate,omitempty"`
+	Model             string              `json:"model"`
+	CandidateN        int                 `json:"candidate_n"`
+	NDCGAt5           float64             `json:"ndcg_at_5"`
+	MRR               float64             `json:"mrr"`
+	RerankedQueries   int                 `json:"reranked_queries"`
+	AbstentionAligned bool                `json:"abstention_aligned"`
+	P50LatencyMs      float64             `json:"p50_latency_ms"`
+	P95LatencyMs      float64             `json:"p95_latency_ms"`
+	ColdLoadMs        int64               `json:"cold_load_ms,omitempty"`
+	MaxRSSBytes       int64               `json:"max_rss_bytes,omitempty"`
+	BootstrapCI       *CIRange            `json:"bootstrap_ci,omitempty"`
+	RerankerOrdering  map[string][]string `json:"reranker_ordering,omitempty"`
+	GateEvaluations   int                 `json:"gate_evaluations,omitempty"`
+	VerifiedRate      float64             `json:"verified_rate,omitempty"`
 }
 
 // ProbeReport is the full probe outcome (ADR-0045): baseline plus every
@@ -156,6 +158,9 @@ func (r *Runner) Run(ctx context.Context, art *eval.CandidateArtifact, gs *eval.
 	}
 
 	for _, combo := range combos {
+		if combo.N > art.CandidateTopK {
+			return nil, fmt.Errorf("combination %s N=%d exceeds the artifact's candidate top N %d — re-collect the artifact (probe review C2)", combo.Model, combo.N, art.CandidateTopK)
+		}
 		rr, ok := r.rerankers[combo.Model]
 		if !ok {
 			return nil, fmt.Errorf("reranker %q is not registered", combo.Model)
@@ -184,7 +189,7 @@ func (r *Runner) evaluateCombination(
 	topK int,
 	baselineNDCG []float64,
 ) (CombinationResult, error) {
-	res := CombinationResult{Model: combo.Model, CandidateN: combo.N, AbstentionAligned: true}
+	res := CombinationResult{Model: combo.Model, CandidateN: combo.N, AbstentionAligned: true, RerankerOrdering: map[string][]string{}}
 	var nSum, mSum, verified float64
 	count := 0
 	var latencies []int64
@@ -204,48 +209,57 @@ func (r *Runner) evaluateCombination(
 		for _, id := range sliceString(aq.Candidates, combo.N) {
 			candidates = append(candidates, retrievalseam.SearchResult{ChunkID: id, Score: 1.0})
 		}
-		if len(candidates) == 0 {
-			continue
-		}
 
-		// Rerankers score (query, document) pairs, so candidates carry their
-		// content when a content provider is wired; ranking-only probes run
-		// with empty content.
-		if r.options.Content != nil {
-			ids := make([]string, len(candidates))
-			for i, c := range candidates {
-				ids[i] = c.ChunkID
+		var rerankedIDs []string
+		if len(candidates) > 0 {
+			// Rerankers score (query, document) pairs, so candidates carry
+			// their content when a content provider is wired; ranking-only
+			// probes run with empty content.
+			if r.options.Content != nil {
+				ids := make([]string, len(candidates))
+				for i, c := range candidates {
+					ids[i] = c.ChunkID
+				}
+				contents, err := r.options.Content(ctx, ids)
+				if err != nil {
+					return res, fmt.Errorf("content resolution failed: %w", err)
+				}
+				if len(contents) != len(candidates) {
+					return res, fmt.Errorf("content provider returned %d entries for %d ids", len(contents), len(candidates))
+				}
+				for i := range candidates {
+					candidates[i].ContentMarkdown = contents[i]
+				}
 			}
-			contents, err := r.options.Content(ctx, ids)
+
+			start := time.Now()
+			ordered, err := rr.Rerank(ctx, q.Query, candidates)
+			latencies = append(latencies, time.Since(start).Milliseconds())
 			if err != nil {
-				return res, fmt.Errorf("content resolution failed: %w", err)
+				return res, err
 			}
-			if len(contents) != len(candidates) {
-				return res, fmt.Errorf("content provider returned %d entries for %d ids", len(contents), len(candidates))
-			}
-			for i := range candidates {
-				candidates[i].ContentMarkdown = contents[i]
-			}
-		}
 
-		start := time.Now()
-		ordered, err := rr.Rerank(ctx, q.Query, candidates)
-		latencies = append(latencies, time.Since(start).Milliseconds())
-		if err != nil {
-			return res, err
+			// Single enforcement point of the ADR-0044 tie-break contract,
+			// shared with the production wrapper.
+			stabilized := rerank.StabilizeOrdering(candidates, ordered, combo.N)
+			rerankedIDs = make([]string, 0, len(stabilized))
+			for _, c := range stabilized {
+				rerankedIDs = append(rerankedIDs, c.ChunkID)
+			}
 		}
+		res.RerankerOrdering[q.ID] = rerankedIDs
 
-		rerankedIDs := make([]string, 0, len(ordered))
-		for _, c := range ordered {
-			rerankedIDs = append(rerankedIDs, c.ChunkID)
-		}
 		top := sliceString(rerankedIDs, topK)
 		ndcg := eval.NDCGAtK(top, q.ExpectedChunkIDs, topK)
 		nSum += ndcg
 		mSum += eval.MRR(top, q.ExpectedChunkIDs)
 		count++
 		res.RerankedQueries++
-		if len(baselineNDCG) > count-1 {
+		// Pair the per-query delta against the same query's baseline nDCG:
+		// both loops iterate the same non-abstention queries in gold set
+		// order, so count-1 stays aligned even for empty-candidate queries
+		// (which contribute a zero nDCG).
+		if count-1 < len(baselineNDCG) {
 			deltas = append(deltas, (ndcg-baselineNDCG[count-1])*100)
 		}
 
@@ -277,11 +291,19 @@ func (r *Runner) evaluateCombination(
 	if len(deltas) > 0 {
 		res.BootstrapCI = bootstrapCI(deltas)
 	}
-	if exec, ok := rr.(*ExecReranker); ok {
-		res.MaxRSSBytes = exec.RSSBytes()
+	if rep, ok := rr.(loadReporter); ok {
+		res.MaxRSSBytes = rep.RSSBytes()
+		res.ColdLoadMs = rep.LoadTimeMs()
 	}
 
 	return res, nil
+}
+
+// loadReporter is the minimal interface the probe uses to surface model
+// operational data from exec adapters (memory footprint, cold load time).
+type loadReporter interface {
+	RSSBytes() int64
+	LoadTimeMs() int64
 }
 
 // evaluateGate runs the gate over the given top-K chunk IDs' content,
