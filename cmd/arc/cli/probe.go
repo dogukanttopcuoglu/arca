@@ -130,8 +130,9 @@ func (a *App) RunProbe(ctx context.Context, opts ProbeRunOptions) (string, error
 	rerankerMap := map[string]rerank.Reranker{"bge": execReranker}
 
 	runner := probe.NewRunner(rerankerMap, probe.Options{
-		Content: a.probeContent(),
-		Gate:    buildProbeGate(opts.M5Gate, a.runtime.cfg),
+		Content:        a.probeContent(),
+		Gate:           buildProbeGate(opts.M5Gate, a.runtime.cfg),
+		GateMaxTokens:  a.runtime.cfg.LLMContextBudget,
 	})
 
 	var combos []probe.Combination
@@ -276,16 +277,16 @@ func renderProbeManifest(m ProbeManifest) string {
 	fmt.Fprintf(&sb, "fingerprint: %s (gold set %s, commit %s)\n", m.ArtifactFingerprint, m.GoldSetVersion, m.GitCommit)
 	fmt.Fprintf(&sb, "budget: p95 rerank <= %d ms, rss <= %d bytes\n", m.Budget.MaxRerankP95Ms, m.Budget.MaxRSSBytes)
 	fmt.Fprintf(&sb, "thresholds: MPI nDCG@5 >= +%.1fpp, MAR mrr >= -%.1fpp, verified >= -%.1fpp\n", m.MPI, m.MARMRR, m.MARVerified)
-	fmt.Fprintf(&sb, "\nbaseline: nDCG@5 %.3f, MRR %.3f, verified %.3f\n", m.Report.Baseline.NDCGAt5, m.Report.Baseline.MRR, m.Report.Baseline.VerifiedRate)
+	fmt.Fprintf(&sb, "\nbaseline: recall@5 %.3f, nDCG@5 %.3f, MRR %.3f, verified %.3f\n", m.Report.Baseline.RecallAt5, m.Report.Baseline.NDCGAt5, m.Report.Baseline.MRR, m.Report.Baseline.VerifiedRate)
 	sb.WriteString("combinations:\n")
-	fmt.Fprintf(&sb, "  %-8s %-5s %-9s %-8s %-9s %-9s %-6s %-8s\n", "model", "N", "ndcg@5", "mrr", "p95_ms", "rss_mb", "verif", "ci_med")
+	fmt.Fprintf(&sb, "  %-8s %-5s %-9s %-9s %-8s %-9s %-9s %-6s %-8s\n", "model", "N", "recall@5", "ndcg@5", "mrr", "p95_ms", "rss_mb", "verif", "ci_med")
 	for _, c := range m.Report.Combinations {
 		ci := ""
 		if c.BootstrapCI != nil {
 			ci = fmt.Sprintf("%+.2f", c.BootstrapCI.DeltaMedianPp)
 		}
-		fmt.Fprintf(&sb, "  %-8s %-5d %-9.3f %-8.3f %-9.1f %-8.1f %-6.3f %s\n",
-			c.Model, c.CandidateN, c.NDCGAt5, c.MRR, c.P95LatencyMs, float64(c.MaxRSSBytes)/1024/1024, c.VerifiedRate, ci)
+		fmt.Fprintf(&sb, "  %-8s %-5d %-9.3f %-9.3f %-8.3f %-9.1f %-8.1f %-6.3f %s\n",
+			c.Model, c.CandidateN, c.RecallAt5, c.NDCGAt5, c.MRR, c.P95LatencyMs, float64(c.MaxRSSBytes)/1024/1024, c.VerifiedRate, ci)
 	}
 	sb.WriteString("\n")
 	if m.Outcome.Accepted {

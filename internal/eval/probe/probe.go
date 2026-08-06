@@ -34,6 +34,12 @@ type Options struct {
 	Content func(ctx context.Context, ids []string) ([]string, error)
 	// Gate evaluates the M5 semantic evidence gate over reranked content.
 	Gate func(ctx context.Context, query, content string) (bool, error)
+	// GateMaxTokens caps the gate input, mirroring the AnswerEngine's
+	// context budget (LLM_CONTEXT_BUDGET). Without it, a long top-5 join
+	// can exceed the LLM's reasoning budget and produce empty completions
+	// (probe failure mode observed with reasoning models). Zero defaults
+	// to 4000, matching the engine's default context budget.
+	GateMaxTokens int
 }
 
 // Runner executes the probe over a recorded candidate artifact.
@@ -52,6 +58,7 @@ func NewRunner(rerankers map[string]rerank.Reranker, opts Options) *Runner {
 // rerank) — the delta reference for every combination (ADR-0045). The gate
 // fields measure the baseline's answer quality when a gate is wired.
 type BaselineResult struct {
+	RecallAt5       float64 `json:"recall_at_5"`
 	NDCGAt5         float64 `json:"ndcg_at_5"`
 	MRR             float64 `json:"mrr"`
 	GateEvaluations int     `json:"gate_evaluations,omitempty"`
@@ -71,6 +78,7 @@ type CIRange struct {
 type CombinationResult struct {
 	Model             string              `json:"model"`
 	CandidateN        int                 `json:"candidate_n"`
+	RecallAt5         float64             `json:"recall_at_5"`
 	NDCGAt5           float64             `json:"ndcg_at_5"`
 	MRR               float64             `json:"mrr"`
 	RerankedQueries   int                 `json:"reranked_queries"`
@@ -124,7 +132,7 @@ func (r *Runner) Run(ctx context.Context, art *eval.CandidateArtifact, gs *eval.
 	// Baseline: the recorded candidate list top-K, no rerank. Per-query
 	// nDCG values feed the bootstrap delta of every combination.
 	var baselineNDCG []float64
-	var baselineN, baselineM, verified float64
+	var baselineN, baselineM, baselineR, verified float64
 	baseCount := 0
 	for _, q := range gs.Queries {
 		aq := byID[q.ID]
@@ -136,6 +144,7 @@ func (r *Runner) Run(ctx context.Context, art *eval.CandidateArtifact, gs *eval.
 		baselineN += ndcg
 		baselineNDCG = append(baselineNDCG, ndcg)
 		baselineM += eval.MRR(top, q.ExpectedChunkIDs)
+		baselineR += eval.RecallAtK(top, q.ExpectedChunkIDs, topK)
 		baseCount++
 
 		if r.options.Gate != nil && r.options.Content != nil {
@@ -150,6 +159,7 @@ func (r *Runner) Run(ctx context.Context, art *eval.CandidateArtifact, gs *eval.
 		}
 	}
 	if baseCount > 0 {
+		rep.Baseline.RecallAt5 = baselineR / float64(baseCount)
 		rep.Baseline.NDCGAt5 = baselineN / float64(baseCount)
 		rep.Baseline.MRR = baselineM / float64(baseCount)
 	}
@@ -190,7 +200,7 @@ func (r *Runner) evaluateCombination(
 	baselineNDCG []float64,
 ) (CombinationResult, error) {
 	res := CombinationResult{Model: combo.Model, CandidateN: combo.N, AbstentionAligned: true, RerankerOrdering: map[string][]string{}}
-	var nSum, mSum, verified float64
+	var nSum, mSum, rSum, verified float64
 	count := 0
 	var latencies []int64
 	var deltas []float64
@@ -253,6 +263,7 @@ func (r *Runner) evaluateCombination(
 		ndcg := eval.NDCGAtK(top, q.ExpectedChunkIDs, topK)
 		nSum += ndcg
 		mSum += eval.MRR(top, q.ExpectedChunkIDs)
+		rSum += eval.RecallAtK(top, q.ExpectedChunkIDs, topK)
 		count++
 		res.RerankedQueries++
 		// Pair the per-query delta against the same query's baseline nDCG:
@@ -276,6 +287,7 @@ func (r *Runner) evaluateCombination(
 	}
 
 	if count > 0 {
+		res.RecallAt5 = rSum / float64(count)
 		res.NDCGAt5 = nSum / float64(count)
 		res.MRR = mSum / float64(count)
 	}
@@ -321,11 +333,27 @@ func (r *Runner) evaluateGate(ctx context.Context, query string, aq *eval.Artifa
 		sb.WriteString(c)
 		sb.WriteString(" ")
 	}
-	supported, err := r.options.Gate(ctx, query, sb.String())
+	content := sb.String()
+	if max := r.effectiveGateMaxTokens(); max > 0 && len(content) > max*4 {
+		// ~4 chars/token (SimpleTokenCounter's lower bound): keep the gate
+		// input within the engine's context budget so reasoning models do
+		// not exhaust their completion budget on long sources.
+		content = content[:max*4]
+	}
+	supported, err := r.options.Gate(ctx, query, content)
 	if err != nil {
 		return false, fmt.Errorf("gate evaluation failed: %w", err)
 	}
 	return supported, nil
+}
+
+// effectiveGateMaxTokens returns the configured gate budget or the engine
+// default (4000, matching DefaultContextBuilder's budget).
+func (r *Runner) effectiveGateMaxTokens() int {
+	if r.options.GateMaxTokens > 0 {
+		return r.options.GateMaxTokens
+	}
+	return 4000
 }
 
 // bootstrapCI computes a report-only 95% CI over per-query nDCG deltas
