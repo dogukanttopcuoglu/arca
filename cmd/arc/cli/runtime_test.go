@@ -14,6 +14,43 @@ import (
 	"arca/internal/retrieval/seam"
 )
 
+func TestApplyEntityRerank(t *testing.T) {
+	inner := &dense.DenseRetriever{}
+	cfg := DefaultConfig()
+
+	t.Run("empty URL keeps the fusion retriever unchanged (default-off)", func(t *testing.T) {
+		rt := &Runtime{}
+		got := applyEntityRerank(rt, inner, cfg)
+		if got != inner {
+			t.Fatalf("expected the unchanged fusion retriever, got %T", got)
+		}
+		if rt.reranker != nil {
+			t.Fatal("no adapter may be recorded when reranking is off")
+		}
+	})
+
+	t.Run("configured URL wraps the fusion retriever and records the adapter", func(t *testing.T) {
+		rt := &Runtime{}
+		cfg.RerankURL = "http://localhost:3003"
+		cfg.RerankCandidateN = 50
+		cfg.RerankTimeoutMS = 2000
+		got := applyEntityRerank(rt, inner, cfg)
+		wrapped, ok := got.(*rerank.RerankedRetriever)
+		if !ok {
+			t.Fatalf("expected RerankedRetriever wrapper, got %T", got)
+		}
+		if rt.reranker == nil {
+			t.Fatal("adapter must be recorded for the stats block")
+		}
+		// The wrapper must request the E1-frozen candidate budget from the
+		// inner retriever.
+		requests := wrapped.RequestedBudget()
+		if requests != 50 {
+			t.Fatalf("candidate budget = %d, want 50", requests)
+		}
+	})
+}
+
 func TestDefaultConfig_RerankerOff(t *testing.T) {
 	cfg := DefaultConfig()
 	if cfg.RerankURL != "" {

@@ -191,17 +191,45 @@ A deterministic digest of the indexed corpus used to prove benchmark validity: S
 The indexing-stage seam, symmetric to the dense embedding provider, that converts a `KnowledgeChunk` into a sparse vector representation (BM25 term weights in M3; SPLADE/learned sparse later). Sparse vectors share the same Qdrant collection and lifecycle as dense vectors — retrieval state is never process-local.
 
 ## IntentHint
-A minimal signal emitted by query understanding carrying only `Intent`, `Decompose`, and `Source` (initially `"rule_based"`, derived from the existing deterministic analyzer signal). Proven intents: `comparison` (from `SubQueries`) and `entity` (from the analyzer's entity question classification, M7). A hint never decides retrieval behavior — the Retrieval Orchestrator holds policy and may ignore, partially use, or combine hints with other signals. No confidence score is attached until a benchmarked classifier justifies probabilistic semantics.
+A minimal signal emitted by query understanding carrying only `Intent`, `Decompose`, and `Source` (initially `"rule_based"`, derived from the existing deterministic analyzer signal). Proven intents: `comparison` (from `SubQueries`), `entity` (from the analyzer's entity question classification, M7), and `document_overview` (document-level questions — M9, document profile retrieval). A hint never decides retrieval behavior — the Retrieval Orchestrator holds policy and may ignore, partially use, or combine hints with other signals. No confidence score is attached until a benchmarked classifier justifies probabilistic semantics.
 _Avoid_: Intent classification (the label alone is not a decision), intent score
 
 ## Retrieval Orchestrator
 The pure decision function in `qa` translating `IntentHint + RuntimeConfig` into a `RetrievalDecision` (`Decompose`, optional `TopKOverride`). It is the only place where hints translate into behavior; the classifier stays infrastructure. Benchmark results decide whether classification exists at all. Runtime fusion-policy selection is currently config-frozen (`Balanced`); a `Policy` decision field appears only when a production benchmark demonstrates a per-intent gain beyond the 5% tolerance.
 
 ## RetrievalDecision
-The output of the Retrieval Orchestrator, kept minimal and benchmark-backed: `Decompose bool`, an optional `TopKOverride` (evidence budget), and `UseGraph` — the M7 graph gate opened only for entity queries when the calibrated graph weight is positive (ADR-0042). No `Policy` field until a second benchmark-validated runtime policy path exists. `AnswerEngine` executes the decision; retrievers remain execution components.
+The output of the Retrieval Orchestrator, kept minimal and benchmark-backed: `Decompose bool`, an optional `TopKOverride` (evidence budget), `UseGraph` — the M7 graph gate opened only for entity queries when the calibrated graph weight is positive (ADR-0042), and `DocumentOverview` — the M9 path selecting the document-level retrieval component for `document_overview` intent (ADR-0048). No `Policy` field until a second benchmark-validated runtime policy path exists. `AnswerEngine` executes the decision; retrievers remain execution components.
+
+## Document Profile Point
+The document-level retrieval artifact stored in the vector store — one per indexed document — carrying the deterministic profile content (title, author, extractive summary, key topics, section list) derived from enrichment outputs at index time (ADR-0048). It is tagged `content_type=document_profile`, participates in the indexing diff lifecycle like any point, and is excluded from corpus fingerprint computation (the fingerprint covers indexed *chunks*, and a profile is not a chunk). It is the retrieval target of the `document_overview` intent.
+_Avoid_: document summary chunk, overview chunk, metadata point
+
+## Document Overview Intent
+The third benchmark-proven query intent (after `comparison` and `entity`): queries asking for document-level understanding — "what is this book about", "bu kitap ne anlatıyor", "who is the author", "ana fikri nedir" — detected deterministically by the rule-based analyzer with a capped EN+TR pattern set (ADR-0048). It routes to the Document Overview Retriever; queries the patterns miss fall back to normal retrieval (a UX miss, never a correctness failure — the EvidenceGate still abstains honestly).
+_Avoid_: document intent, overview intent (vague)
+
+## Document Overview Retriever
+The retrieval execution component for `document_overview` intent, implementing the existing `Retriever` seam (ADR-0048). With a document filter: the document's profile point plus the first real content chunks (deterministic `chunk_order > 1` selection, known front-matter noise excluded at retrieval time). Without a filter: all profile points (library-level overview). It never runs graph, decomposition, or hybrid paths; it hands the assembled context to the unchanged ContextBuilder → EvidenceGate → LLM flow.
+_Avoid_: overview pipeline, second retrieval pipeline
+
+## Expected Retrieval Points
+The gold set query expectation field generalizing `expected_chunk_ids` (ADR-0027, ADR-0048): the set of retrieval artifacts a query must surface — knowledge chunks, document profile points, or both. It exists because a `document_profile` point is not a chunk, and document-overview benchmarks measure document-level retrieval behavior, not chunk retrieval. At most one of `expected_chunk_ids` / `expected_retrieval_points` is declared per query.
+_Avoid_: expected_context_points (implies an assembled window)
 
 ## EvidenceBudget
 The maximum number of retrieved chunks admitted to evidence assembly, expressed in M6 as a `TopKOverride` on the RetrievalDecision — never a token-budget or gate change. The concrete value is calibrated per intent by benchmark (e.g. comparison false-abstention reduction on Gold Set v2) before it freezes; the default is the caller's TopK.
+
+## RerankedRetriever
+The M8 execution component (ADR-0044) wrapping any `Retriever` with a second-stage rerank: it requests an internal candidate budget N from the inner retriever, reranks, and returns the caller's TopK. Reranker failures degrade gracefully to the inner ordering (fail-open); `StabilizeOrdering` is the single enforcement point of the ordering contract (deterministic ChunkID-ASC tie-break). Production activation (M10) wraps the graph fusion retriever behind the M7 entity gate; the global rerank remains benchmark-rejected.
+_Avoid_: rerank wrapper, reranker retriever
+
+## Reranker Service
+The provider-agnostic reranking microservice (M10, ADR-0049) — a Python HTTP service (`reranker-service`) exposing a minimal `POST /rerank` contract (`{query, candidates:[{id,text}]}` → `{ranked_ids, scores}`), with the BGE cross-encoder as its first model implementation. Model choice lives entirely in the service; the retrieval engine only knows the HTTP contract. Runs beside the other services (Docker, GPU), model loaded once per service lifetime.
+_Avoid_: bge-service, bge-reranker-service, rerank model server
+
+## HTTP Reranker
+The production `Reranker` seam adapter (M10, ADR-0049): an HTTP client depending only on the `POST /rerank` contract, never on the Python implementation. It carries the minimal runtime observability (atomic counters `reranker_requests_total`, `reranker_failures_total`, `reranker_latency_ms_total` + a structured debug log line per call: candidate_count, reranked_count, latency_ms, degraded). Fail-open: timeout/connection/5xx/invalid response fall back to the inner retriever ordering with `degraded=true`.
+_Avoid_: reranker client, rerank provider adapter
 
 ## FusionPolicy
 A frozen, calibrated retrieval fusion configuration (`DenseWeight`, `SparseWeight`, `SparseCap`) produced by offline benchmark calibration — not raw tuned parameters. Named policies (e.g. `Balanced`, `DenseBiased`, `LexicalBiased`) are the only fusion variants an orchestrator may select; numerical optimization ends at calibration (M4). Runtime selection stays config-frozen (`Balanced`) until a production benchmark demonstrates a per-intent gain beyond the 5% tolerance (M6).

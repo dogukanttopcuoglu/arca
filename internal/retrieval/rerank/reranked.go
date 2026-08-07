@@ -54,6 +54,12 @@ func NewRerankedRetriever(inner retrievalseam.Retriever, config Config) *Reranke
 	return &RerankedRetriever{inner: inner, config: config}
 }
 
+// RequestedBudget reports the configured internal candidate budget N.
+// Composition tests verify the E1-frozen value through it (M10, ADR-0049).
+func (r *RerankedRetriever) RequestedBudget() int {
+	return r.config.CandidateBudget
+}
+
 // Retrieve requests the candidate budget N from the inner retriever, reranks
 // the candidates, and returns the caller's TopK. Reranker failures degrade
 // gracefully to the inner retriever's ordering (Graceful Degradation).

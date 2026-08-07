@@ -491,6 +491,28 @@ func buildLLMProvider(cfg Config) llmprovider.LLMProvider {
 	)
 }
 
+// applyEntityRerank applies the M10 entity-gated reranking composition
+// (ADR-0049): with a configured reranker-service URL, the graph fusion
+// retriever — the entity execution component behind the UseGraph decision —
+// is wrapped with RerankedRetriever at the E1-frozen candidate budget, and
+// the adapter is recorded on the runtime for the ask stats block. An empty
+// URL returns the fusion retriever unchanged (default-off, byte-identical).
+func applyEntityRerank(rt *Runtime, fusionRet retrievalseam.Retriever, cfg Config) retrievalseam.Retriever {
+	if cfg.RerankURL == "" {
+		return fusionRet
+	}
+	timeout := time.Duration(cfg.RerankTimeoutMS) * time.Millisecond
+	if timeout <= 0 {
+		timeout = 2 * time.Second
+	}
+	adapter := rerank.NewHTTPReranker(cfg.RerankURL, timeout)
+	rt.reranker = adapter
+	return rerank.NewRerankedRetriever(fusionRet, rerank.Config{
+		CandidateBudget: cfg.RerankCandidateN,
+		Reranker:        adapter,
+	})
+}
+
 // buildAnswerEngine wires the real AnswerEngine seams: ContextBuilder with the
 // configured budget, the RAG PromptBuilder, the OpenAI-compatible LLM adapter,
 // the default verification pipeline, the real EvidenceGate (ADR-0030), the
@@ -513,24 +535,7 @@ func buildAnswerEngine(rt *Runtime, retriever retrievalseam.Retriever) *qa.Answe
 			fmt.Fprintf(os.Stderr, "warning: graph fusion unavailable (RETRIEVAL_GRAPH_WEIGHT=%.1f): %v; falling back to %s\n",
 				cfg.RetrievalGraphWeight, err, cfg.RetrievalMode)
 		} else {
-			graphOpt := qa.WithGraphRetriever(fusionRet)
-			// M10 entity-gated reranking (ADR-0049): with a configured
-			// reranker-service URL, the graph fusion retriever (the entity
-			// execution component behind the UseGraph decision) is wrapped
-			// with RerankedRetriever at the E1-frozen candidate budget.
-			// Empty URL keeps the path byte-identical (default-off).
-			if cfg.RerankURL != "" {
-				timeout := time.Duration(cfg.RerankTimeoutMS) * time.Millisecond
-				if timeout <= 0 {
-					timeout = 2 * time.Second
-				}
-				adapter := rerank.NewHTTPReranker(cfg.RerankURL, timeout)
-				rt.reranker = adapter
-				graphOpt = qa.WithGraphRetriever(rerank.NewRerankedRetriever(fusionRet, rerank.Config{
-					CandidateBudget: cfg.RerankCandidateN,
-					Reranker:        adapter,
-				}))
-			}
+			graphOpt := qa.WithGraphRetriever(applyEntityRerank(rt, fusionRet, cfg))
 			opts = append(opts, graphOpt)
 		}
 	}

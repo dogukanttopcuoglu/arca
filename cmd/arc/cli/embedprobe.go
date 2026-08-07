@@ -126,7 +126,9 @@ func (a *App) RunEmbedProbe(ctx context.Context, opts EmbedProbeOptions) (string
 			worker.WithEmbeddingInputRepresentation(rep),
 		)
 		for _, docID := range docIDs {
-			job, err := w.ExecuteSync(ctx, docID, titles[docID], byDoc[docID])
+			// Embedding-representation probe: re-indexes chunks only; no
+			// document profile points (probe collections, ADR-0047 surface).
+			job, err := w.ExecuteSync(ctx, docID, titles[docID], byDoc[docID], nil)
 			if err != nil {
 				return "", fmt.Errorf("representation %s indexing %s failed: %w", letter, docID, err)
 			}
