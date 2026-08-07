@@ -208,6 +208,48 @@ func TestGraphRetriever_TopKAndNoMatch(t *testing.T) {
 	})
 }
 
+func TestGraphRetriever_DocumentFilter(t *testing.T) {
+	gs, cs, vs := vectorSeededGraph(t)
+	r := graphretriever.NewGraphRetriever(gs, cs, graphretriever.WithVectorStore(vs))
+
+	// Unfiltered: both entity-evidenced chunks of the world bank node.
+	results := retrieve(t, r, "What does the book say about World Bank?", 5, 0)
+	if len(results) != 2 {
+		t.Fatalf("unfiltered: expected 2 chunks, got %v", ids(results))
+	}
+
+	// Scoped to doc-a: both chunks survive and carry full payload metadata
+	// (document/section/pages — graph-leg citations would otherwise render
+	// empty Sources entries).
+	filtered, err := r.Retrieve(context.Background(), seam.RetrievalQuery{
+		QueryText: "What does the book say about World Bank?", TopK: 5,
+		Filter: indexingmodel.MetadataFilter{DocumentIDs: []string{"doc-a"}},
+	})
+	if err != nil {
+		t.Fatalf("scoped retrieve: %v", err)
+	}
+	if len(filtered) != 2 {
+		t.Fatalf("doc-a scoped: expected 2 chunks, got %v", ids(filtered))
+	}
+	for _, res := range filtered {
+		if res.Metadata.DocumentID != "doc-a" || res.Metadata.ChunkID != res.ChunkID {
+			t.Fatalf("result %s metadata = %+v, want full payload metadata from doc-a", res.ChunkID, res.Metadata)
+		}
+	}
+
+	// Scoped to an absent document: the graph leg must contribute nothing.
+	other, err := r.Retrieve(context.Background(), seam.RetrievalQuery{
+		QueryText: "What does the book say about World Bank?", TopK: 5,
+		Filter: indexingmodel.MetadataFilter{DocumentIDs: []string{"doc-z"}},
+	})
+	if err != nil {
+		t.Fatalf("absent-doc retrieve: %v", err)
+	}
+	if len(other) != 0 {
+		t.Fatalf("doc-z scoped: expected 0 chunks, got %v", ids(other))
+	}
+}
+
 // vectorSeededGraph builds the graph with a vector store carrying chunk
 // content in the point payload — the production arrangement where indexing
 // and querying run in different processes and the ContentStore is empty.

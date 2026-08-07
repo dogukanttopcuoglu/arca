@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"bufio"
 	"context"
 	"strings"
 	"testing"
@@ -21,7 +22,7 @@ func TestAppRunAsk_RendersAnswer(t *testing.T) {
 
 	t.Run("renders query, answer, and Sources section for a verified answer", func(t *testing.T) {
 		app := newTestApp(ctx, t, "Verified grounded answer with citation [Ref 1].")
-		out, err := app.RunAsk(ctx, "What is creativity?")
+		out, err := app.RunAsk(ctx, "What is creativity?", "")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -38,14 +39,14 @@ func TestAppRunAsk_RendersAnswer(t *testing.T) {
 		if !strings.Contains(out, "[Ref 1]") || !strings.Contains(out, "Introduction") || !strings.Contains(out, "page(s) 1") {
 			t.Errorf("expected source mapping with reference, section, and page, got:\n%s", out)
 		}
-		if strings.Contains(out, "⚠") {
+		if strings.Contains(out, "âš ") {
 			t.Errorf("expected no warning for a verified answer, got:\n%s", out)
 		}
 	})
 
 	t.Run("renders a warning for an unverified answer", func(t *testing.T) {
 		app := newTestApp(ctx, t, "Hallucinated claim [Ref 99].")
-		out, err := app.RunAsk(ctx, "What is creativity?")
+		out, err := app.RunAsk(ctx, "What is creativity?", "")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -53,7 +54,7 @@ func TestAppRunAsk_RendersAnswer(t *testing.T) {
 		if !strings.Contains(out, "Hallucinated claim [Ref 99].") {
 			t.Errorf("expected answer text preserved, got:\n%s", out)
 		}
-		if !strings.Contains(out, "⚠") || !strings.Contains(out, "unverified") {
+		if !strings.Contains(out, "⚠ answer contains unverified") || !strings.Contains(out, "unverified") {
 			t.Errorf("expected visible unverified warning, got:\n%s", out)
 		}
 	})
@@ -72,7 +73,7 @@ func TestAppRunAsk_RendersAnswer(t *testing.T) {
 		)
 		app := &App{answerEngine: engine}
 
-		out, err := app.RunAsk(ctx, "Query with no matches")
+		out, err := app.RunAsk(ctx, "Query with no matches", "")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -83,14 +84,14 @@ func TestAppRunAsk_RendersAnswer(t *testing.T) {
 		if strings.Contains(out, "Sources:") {
 			t.Errorf("expected no Sources section for no_evidence, got:\n%s", out)
 		}
-		if strings.Contains(out, "⚠") {
+		if strings.Contains(out, "âš ") {
 			t.Errorf("expected no warning for no_evidence, got:\n%s", out)
 		}
 	})
 
 	t.Run("rejects an empty query", func(t *testing.T) {
 		app := &App{}
-		_, err := app.RunAsk(ctx, "   ")
+		_, err := app.RunAsk(ctx, "   ", "")
 		if err == nil {
 			t.Error("expected error for empty query, got nil")
 		}
@@ -107,7 +108,7 @@ func TestAppRunAsk_RendersAnswer(t *testing.T) {
 		seedTestChunk(ctx, t, runtime.embeddingProvider, vecStore, runtime.contentStore.(*store.InMemoryContentStore))
 
 		app := NewAppWithRuntime(runtime)
-		out, err := app.RunAsk(ctx, "What is creativity?")
+		out, err := app.RunAsk(ctx, "What is creativity?", "")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -118,8 +119,151 @@ func TestAppRunAsk_RendersAnswer(t *testing.T) {
 		if strings.Contains(out, "Sources:") {
 			t.Errorf("expected no Sources section for abstention, got:\n%s", out)
 		}
-		if strings.Contains(out, "⚠") {
+		if strings.Contains(out, "âš ") {
 			t.Errorf("expected no warning for abstention, got:\n%s", out)
+		}
+	})
+}
+
+func TestAppResolveDocFilter(t *testing.T) {
+	ctx := context.Background()
+	embProvider := provider.NewMockEmbeddingProvider("mock-provider", "mock-model-v1", 1536)
+	vec, err := embProvider.EmbedQuery(ctx, "seed")
+	if err != nil || len(vec) == 0 {
+		t.Fatalf("embed: %v", err)
+	}
+	vecStore := store.NewInMemoryVectorStore()
+	if err := vecStore.UpsertPoints(ctx, []store.VectorPoint{
+		{ID: "p1", Vector: vec, Metadata: indexingmodel.VectorMetadata{DocumentID: "book-alpha", ChunkID: "a1"}},
+		{ID: "p2", Vector: vec, Metadata: indexingmodel.VectorMetadata{DocumentID: "book-alpha-notes", ChunkID: "a2"}},
+		{ID: "p3", Vector: vec, Metadata: indexingmodel.VectorMetadata{DocumentID: "rick-rubin", ChunkID: "r1"}},
+	}); err != nil {
+		t.Fatalf("seed vector store: %v", err)
+	}
+	app := &App{runtime: &Runtime{vectorStore: vecStore}}
+
+	t.Run("empty filter stays empty (whole corpus)", func(t *testing.T) {
+		f, err := app.resolveDocFilter(ctx, "")
+		if err != nil || len(f.DocumentIDs) != 0 {
+			t.Fatalf("empty filter = %+v (err %v), want empty", f, err)
+		}
+	})
+
+	t.Run("unique substring resolves case-insensitively", func(t *testing.T) {
+		f, err := app.resolveDocFilter(ctx, "RICK")
+		if err != nil {
+			t.Fatalf("resolve: %v", err)
+		}
+		if len(f.DocumentIDs) != 1 || f.DocumentIDs[0] != "rick-rubin" {
+			t.Fatalf("resolved %v, want [rick-rubin]", f.DocumentIDs)
+		}
+	})
+
+	t.Run("no match errors and lists indexed documents", func(t *testing.T) {
+		_, err := app.resolveDocFilter(ctx, "nonexistent")
+		if err == nil {
+			t.Fatal("expected error for no match, got nil")
+		}
+		if !strings.Contains(err.Error(), "book-alpha") || !strings.Contains(err.Error(), "rick-rubin") {
+			t.Fatalf("expected indexed document list in error, got: %v", err)
+		}
+	})
+
+	t.Run("ambiguous match errors and lists candidates", func(t *testing.T) {
+		_, err := app.resolveDocFilter(ctx, "alpha")
+		if err == nil {
+			t.Fatal("expected error for ambiguous match, got nil")
+		}
+		if !strings.Contains(err.Error(), "more specific") {
+			t.Fatalf("expected disambiguation hint, got: %v", err)
+		}
+	})
+}
+
+func TestAppListDocumentsAndPicker(t *testing.T) {
+	ctx := context.Background()
+	embProvider := provider.NewMockEmbeddingProvider("mock-provider", "mock-model-v1", 1536)
+	vec, err := embProvider.EmbedQuery(ctx, "seed")
+	if err != nil || len(vec) == 0 {
+		t.Fatalf("embed: %v", err)
+	}
+	vecStore := store.NewInMemoryVectorStore()
+	if err := vecStore.UpsertPoints(ctx, []store.VectorPoint{
+		{ID: "p1", Vector: vec, Metadata: indexingmodel.VectorMetadata{DocumentID: "rick-rubin", ChunkID: "a1"}},
+		{ID: "p2", Vector: vec, Metadata: indexingmodel.VectorMetadata{DocumentID: "rick-rubin", ChunkID: "a2"}},
+		{ID: "p3", Vector: vec, Metadata: indexingmodel.VectorMetadata{DocumentID: "Meadows - Thinking in Systems - libgen.li", ChunkID: "b1"}},
+	}); err != nil {
+		t.Fatalf("seed vector store: %v", err)
+	}
+	app := &App{runtime: &Runtime{vectorStore: vecStore}}
+
+	t.Run("listDocuments returns distinct docs with chunk counts", func(t *testing.T) {
+		docs, err := app.listDocuments(ctx)
+		if err != nil {
+			t.Fatalf("listDocuments: %v", err)
+		}
+		if len(docs) != 2 {
+			t.Fatalf("expected 2 documents, got %d", len(docs))
+		}
+		for _, d := range docs {
+			if d.DocumentID == "rick-rubin" && d.Chunks != 2 {
+				t.Fatalf("rick-rubin chunks = %d, want 2", d.Chunks)
+			}
+			if d.DocumentID == "Meadows - Thinking in Systems - libgen.li" && d.Chunks != 1 {
+				t.Fatalf("meadows chunks = %d, want 1", d.Chunks)
+			}
+		}
+	})
+
+	t.Run("RunListDocs renders counts and IDs", func(t *testing.T) {
+		out, err := app.RunListDocs(ctx)
+		if err != nil {
+			t.Fatalf("RunListDocs: %v", err)
+		}
+		if !strings.Contains(out, "2 indexed document(s)") || !strings.Contains(out, "rick-rubin") {
+			t.Fatalf("unexpected listing:\n%s", out)
+		}
+	})
+
+	t.Run("friendlyDocName strips libgen suffix and underscores", func(t *testing.T) {
+		got := friendlyDocName("Meadows, Donella H. - Thinking in Systems_ A Primer (2009, Earthscan) - libgen.li")
+		if got != "Meadows, Donella H. - Thinking in Systems A Primer (2009, Earthscan)" {
+			t.Fatalf("friendly name = %q", got)
+		}
+		if friendlyDocName("rick-rubin") != "rick-rubin" {
+			t.Fatalf("plain id must pass through unchanged")
+		}
+	})
+
+	t.Run("interactive picker flows selection to RunAsk", func(t *testing.T) {
+		contentStore := store.NewInMemoryContentStore()
+		retriever := dense.NewDenseRetriever(embProvider, vecStore, contentStore)
+		engine := qa.NewAnswerEngine(
+			qa.NewRuleBasedAnalyzer(),
+			retriever,
+			qacontext.NewDefaultContextBuilder(nil, 4000),
+			qaprompt.NewRAGPromptBuilder(),
+			&cliFakeLLM{content: "Grounded answer [Ref 1]."},
+			qaverification.NewDefaultVerificationPipeline(),
+			nil,
+		)
+		pickerApp := &App{runtime: &Runtime{vectorStore: vecStore}, answerEngine: engine}
+
+		in := strings.NewReader("1\nWhat does the book say about Rick Rubin?\n")
+		var out strings.Builder
+		err := pickerApp.RunAskInteractive(ctx, bufio.NewReader(in), &out)
+		if err != nil {
+			t.Fatalf("RunAskInteractive: %v", err)
+		}
+		text := out.String()
+		if !strings.Contains(text, "rick-rubin") {
+			t.Fatalf("picker must list rick-rubin, got:\n%s", text)
+		}
+		if !strings.Contains(text, "Kütüphane seçin") || !strings.Contains(text, "Sorunuz:") {
+			t.Fatalf("picker prompts missing:\n%s", text)
+		}
+		if !strings.Contains(text, "Q: What does the book say about Rick Rubin?") {
+			t.Fatalf("picker must answer the chosen query, got:\n%s", text)
 		}
 	})
 }
@@ -198,3 +342,4 @@ func (f *cliFakeLLM) Stream(ctx context.Context, prompt qaprompt.PromptMessage) 
 func (f *cliFakeLLM) Capabilities() llmprovider.ModelCapabilities {
 	return llmprovider.ModelCapabilities{SupportsSystemMessage: true, SupportsStreaming: true, ContextWindow: 128000}
 }
+

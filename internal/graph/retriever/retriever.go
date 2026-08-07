@@ -121,6 +121,26 @@ func (g *GraphRetriever) Retrieve(ctx context.Context, query retrievalseam.Retri
 		return chunkIDs[i] < chunkIDs[j]
 	})
 
+	// Payload metadata: resolved once from the vector store payload (the
+	// content source of truth, M7 BULGU-1). It serves two purposes: the
+	// --doc document scope drops entity-evidenced chunks from other
+	// documents before fusion, and surviving chunks carry the full citation
+	// metadata (document/section/pages) instead of a bare ChunkID — graph-
+	// leg answers would otherwise render empty Sources entries. Without a
+	// vector store the mapping cannot be resolved: the graph leg stays
+	// unfiltered and metadata remains minimal.
+	var chunkMeta map[string]indexingmodel.VectorMetadata
+	if g.vectorStore != nil {
+		points, err := g.vectorStore.ListPoints(ctx, indexingmodel.MetadataFilter{ChunkIDs: chunkIDs})
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve chunk payloads: %w", err)
+		}
+		chunkMeta = make(map[string]indexingmodel.VectorMetadata, len(points))
+		for _, pt := range points {
+			chunkMeta[pt.Metadata.ChunkID] = pt.Metadata
+		}
+	}
+
 	results := make([]retrievalseam.SearchResult, 0, len(chunkIDs))
 	resolveContent := make([]string, 0, len(chunkIDs))
 	for _, cid := range chunkIDs {
@@ -128,12 +148,18 @@ func (g *GraphRetriever) Retrieve(ctx context.Context, query retrievalseam.Retri
 		if score < float64(query.MinScore) {
 			continue
 		}
+		if len(query.Filter.DocumentIDs) > 0 && len(chunkMeta) > 0 &&
+			!containsString(query.Filter.DocumentIDs, chunkMeta[cid].DocumentID) {
+			continue
+		}
+		meta := indexingmodel.VectorMetadata{ChunkID: cid}
+		if full, ok := chunkMeta[cid]; ok {
+			meta = full
+		}
 		results = append(results, retrievalseam.SearchResult{
-			ChunkID: cid,
-			Score:   float32(score),
-			Metadata: indexingmodel.VectorMetadata{
-				ChunkID: cid,
-			},
+			ChunkID:  cid,
+			Score:    float32(score),
+			Metadata: meta,
 		})
 		resolveContent = append(resolveContent, cid)
 		if len(results) >= query.TopK {
@@ -205,6 +231,16 @@ func unique(tokens []string) []string {
 		}
 	}
 	return out
+}
+
+// containsString reports whether the slice contains the value.
+func containsString(s []string, v string) bool {
+	for _, x := range s {
+		if x == v {
+			return true
+		}
+	}
+	return false
 }
 
 // scoreEntity returns (contribution, matchedTokenCount) for one entity node:

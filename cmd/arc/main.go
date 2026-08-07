@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"flag"
 	"fmt"
@@ -14,7 +15,7 @@ import (
 func main() {
 	if len(os.Args) < 2 {
 		fmt.Println("ARC Document Intelligence OS CLI")
-		fmt.Println("Usage: arc [inspect|ask|research|eval] <args>")
+		fmt.Println("Usage: arc [inspect|ask|research|docs|eval] <args>")
 		os.Exit(1)
 	}
 
@@ -36,11 +37,27 @@ func main() {
 		fmt.Println(out)
 
 	case "ask":
-		query := "What is creativity?"
-		if len(os.Args) > 2 {
-			query = os.Args[2]
+		if len(os.Args) == 2 {
+			// Interactive mode: list the library, pick a document, ask.
+			if err := app.RunAskInteractive(ctx, bufio.NewReader(os.Stdin), os.Stdout); err != nil {
+				fmt.Printf("Error: %v\n", err)
+				os.Exit(1)
+			}
+			return
 		}
-		out, err := app.RunAsk(ctx, query)
+		query, docFilter := parseAskArgs(os.Args[2:])
+		if query == "" {
+			query = "What is creativity?"
+		}
+		out, err := app.RunAsk(ctx, query, docFilter)
+		if err != nil {
+			fmt.Printf("Error: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Println(out)
+
+	case "docs":
+		out, err := app.RunListDocs(ctx)
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)
 			os.Exit(1)
@@ -118,6 +135,25 @@ func main() {
 		fmt.Printf("Unknown command %q\n", cmd)
 		os.Exit(1)
 	}
+}
+
+// parseAskArgs splits `arc ask` arguments into the query text and an
+// optional document substring filter (`-doc <substring>`), order-independent:
+// the doc flag and its value are removed wherever they appear and the
+// remaining arguments are joined as the query.
+func parseAskArgs(args []string) (query, docFilter string) {
+	var parts []string
+	for i := 0; i < len(args); i++ {
+		if args[i] == "-doc" || args[i] == "--doc" {
+			if i+1 < len(args) {
+				docFilter = args[i+1]
+				i++
+			}
+			continue
+		}
+		parts = append(parts, args[i])
+	}
+	return strings.Join(parts, " "), docFilter
 }
 
 // runProbe dispatches the M8 probe subcommands: `arc eval probe collect`

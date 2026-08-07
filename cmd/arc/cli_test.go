@@ -1,4 +1,4 @@
-package main_test
+﻿package main_test
 
 import (
 	"context"
@@ -135,7 +135,7 @@ func TestCLIToolCommands(t *testing.T) {
 	})
 
 	t.Run("executes 'ask' CLI command and renders the generated answer", func(t *testing.T) {
-		out, err := app.RunAsk(ctx, "What is a knowledge system?")
+		out, err := app.RunAsk(ctx, "What is a knowledge system?", "")
 		if err != nil {
 			t.Fatalf("unexpected error running CLI ask: %v", err)
 		}
@@ -151,7 +151,7 @@ func TestCLIToolCommands(t *testing.T) {
 	})
 
 	t.Run("ask renders answer with citations and section metadata", func(t *testing.T) {
-		out, err := app.RunAsk(ctx, "semantic boundaries")
+		out, err := app.RunAsk(ctx, "semantic boundaries", "")
 		if err != nil {
 			t.Fatalf("unexpected error running CLI ask: %v", err)
 		}
@@ -179,3 +179,4 @@ func TestCLIToolCommands(t *testing.T) {
 		}
 	})
 }
+
