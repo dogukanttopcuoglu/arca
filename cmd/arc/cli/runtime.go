@@ -31,6 +31,7 @@ import (
 	"arca/internal/retrieval/documentoverview"
 	"arca/internal/retrieval/graphfusion"
 	"arca/internal/retrieval/hybrid"
+	"arca/internal/retrieval/rerank"
 	retrievalseam "arca/internal/retrieval/seam"
 	retrievalsparse "arca/internal/retrieval/sparse"
 
@@ -108,6 +109,17 @@ type Config struct {
 	// GraphFusionRetriever. Frozen at 1.0 by the Gold Set v3 calibration
 	// (ADR-0041); 0 keeps the graph gate closed.
 	RetrievalGraphWeight float64 `mapstructure:"RETRIEVAL_GRAPH_WEIGHT"`
+	// RerankURL is the reranker-service base URL (M10, ADR-0049): empty
+	// keeps the retrieval path byte-identical (default-off); when set, the
+	// graph fusion retriever is wrapped with RerankedRetriever behind the
+	// M7 entity gate.
+	RerankURL string `mapstructure:"RETRIEVAL_RERANK_URL"`
+	// RerankCandidateN is the internal candidate budget for the entity-gated
+	// rerank. Frozen at 50 by the E1 benchmark acceptance (ADR-0049).
+	RerankCandidateN int `mapstructure:"RETRIEVAL_RERANK_CANDIDATE_N"`
+	// RerankTimeoutMS covers only the reranker HTTP call; a timeout degrades
+	// to the inner retriever ordering (fail-open).
+	RerankTimeoutMS int `mapstructure:"RETRIEVAL_RERANK_TIMEOUT_MS"`
 	// HTTPTimeout is the client timeout for external service calls.
 	HTTPTimeout time.Duration `mapstructure:"HTTP_TIMEOUT"`
 }
@@ -133,6 +145,8 @@ func DefaultConfig() Config {
 		FusionPolicyName:      "balanced",
 		ComparisonTopK:        8,   // M6 calibrated evidence budget (ADR-0037)
 		RetrievalGraphWeight:  1.0, // M7 calibrated graph fusion weight (ADR-0041)
+		RerankCandidateN:      50,  // E1-frozen candidate budget (ADR-0049)
+		RerankTimeoutMS:       2000,
 		HTTPTimeout:           30 * time.Second,
 	}
 }
@@ -163,6 +177,9 @@ func LoadFromEnv() Config {
 	v.SetDefault("RETRIEVAL_FUSION_POLICY", base.FusionPolicyName)
 	v.SetDefault("RETRIEVAL_COMPARISON_TOP_K", base.ComparisonTopK)
 	v.SetDefault("RETRIEVAL_GRAPH_WEIGHT", base.RetrievalGraphWeight)
+	v.SetDefault("RETRIEVAL_RERANK_URL", base.RerankURL)
+	v.SetDefault("RETRIEVAL_RERANK_CANDIDATE_N", base.RerankCandidateN)
+	v.SetDefault("RETRIEVAL_RERANK_TIMEOUT_MS", base.RerankTimeoutMS)
 	v.SetDefault("HTTP_TIMEOUT", base.HTTPTimeout)
 
 	return Config{
@@ -184,6 +201,9 @@ func LoadFromEnv() Config {
 		FusionPolicyName:      v.GetString("RETRIEVAL_FUSION_POLICY"),
 		ComparisonTopK:        v.GetInt("RETRIEVAL_COMPARISON_TOP_K"),
 		RetrievalGraphWeight:  v.GetFloat64("RETRIEVAL_GRAPH_WEIGHT"),
+		RerankURL:             v.GetString("RETRIEVAL_RERANK_URL"),
+		RerankCandidateN:      v.GetInt("RETRIEVAL_RERANK_CANDIDATE_N"),
+		RerankTimeoutMS:       v.GetInt("RETRIEVAL_RERANK_TIMEOUT_MS"),
 		HTTPTimeout:           v.GetDuration("HTTP_TIMEOUT"),
 	}
 }
@@ -212,6 +232,10 @@ type Runtime struct {
 	contentStore      store.ContentStore
 	indexingWorker    *worker.IndexingWorker
 	denseRetriever    *dense.DenseRetriever
+	// reranker is the production HTTP Reranker adapter (M10, ADR-0049);
+	// nil when reranking is not configured (default-off). The ask output
+	// renders its counters as the Reranker block.
+	reranker *rerank.HTTPReranker
 
 	// Sparse retrieval components are built lazily: the query encoder needs
 	// the indexed corpus, which does not exist yet on a fresh collection.
@@ -489,7 +513,25 @@ func buildAnswerEngine(rt *Runtime, retriever retrievalseam.Retriever) *qa.Answe
 			fmt.Fprintf(os.Stderr, "warning: graph fusion unavailable (RETRIEVAL_GRAPH_WEIGHT=%.1f): %v; falling back to %s\n",
 				cfg.RetrievalGraphWeight, err, cfg.RetrievalMode)
 		} else {
-			opts = append(opts, qa.WithGraphRetriever(fusionRet))
+			graphOpt := qa.WithGraphRetriever(fusionRet)
+			// M10 entity-gated reranking (ADR-0049): with a configured
+			// reranker-service URL, the graph fusion retriever (the entity
+			// execution component behind the UseGraph decision) is wrapped
+			// with RerankedRetriever at the E1-frozen candidate budget.
+			// Empty URL keeps the path byte-identical (default-off).
+			if cfg.RerankURL != "" {
+				timeout := time.Duration(cfg.RerankTimeoutMS) * time.Millisecond
+				if timeout <= 0 {
+					timeout = 2 * time.Second
+				}
+				adapter := rerank.NewHTTPReranker(cfg.RerankURL, timeout)
+				rt.reranker = adapter
+				graphOpt = qa.WithGraphRetriever(rerank.NewRerankedRetriever(fusionRet, rerank.Config{
+					CandidateBudget: cfg.RerankCandidateN,
+					Reranker:        adapter,
+				}))
+			}
+			opts = append(opts, graphOpt)
 		}
 	}
 	// M9 document-level path (ADR-0048): the overview retriever serves

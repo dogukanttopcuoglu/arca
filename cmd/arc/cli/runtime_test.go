@@ -4,13 +4,84 @@ import (
 	"context"
 	"strings"
 	"testing"
+	"time"
 
 	"arca/internal/indexing/provider"
 	"arca/internal/indexing/store"
 	llmprovider "arca/internal/llm/provider"
 	"arca/internal/retrieval/dense"
+	"arca/internal/retrieval/rerank"
 	"arca/internal/retrieval/seam"
 )
+
+func TestDefaultConfig_RerankerOff(t *testing.T) {
+	cfg := DefaultConfig()
+	if cfg.RerankURL != "" {
+		t.Fatalf("default rerank URL = %q, want empty (default-off)", cfg.RerankURL)
+	}
+	if cfg.RerankCandidateN != 50 {
+		t.Fatalf("default candidate N = %d, want 50 (E1-frozen)", cfg.RerankCandidateN)
+	}
+	if cfg.RerankTimeoutMS != 2000 {
+		t.Fatalf("default timeout = %dms, want 2000", cfg.RerankTimeoutMS)
+	}
+
+	fromEnv := LoadFromEnv()
+	if fromEnv.RerankURL != "" || fromEnv.RerankCandidateN != 50 || fromEnv.RerankTimeoutMS != 2000 {
+		t.Fatalf("env defaults drifted: %+v", fromEnv)
+	}
+}
+
+func TestRenderRerankerStats(t *testing.T) {
+	t.Run("nil adapter renders Enabled false", func(t *testing.T) {
+		out := renderRerankerStats(nil)
+		if !strings.Contains(out, "Enabled: false") {
+			t.Fatalf("expected disabled block, got:\n%s", out)
+		}
+	})
+
+	t.Run("adapter counters render the full block", func(t *testing.T) {
+		r := rerank.NewHTTPReranker("http://localhost:3003", time.Second)
+		out := renderRerankerStats(r)
+		for _, want := range []string{"Enabled: true", "Requests: 0", "Failures: 0", "AvgLatencyMs: 0", "Degraded: false"} {
+			if !strings.Contains(out, want) {
+				t.Fatalf("block missing %q:\n%s", want, out)
+			}
+		}
+	})
+}
+
+func TestAppRunAsk_RerankerBlock(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("unconfigured runtime renders Enabled false", func(t *testing.T) {
+		app := newTestApp(ctx, t, "Grounded answer [Ref 1].")
+		out, err := app.RunAsk(ctx, "What is creativity?", "")
+		if err != nil {
+			t.Fatalf("RunAsk: %v", err)
+		}
+		if !strings.Contains(out, "Reranker:") || !strings.Contains(out, "Enabled: false") {
+			t.Fatalf("expected disabled Reranker block, got:\n%s", out)
+		}
+	})
+
+	t.Run("configured runtime renders the enabled block", func(t *testing.T) {
+		app := newTestApp(ctx, t, "Grounded answer [Ref 1].")
+		// The adapter is composed by buildAnswerEngine (ticket 03 wiring);
+		// the live invocation and counters are verified end-to-end in the
+		// M10 activation gate.
+		app.runtime = &Runtime{reranker: rerank.NewHTTPReranker("http://localhost:3003", time.Second)}
+		out, err := app.RunAsk(ctx, "What is creativity?", "")
+		if err != nil {
+			t.Fatalf("RunAsk: %v", err)
+		}
+		for _, want := range []string{"Enabled: true", "Requests: 0", "Failures: 0", "AvgLatencyMs: 0", "Degraded: false"} {
+			if !strings.Contains(out, want) {
+				t.Fatalf("expected live Reranker block with %q, got:\n%s", want, out)
+			}
+		}
+	})
+}
 
 func TestDefaultConfig_LLMSettings(t *testing.T) {
 	cfg := DefaultConfig()

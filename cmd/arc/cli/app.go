@@ -16,6 +16,7 @@ import (
 	"arca/internal/pdfinspector/model"
 	"arca/internal/qa"
 	qaverification "arca/internal/qa/verification"
+	"arca/internal/retrieval/rerank"
 	retrievalseam "arca/internal/retrieval/seam"
 )
 
@@ -78,7 +79,7 @@ func (a *App) RunInspect(ctx context.Context, filePath string) (string, error) {
 		return "", fmt.Errorf("inspection failed: %w", err)
 	}
 
-	jobObj, err := a.runtime.indexingWorker.ExecuteSync(ctx, result.Document.DocumentID, result.Document.Title, result.Chunks)
+	jobObj, err := a.runtime.indexingWorker.ExecuteSync(ctx, result.Document.DocumentID, result.Document.Title, result.Chunks, &result.Document)
 	if err != nil {
 		return "", fmt.Errorf("indexing failed: %w", err)
 	}
@@ -136,7 +137,36 @@ func (a *App) RunAsk(ctx context.Context, query string, docFilter string) (strin
 		sb.WriteString("\n⚠ answer contains unverified reference(s) — treat with caution\n")
 	}
 
+	var reranker *rerank.HTTPReranker
+	if a.runtime != nil {
+		reranker = a.runtime.reranker
+	}
+	sb.WriteString("\n" + renderRerankerStats(reranker))
+
 	return sb.String(), nil
+}
+
+// renderRerankerStats renders the M10 observability block (ADR-0049):
+// whether reranking is configured and, when it is, the adapter counters.
+// A nil adapter means default-off (empty RETRIEVAL_RERANK_URL).
+func renderRerankerStats(r *rerank.HTTPReranker) string {
+	var sb strings.Builder
+	sb.WriteString("Reranker:\n")
+	if r == nil {
+		sb.WriteString("  Enabled: false\n")
+		return sb.String()
+	}
+	requests := r.RequestsTotal()
+	avg := int64(0)
+	if requests > 0 {
+		avg = r.LatencyMsTotal() / requests
+	}
+	fmt.Fprintf(&sb, "  Enabled: true\n")
+	fmt.Fprintf(&sb, "  Requests: %d\n", requests)
+	fmt.Fprintf(&sb, "  Failures: %d\n", r.FailuresTotal())
+	fmt.Fprintf(&sb, "  AvgLatencyMs: %d\n", avg)
+	fmt.Fprintf(&sb, "  Degraded: %t\n", r.LastDegraded())
+	return sb.String()
 }
 
 // DocumentEntry is one indexed document in the live index: its ID and the
