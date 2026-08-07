@@ -222,6 +222,33 @@ Rationale:
 
 **E2 verdict:** the deterministic structure path clears MPI on the heading slice but is far weaker than the model path and does not change the M8 rejection. E1 (entity-gated BGE) remains the only untested candidate; E3 is meaningful only if E1 passes.
 
+## 8b. E1 executed — results (2026-08-07, GPU, fingerprint-gated)
+
+**Hypothesis tested:** reranking only entity queries (the M8 win class, behind the M7 `UseGraph` gate) with the BGE cross-encoder captures the entity gains while concept/comparison/single_fact slices stay byte-identical at baseline.
+
+**Setup:** Gold Set v3.1 (see curation below), artifact re-collected from the live corpus (fingerprint `8b21a664…` verified; all 29 non-abstention candidate lists byte-identical to the v3 artifact — zero retrieval drift), budgets frozen p95 ≤ 8s / RSS ≤ 4 GiB, `--bge-intents entity`, `--gate-runs 3` (median decision — see finding 4).
+
+| configuration | nDCG@5 (Δ) | MRR | entity slice nDCG (Δ) | verified (Δ) | p95 ms | verdict |
+|---|---|---|---|---|---|---|
+| Baseline (GraphFusion w=1.0) | 0.886 | 0.902 | 0.9146 | 0.655 | — | — |
+| BGE N=20 (entity-gated) | 0.903 (+1.69pp) | 0.902 | 0.9781 (+6.35pp) | 0.759 (+10.3pp) | 21029 (cold) | budget FAIL |
+| BGE N=50 (entity-gated) | 0.897 (+1.20pp) | 0.902 | 0.9571 (+4.25pp) | 0.759 (+10.3pp) | 3967 | **ACCEPT** |
+| BGE N=100 (entity-gated) | 0.892 (+0.78pp) | 0.902 | 0.9382 (+2.36pp) | 0.759 (+10.3pp) | 5908 | MPI FAIL |
+
+Gated-out slices (comparison/concept/single_fact): **byte-identical** to baseline at every N (recall/nDCG/MRR delta +0.00) — the M8 loss classes are untouched as designed. Abstention: aligned (8/8 zero candidates).
+
+**Verdict: ACCEPT (bge, N=50) — the first reranker acceptance on the production distribution.** Every frozen ADR-0045 threshold passes: MPI +1.20pp aggregate (+4.25pp entity slice), MAR MRR 0.00pp, MAR verified +10.3pp, abstention aligned, budget p95 3.97s / RSS 3.4 GiB.
+
+**Findings:**
+
+1. **The entity gate isolates the only M8 win class.** Entity queries are exactly where reranking helps (M8 per-query analysis: +0.08..+0.50 on entity/name-driven queries) and concept/comparison are exactly where it destroyed ranking (−0.62..−1.00). Gating on the existing M7 `UseGraph` intent keeps the gain and drops the loss.
+2. **Gold set v3's abstention slice was defective.** 6/8 queries (g-ab-02..08) retrieved 4–100 candidates at baseline — same curation-defect class M8 flagged on v4 h-ab-01. The strict `AbstentionAligned` invariant (candidates must be empty) therefore failed *every* probe combination on the v3 artifact regardless of reranker behavior. Curated `goldset_v3_1.json`: g-ab-02..08 → g-ab-09..14, mined from the live corpus for zero candidates (chemical formula for table salt; fastest land animal; Mona Lisa; speed of light; largest ocean; Moon diameter), keeping g-ab-01/g-ab-05 (the proven pair). All 29 non-abstention queries untouched.
+3. **The verified-rate metric was noise-dominated at single-shot.** Same (query, content) pairs produced baseline verified 0.655 (M8) / 0.690 / 0.759 across runs — 1–2 of 29 LLM verdicts flip per run, a ±3.4..7pp noise band against the ±1pp MAR threshold. The probe gained `--gate-runs` (lower-median decision, mirroring the eval runner's M7 BULGU-2 fix); baseline stabilized at 0.655 — reproducing M8's closeout value exactly.
+4. **The verified gain is real and consistent** (+10.3pp at every N with median-of-3) — matching M8's observation that reranked top-5 joins are more often gate-supported. The gate is not a substitute for ranking quality, but the entity-gated path needs no gate compensation.
+5. **N=20's budget failure is a cold-load artifact:** the first combination's first query pays the ~18s model load; N=50 (3.97s) and N=100 (5.9s) are warm and within budget. A production service would amortize load across requests.
+
+**E1 verdict:** PASS. The composition question (E3: entity BGE + heading structure bonus — disjoint intents) is now meaningful, satisfying the research doc's precondition. Production activation is not automatic: the probe surface is ADR-0045 benchmark tooling; activation would reuse the M8 `RerankedRetriever` seam behind the M7 entity gate with a deployable reranker provider (the exec adapter is probe-only) — that is its own milestone with its own ADR.
+
 ## 9. Explicit non-goals
 
 - **No global reranking** over all retrieved chunks (M8 rejected; E4 is a control, not a candidate).
@@ -235,4 +262,4 @@ Rationale:
 
 ## 10. Conclusion
 
-Structure-aware reranking is a **promising but unproven** direction, and the research record is explicit that it may conclude with "do not implement". The evidence ordering is clear: the heading gain is structural-lexical (test it deterministically first, E2), the entity gain is model-driven (test it gated, E1), and only their composition (E3) can justify any production change. GraphFusion remains the primary retrieval signal; anything that touches it must win its own benchmark first.
+Structure-aware reranking has now produced its first acceptance: **entity-gated BGE reranking (N=50) passes the frozen kill gate on the production distribution** (E1, gold set v3.1). The heading path remains model-driven — E2 showed the deterministic structure bonus clears MPI on the heading slice (+3.85pp) but captures only ~30% of BGE's gain, and the gated bonus is production-safe. The remaining question is composition (E3: entity BGE + heading structure bonus, disjoint intent classes), which is meaningful only because E1 passed; if E3 confirms non-interference, the next step is a production-activation milestone behind the M7 entity gate with a deployable reranker provider. GraphFusion remains the primary retrieval signal; any production change must win its own benchmark first — E1's acceptance is measured on the same frozen thresholds.
