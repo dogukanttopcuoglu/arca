@@ -7,6 +7,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"time"
 
 	"arca/internal/eval"
 	"arca/internal/eval/probe"
@@ -52,6 +53,11 @@ type ProbeRunOptions struct {
 	// (comma-separated; research E1 selective reranking); empty = all
 	// queries. Gated-out queries keep the baseline ordering.
 	BGEIntents string
+	// HTTPRerankerURL, when set, replaces the probe-side exec adapter with
+	// the production HTTP Reranker (M10, ADR-0049): the activation gate
+	// measures the production surface on the same artifacts and frozen
+	// thresholds as E1. Empty keeps the exec adapter.
+	HTTPRerankerURL string
 }
 
 // RunProbeCollect generates the candidate artifact from the production
@@ -133,15 +139,21 @@ func (a *App) RunProbe(ctx context.Context, opts ProbeRunOptions) (string, error
 		return "", err
 	}
 
-	// Model adapters are probe-side exec rerankers; each command speaks the
-	// NDJSON protocol of the probe exec adapter.
-	if opts.BGECommand == "" {
-		return "", fmt.Errorf("no reranker command configured (--bge-command)")
+	// Model adapters: the probe-side exec reranker speaks the NDJSON
+	// protocol; with HTTPRerankerURL set, the production HTTP adapter
+	// replaces it so the activation gate measures the real production
+	// surface (M10, ADR-0049). Exactly one model source is required.
+	if opts.HTTPRerankerURL == "" && strings.TrimSpace(opts.BGECommand) == "" {
+		return "", fmt.Errorf("no reranker configured (--bge-command or --http-reranker-url)")
 	}
-	execReranker := probe.NewExecReranker(parseCommand(opts.BGECommand)...)
-	defer execReranker.Close()
-
-	rerankerMap := map[string]rerank.Reranker{"bge": execReranker}
+	rerankerMap := map[string]rerank.Reranker{}
+	if opts.HTTPRerankerURL != "" {
+		rerankerMap["bge"] = rerank.NewHTTPReranker(opts.HTTPRerankerURL, 10*time.Second)
+	} else {
+		execReranker := probe.NewExecReranker(parseCommand(opts.BGECommand)...)
+		defer execReranker.Close()
+		rerankerMap["bge"] = execReranker
+	}
 	var structureIntents []string
 	if opts.Structure {
 		rerankerMap["structure"] = &probe.StructureReranker{BonusAlpha: 0.5}

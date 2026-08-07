@@ -200,6 +200,7 @@ func runProbe(ctx context.Context, app *arccli.App, args []string) {	if len(args
 		structure := fs.Bool("structure", false, "add the deterministic structure-bonus reranker (research E2, model-free heading overlap)")
 		structureIntents := fs.String("structure-intents", "", "gate the structure reranker to these intents (comma-separated; empty = all)")
 		bgeIntents := fs.String("bge-intents", "", "gate the BGE reranker to these intents (comma-separated; empty = all queries — research E1 selective reranking)")
+		httpRerankerURL := fs.String("http-reranker-url", "", "use the production HTTP Reranker adapter against this base URL instead of the exec adapter (M10 activation gate)")
 		if err := fs.Parse(args[1:]); err != nil {
 			fmt.Printf("Error: %v\n", err)
 			os.Exit(1)
@@ -226,6 +227,7 @@ func runProbe(ctx context.Context, app *arccli.App, args []string) {	if len(args
 			Structure:       *structure,
 			StructureIntents: *structureIntents,
 			BGEIntents:      *bgeIntents,
+			HTTPRerankerURL: *httpRerankerURL,
 		})
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)
