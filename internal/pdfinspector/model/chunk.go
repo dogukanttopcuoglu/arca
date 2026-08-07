@@ -1,13 +1,16 @@
 package model
 
-// Supported chunk content types.
+// Supported chunk content types. ContentTypeDocumentProfile marks the
+// document-level retrieval artifact (ADR-0048) — it is NOT a chunk content
+// type: a profile point is document metadata, never a corpus segment.
 const (
-	ContentTypeParagraph = "paragraph"
-	ContentTypeTable     = "table"
-	ContentTypeCode      = "code"
-	ContentTypeList      = "list"
-	ContentTypeEquation  = "equation"
-	ContentTypeFigure    = "figure"
+	ContentTypeParagraph        = "paragraph"
+	ContentTypeTable            = "table"
+	ContentTypeCode             = "code"
+	ContentTypeList             = "list"
+	ContentTypeEquation         = "equation"
+	ContentTypeFigure           = "figure"
+	ContentTypeDocumentProfile  = "document_profile"
 )
 
 // SourceOffset defines character start and end index bounds in source text.

@@ -16,6 +16,7 @@ import (
 	"arca/internal/indexing/provider"
 	"arca/internal/indexing/sparse"
 	"arca/internal/indexing/store"
+	"arca/internal/pdfinspector/chunking"
 	pdfmodel "arca/internal/pdfinspector/model"
 )
 
@@ -78,7 +79,11 @@ func NewIndexingWorker(p provider.EmbeddingProvider, s store.VectorStore, c stor
 // ExecuteSync executes document indexing synchronously and returns the completed IndexingJob.
 // documentTitle feeds the ADR-0047 embedding input representation (BookPath);
 // it is passed through to the embedding input builder, never stored.
-func (w *IndexingWorker) ExecuteSync(ctx context.Context, documentID, documentTitle string, chunks []pdfmodel.KnowledgeChunk) (*indexingjob.IndexingJob, error) {
+// meta, when non-nil, creates the document's Document Profile Point (ADR-0048):
+// one deterministic document-level retrieval artifact riding the same diff
+// lifecycle as the chunk batch (stable point ID + ContentHash over the profile
+// content decide skip vs re-upsert).
+func (w *IndexingWorker) ExecuteSync(ctx context.Context, documentID, documentTitle string, chunks []pdfmodel.KnowledgeChunk, meta *pdfmodel.DocumentMetadata) (*indexingjob.IndexingJob, error) {
 	if documentID == "" {
 		return nil, fmt.Errorf("documentID cannot be empty")
 	}
@@ -103,9 +108,15 @@ func (w *IndexingWorker) ExecuteSync(ctx context.Context, documentID, documentTi
 		return jobObj, err
 	}
 
-	existingMeta := make([]indexingmodel.VectorMetadata, len(existingPoints))
-	for i, pt := range existingPoints {
-		existingMeta[i] = pt.Metadata
+	existingMeta := make([]indexingmodel.VectorMetadata, 0, len(existingPoints))
+	for _, pt := range existingPoints {
+		// The Document Profile Point (ADR-0048) is not a chunk: it must not
+		// enter the chunk diff engine (it would be flagged as an orphan and
+		// deleted on every re-index). Its lifecycle is managed in step 3c.
+		if pt.Metadata.ContentType == pdfmodel.ContentTypeDocumentProfile {
+			continue
+		}
+		existingMeta = append(existingMeta, pt.Metadata)
 	}
 
 	// 2. Compute DiffPlan using DiffEngine
@@ -151,14 +162,61 @@ func (w *IndexingWorker) ExecuteSync(ctx context.Context, documentID, documentTi
 		}
 	}
 
+	// 3c. Document Profile Point (ADR-0048): one deterministic document-level
+	// artifact per document, derived from enrichment metadata. It rides the
+	// chunk diff lifecycle — the point ID is stable and the ContentHash over
+	// the profile content decides skip vs re-upsert — and joins the same
+	// upsert batch below. Sparse encoding is deliberately skipped: the
+	// profile is document metadata and must not shift BM25 IDF statistics.
+	var newPoints []store.VectorPoint
+	if meta != nil {
+		content := BuildDocumentProfileContent(meta, chunks)
+		contentHash := chunking.ComputeContentHash(content)
+		ptID := store.CalculatePointID(documentID, ProfileSectionPath, 0)
+
+		needsUpsert := true
+		for _, pt := range existingPoints {
+			if pt.Metadata.ContentType == pdfmodel.ContentTypeDocumentProfile &&
+				pt.Metadata.ContentHash == contentHash && pt.ID == ptID {
+				needsUpsert = false
+				break
+			}
+		}
+
+		if needsUpsert {
+			embRes, err := w.provider.EmbedDocuments(ctx, []string{content})
+			if err != nil {
+				jobObj.SetError(err)
+				return jobObj, fmt.Errorf("profile embedding failed: %w", err)
+			}
+			sig := indexingmodel.CalculateIndexSignature(contentHash, jobObj.EmbeddingProvider, jobObj.EmbeddingModel, "1.0.0", "1.0")
+			newPoints = append(newPoints, store.VectorPoint{
+				ID:              ptID,
+				Vector:          embRes.Vectors[0],
+				ContentMarkdown: content,
+				Metadata: indexingmodel.VectorMetadata{
+					DocumentID:        documentID,
+					ChunkID:           documentID + "/document-profile/001",
+					ChunkOrder:        0,
+					SectionPath:       ProfileSectionPath,
+					ContentType:       pdfmodel.ContentTypeDocumentProfile,
+					ContentHash:       contentHash,
+					EmbeddingProvider: embRes.Provider,
+					EmbeddingModel:    embRes.Model,
+					EmbeddingVersion:  embRes.Version,
+					ChunkSchemaVer:    "1.0",
+					IndexSignature:    sig,
+				},
+			})
+		}
+	}
+
 	// 4. Batch & Generate Embeddings for new/modified chunks
 	chunksToEmbed := diffPlan.ChunksToEmbed()
 	batchSize := caps.MaxBatchSize
 	if batchSize <= 0 {
 		batchSize = 50
 	}
-
-	var newPoints []store.VectorPoint
 
 	for idx := 0; idx < len(chunksToEmbed); idx += batchSize {
 		end := idx + batchSize

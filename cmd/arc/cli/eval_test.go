@@ -12,6 +12,7 @@ import (
 	"arca/internal/eval"
 	indexingmodel "arca/internal/indexing/model"
 	"arca/internal/indexing/store"
+	pdfmodel "arca/internal/pdfinspector/model"
 	retrievalseam "arca/internal/retrieval/seam"
 )
 
@@ -85,6 +86,44 @@ func evalFixture(t *testing.T) (*App, string) {
 	goldsetPath := writeTempGoldSet(t, fingerprint, queries)
 
 	return NewAppWithRuntime(runtime), goldsetPath
+}
+
+func TestListPointsSourceExcludesDocumentProfilePoints(t *testing.T) {
+	ctx := context.Background()
+	vecStore := store.NewInMemoryVectorStore()
+	points := []store.VectorPoint{
+		{ID: "pt-1", Vector: []float32{0.1}, Metadata: indexingmodel.VectorMetadata{DocumentID: "doc-1", ChunkID: "chk-1", ContentHash: hashA}},
+		{ID: "pt-2", Vector: []float32{0.2}, Metadata: indexingmodel.VectorMetadata{DocumentID: "doc-1", ChunkID: "chk-2", ContentHash: hashB}},
+		{ID: "pt-3", Vector: []float32{0.3}, Metadata: indexingmodel.VectorMetadata{
+			DocumentID:  "doc-1",
+			ChunkID:     "doc-1/document-profile/001",
+			SectionPath: "Document Profile",
+			ContentType: pdfmodel.ContentTypeDocumentProfile,
+			ContentHash: "profile-hash",
+		}},
+	}
+	if err := vecStore.UpsertPoints(ctx, points); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+
+	hashes, err := listPointsSource{store: vecStore}.ContentHashes("doc-1")
+	if err != nil {
+		t.Fatalf("ContentHashes: %v", err)
+	}
+	if len(hashes) != 2 {
+		t.Fatalf("expected 2 chunk hashes (profile excluded), got %v", hashes)
+	}
+	for _, h := range hashes {
+		if h == "profile-hash" {
+			t.Fatalf("document profile hash leaked into the corpus fingerprint: %v", hashes)
+		}
+	}
+
+	// The fingerprint over the chunk-only hashes matches the pre-profile corpus.
+	live := eval.ComputeFingerprint(hashes)
+	if live != eval.ComputeFingerprint([]string{hashA, hashB}) {
+		t.Fatalf("fingerprint changed by the profile point: %s", live)
+	}
 }
 
 func TestAppRunEval(t *testing.T) {

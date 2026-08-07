@@ -29,7 +29,7 @@ func (f MetadataFilter) Validate() error {
 	}
 	for _, ct := range f.ContentTypes {
 		switch ct {
-		case pdfmodel.ContentTypeParagraph, pdfmodel.ContentTypeTable, pdfmodel.ContentTypeCode, pdfmodel.ContentTypeList, pdfmodel.ContentTypeEquation, pdfmodel.ContentTypeFigure:
+		case pdfmodel.ContentTypeParagraph, pdfmodel.ContentTypeTable, pdfmodel.ContentTypeCode, pdfmodel.ContentTypeList, pdfmodel.ContentTypeEquation, pdfmodel.ContentTypeFigure, pdfmodel.ContentTypeDocumentProfile:
 			// Valid
 		default:
 			return fmt.Errorf("unsupported content_type in MetadataFilter: %q", ct)

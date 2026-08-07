@@ -174,7 +174,7 @@ func main() {
 		denseRetriever := dense.NewDenseRetriever(indexingProvider, vectorStore, contentStore)
 
 		indexCtx := context.Background()
-		jobObj, err := indexingWorker.ExecuteSync(indexCtx, result.Document.DocumentID, result.Document.Title, result.Chunks)
+		jobObj, err := indexingWorker.ExecuteSync(indexCtx, result.Document.DocumentID, result.Document.Title, result.Chunks, &result.Document)
 		if err != nil {
 			fmt.Printf("[-] Indexing failed: %v\n", err)
 			os.Exit(1)

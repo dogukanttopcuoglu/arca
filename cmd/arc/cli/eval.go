@@ -15,6 +15,7 @@ import (
 	"arca/internal/retrieval/graphfusion"
 	"arca/internal/retrieval/hybrid"
 	retrievalseam "arca/internal/retrieval/seam"
+	pdfmodel "arca/internal/pdfinspector/model"
 )
 
 // EvalOptions configures an arc eval benchmark run.
@@ -178,15 +179,20 @@ type listPointsSource struct {
 }
 
 // ContentHashes returns the ContentHash of every indexed chunk for the
-// document via ListPoints.
+// document via ListPoints. Document Profile Points (ADR-0048) are excluded:
+// the corpus fingerprint covers indexed *chunks*, and a profile is document
+// metadata, not a chunk.
 func (s listPointsSource) ContentHashes(documentID string) ([]string, error) {
 	points, err := s.store.ListPoints(context.Background(), indexingmodel.MetadataFilter{DocumentIDs: []string{documentID}})
 	if err != nil {
 		return nil, err
 	}
-	hashes := make([]string, len(points))
-	for i, p := range points {
-		hashes[i] = p.Metadata.ContentHash
+	var hashes []string
+	for _, p := range points {
+		if p.Metadata.ContentType == pdfmodel.ContentTypeDocumentProfile {
+			continue
+		}
+		hashes = append(hashes, p.Metadata.ContentHash)
 	}
 	return hashes, nil
 }
