@@ -1,15 +1,17 @@
 package qa
 
 // RetrievalDecision is the output of the Retrieval Orchestrator (ADR-0037,
-// extended by ADR-0042 after the M7 benchmark acceptance): comparison
-// decomposition, the comparison evidence-budget TopK override, and the
-// benchmark-gated graph gate for entity queries. A zero TopKOverride means
-// "use the caller's TopK"; UseGraph is honored only when a graph retriever is
-// injected into the engine.
+// extended by ADR-0042 after the M7 benchmark acceptance and by ADR-0048 for
+// M9): comparison decomposition, the comparison evidence-budget TopK
+// override, the benchmark-gated graph gate for entity queries, and the
+// document-level overview path. A zero TopKOverride means "use the caller's
+// TopK"; UseGraph is honored only when a graph retriever is injected into
+// the engine, DocumentOverview only when an overview retriever is.
 type RetrievalDecision struct {
-	Decompose    bool
-	TopKOverride int
-	UseGraph     bool
+	Decompose         bool
+	TopKOverride      int
+	UseGraph          bool
+	DocumentOverview  bool
 }
 
 // RetrievalRuntimeConfig carries the benchmark-calibrated orchestration
@@ -25,7 +27,9 @@ type RetrievalRuntimeConfig struct {
 // function translating an IntentHint and runtime config into a
 // RetrievalDecision. Comparison hints get decomposition and the calibrated
 // evidence budget; entity hints open the graph gate when a positive graph
-// weight is configured (ADR-0042). All other hints keep the Balanced path.
+// weight is configured (ADR-0042); document_overview hints select the
+// document-level retrieval path (ADR-0048). All other hints keep the
+// Balanced path.
 func DecideRetrievalRouting(hint IntentHint, cfg RetrievalRuntimeConfig) RetrievalDecision {
 	switch hint.Intent {
 	case HintIntentComparison:
@@ -38,6 +42,8 @@ func DecideRetrievalRouting(hint IntentHint, cfg RetrievalRuntimeConfig) Retriev
 		if cfg.GraphWeight > 0 {
 			return RetrievalDecision{UseGraph: true}
 		}
+	case HintIntentDocumentOverview:
+		return RetrievalDecision{DocumentOverview: true}
 	}
 	return RetrievalDecision{}
 }

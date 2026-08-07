@@ -38,9 +38,46 @@ func NewRuleBasedAnalyzer() *RuleBasedAnalyzer {
 // (M7 gold set v3 entity slice): "What does the book say about X?".
 var entityQuestionPattern = regexp.MustCompile(`(?i)^what does the (?:book|it) say about .+\??$`)
 
+// documentOverviewPatterns detect document-level questions (M9, ADR-0048):
+// "what is this book about", "bu kitap ne anlatıyor", "yazar kim", "özetle".
+// The set is deliberately capped — it covers the benchmarked forms; a 5th
+// non-structural TR pattern request signals the exemplar-based matcher
+// (Phase 2), never unbounded regex growth. Section-scoped summary queries
+// (bölüm/chapter/konu + özet/summary) are excluded before matching.
+var documentOverviewPatterns = []*regexp.Regexp{
+	// EN — structural, book-anchored
+	regexp.MustCompile(`(?i)^what is (this|the) book about`),
+	regexp.MustCompile(`(?i)^what (does|do) (this|the) book cover`),
+	regexp.MustCompile(`(?i)^summar(ize|y) (of )?(this|the) book`),
+	regexp.MustCompile(`(?i)^what is the main idea`),
+	regexp.MustCompile(`(?i)^who (is|was) the author`),
+	regexp.MustCompile(`(?i)^who wrote (this|the) book`),
+	// TR — capped, book/author-anchored
+	regexp.MustCompile(`(?i)kitap ne anlatıyor`),
+	regexp.MustCompile(`(?i)kitap ne hakkında`),
+	regexp.MustCompile(`(?i)kitabı özetle`),
+	regexp.MustCompile(`(?i)^özetle`),
+	regexp.MustCompile(`(?i)ana fikri`),
+	regexp.MustCompile(`(?i)^yazar kim`),
+	regexp.MustCompile(`(?i)^yazarı kim`),
+	regexp.MustCompile(`(?i)kim yazdı`),
+}
+
+// isSectionScopedSummary reports whether the query asks for a section-level
+// summary (bölüm/chapter/section/konu/topic + özet/summary/summarize) — such
+// queries must stay on normal retrieval, never route to document overview.
+func isSectionScopedSummary(trimmed string) bool {
+	low := strings.ToLower(trimmed)
+	sectionWord := strings.Contains(low, "bölüm") || strings.Contains(low, "chapter") ||
+		strings.Contains(low, "section") || strings.Contains(low, "konu") || strings.Contains(low, "topic")
+	summaryWord := strings.Contains(low, "özet") || strings.Contains(low, "summary") || strings.Contains(low, "summarize")
+	return sectionWord && summaryWord
+}
+
 // Analyze extracts basic query intent, keywords, and deterministic
 // sub-queries for comparison patterns (M4 decomposition experiment). Entity
-// question forms are flagged for the M7 graph gate (ADR-0042).
+// question forms are flagged for the M7 graph gate (ADR-0042); document
+// overview forms for the M9 document-level path (ADR-0048).
 func (a *RuleBasedAnalyzer) Analyze(ctx context.Context, query string) (*AnalyzedQuery, error) {
 	trimmed := strings.TrimSpace(query)
 	if trimmed == "" {
@@ -48,11 +85,14 @@ func (a *RuleBasedAnalyzer) Analyze(ctx context.Context, query string) (*Analyze
 	}
 
 	intent := "concept_lookup"
-	if strings.HasPrefix(strings.ToLower(trimmed), "who") || strings.Contains(strings.ToLower(trimmed), "author") {
+	switch {
+	case entityQuestionPattern.MatchString(trimmed):
 		intent = "entity_lookup"
-	} else if entityQuestionPattern.MatchString(trimmed) {
+	case !isSectionScopedSummary(trimmed) && matchesAny(documentOverviewPatterns, trimmed):
+		intent = "document_overview"
+	case strings.HasPrefix(strings.ToLower(trimmed), "who") || strings.Contains(strings.ToLower(trimmed), "author") || strings.Contains(strings.ToLower(trimmed), "yazar"):
 		intent = "entity_lookup"
-	} else if strings.HasPrefix(strings.ToLower(trimmed), "how") {
+	case strings.HasPrefix(strings.ToLower(trimmed), "how"):
 		intent = "procedural_lookup"
 	}
 
@@ -72,6 +112,16 @@ func (a *RuleBasedAnalyzer) Analyze(ctx context.Context, query string) (*Analyze
 		Entities:   entities,
 		SubQueries: decomposeComparison(trimmed),
 	}, nil
+}
+
+// matchesAny reports whether the query matches any of the patterns.
+func matchesAny(patterns []*regexp.Regexp, query string) bool {
+	for _, re := range patterns {
+		if re.MatchString(query) {
+			return true
+		}
+	}
+	return false
 }
 
 // decomposeComparison deterministically splits comparison queries into two

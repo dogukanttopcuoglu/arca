@@ -44,15 +44,16 @@ type Answer struct {
 // AnswerEngine orchestrates the RAG pipeline stages using modular composition:
 // Analyze -> Retrieve -> ContextBuilder -> EvidenceGate -> PromptBuilder -> LLM.Generate -> Verification.
 type AnswerEngine struct {
-	analyzer       QueryAnalyzer
-	retriever      seam.Retriever
-	graphRetriever seam.Retriever
-	contextBuilder qacontext.ContextBuilder
-	promptBuilder  qaprompt.PromptBuilder
-	llmProvider    llmprovider.LLMProvider
-	verifier       qaverification.VerificationPipeline
-	evidenceGate   EvidenceGate
-	retrievalCfg   RetrievalRuntimeConfig
+	analyzer          QueryAnalyzer
+	retriever         seam.Retriever
+	graphRetriever    seam.Retriever
+	overviewRetriever seam.Retriever
+	contextBuilder    qacontext.ContextBuilder
+	promptBuilder     qaprompt.PromptBuilder
+	llmProvider       llmprovider.LLMProvider
+	verifier          qaverification.VerificationPipeline
+	evidenceGate      EvidenceGate
+	retrievalCfg      RetrievalRuntimeConfig
 }
 
 // AnswerEngineOption configures an AnswerEngine instance.
@@ -73,6 +74,16 @@ func WithRetrievalRuntimeConfig(cfg RetrievalRuntimeConfig) AnswerEngineOption {
 func WithGraphRetriever(r seam.Retriever) AnswerEngineOption {
 	return func(e *AnswerEngine) {
 		e.graphRetriever = r
+	}
+}
+
+// WithDocumentOverviewRetriever injects the document-level retrieval
+// component (ADR-0048): document_overview queries whose decision carries
+// DocumentOverview execute retrieval through it. Without injection the
+// overview path falls back to the base retriever (no behavior change).
+func WithDocumentOverviewRetriever(r seam.Retriever) AnswerEngineOption {
+	return func(e *AnswerEngine) {
+		e.overviewRetriever = r
 	}
 }
 
@@ -165,11 +176,16 @@ func (e *AnswerEngine) Answer(ctx context.Context, query seam.RetrievalQuery) (*
 		hint := AnalyzeIntentHint(analyzed)
 		decision := DecideRetrievalRouting(hint, e.retrievalCfg)
 
-		// Execution component selection (ADR-0042): only the retriever
+		// Execution component selection (ADR-0042/0048): only the retriever
 		// changes; decomposition and TopKOverride behavior is identical.
+		// UseGraph and DocumentOverview are mutually exclusive by
+		// construction (the orchestrator returns one or the other).
 		exec := e.retriever
 		if decision.UseGraph && e.graphRetriever != nil {
 			exec = e.graphRetriever
+		}
+		if decision.DocumentOverview && e.overviewRetriever != nil {
+			exec = e.overviewRetriever
 		}
 
 		if decision.Decompose {
