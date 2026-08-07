@@ -81,9 +81,16 @@ func (r *Retriever) Retrieve(ctx context.Context, query retrievalseam.RetrievalQ
 	// Real content chunks join the context only for a document-filtered
 	// overview (M9 decision): without a filter the library-level overview
 	// surfaces profile points exclusively — no chunk retrieval fallback.
+	// The context is capped at IntroChunks real chunks regardless of the
+	// caller's TopK (M9 spec: "take 4").
 	if len(query.Filter.DocumentIDs) > 0 {
+		chunkCount := 0
 		for _, c := range chunks {
+			if chunkCount >= IntroChunks {
+				break
+			}
 			results = append(results, toResult(c, 0.5))
+			chunkCount++
 			if len(results) >= query.TopK {
 				break
 			}

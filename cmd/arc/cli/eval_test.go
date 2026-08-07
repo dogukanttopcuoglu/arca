@@ -126,6 +126,67 @@ func TestListPointsSourceExcludesDocumentProfilePoints(t *testing.T) {
 	}
 }
 
+func TestAppRunEval_OverviewFlag(t *testing.T) {
+	ctx := context.Background()
+	cfg := DefaultConfig()
+	runtime, err := NewRuntime(cfg)
+	if err != nil {
+		t.Fatalf("failed to construct runtime: %v", err)
+	}
+	vecStore := runtime.vectorStore.(*store.InMemoryVectorStore)
+	emb := runtime.embeddingProvider
+
+	seedPoint := func(id string, meta indexingmodel.VectorMetadata) {
+		t.Helper()
+		vec, err := emb.EmbedQuery(ctx, id)
+		if err != nil || len(vec) == 0 {
+			t.Fatalf("embed %s: %v", id, err)
+		}
+		if err := vecStore.UpsertPoints(ctx, []store.VectorPoint{{ID: "pt-" + id, Vector: vec, ContentMarkdown: id, Metadata: meta}}); err != nil {
+			t.Fatalf("seed %s: %v", id, err)
+		}
+	}
+	seedPoint("chk-1", indexingmodel.VectorMetadata{DocumentID: "doc-1", ChunkID: "chk-1", ChunkOrder: 1, SectionPath: "Copyright", ContentHash: hashA})
+	seedPoint("chk-2", indexingmodel.VectorMetadata{DocumentID: "doc-1", ChunkID: "chk-2", ChunkOrder: 2, SectionPath: "Intro", ContentHash: hashB})
+	seedPoint("doc-1/document-profile/001", indexingmodel.VectorMetadata{
+		DocumentID: "doc-1", ChunkID: "doc-1/document-profile/001", ChunkOrder: 0,
+		SectionPath: "Document Profile", ContentType: pdfmodel.ContentTypeDocumentProfile,
+		ContentHash: "profile-hash",
+	})
+
+	// Gold set: one overview query scoped to doc-1, expectations = profile + first real chunk.
+	gs := `{
+  "schema_version": "1.2",
+  "documents": [
+    {"document_id": "doc-1", "corpus_fingerprint": "` + eval.ComputeFingerprint([]string{hashA, hashB}) + `", "chunk_count": 2}
+  ],
+  "queries": [
+    {"id": "ov-01", "intent": "document_overview", "document_id": "doc-1", "query": "What is this book about?",
+     "expected_retrieval_points": ["doc-1/document-profile/001", "chk-2"]}
+  ]
+}`
+	goldsetPath := filepath.Join(t.TempDir(), "goldset_v5.json")
+	if err := os.WriteFile(goldsetPath, []byte(gs), 0644); err != nil {
+		t.Fatalf("write goldset: %v", err)
+	}
+
+	out, err := NewAppWithRuntime(runtime).RunEval(ctx, EvalOptions{
+		GoldSetPath: goldsetPath,
+		Mode:        retrievalseam.RetrievalDense,
+		TopK:        5,
+		Overview:    true,
+	})
+	if err != nil {
+		t.Fatalf("RunEval: %v", err)
+	}
+	if !strings.Contains(out, "recall@5            1.000") {
+		t.Fatalf("expected overview run to surface the profile + first real chunk, got:\n%s", out)
+	}
+	if !strings.Contains(out, "mrr                 1.000") {
+		t.Fatalf("expected MRR 1.000 (profile first), got:\n%s", out)
+	}
+}
+
 func TestAppRunEval(t *testing.T) {
 	ctx := context.Background()
 

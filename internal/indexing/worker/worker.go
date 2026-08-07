@@ -173,11 +173,16 @@ func (w *IndexingWorker) ExecuteSync(ctx context.Context, documentID, documentTi
 		content := BuildDocumentProfileContent(meta, chunks)
 		contentHash := chunking.ComputeContentHash(content)
 		ptID := store.CalculatePointID(documentID, ProfileSectionPath, 0)
+		sig := indexingmodel.CalculateIndexSignature(contentHash, jobObj.EmbeddingProvider, jobObj.EmbeddingModel, "1.0.0", "1.0")
 
+		// The profile rides the same diff semantics as chunks: the full
+		// IndexSignature (content + provider + model + versions) decides
+		// skip vs re-upsert, so a provider/model migration re-embeds the
+		// profile like any other point.
 		needsUpsert := true
 		for _, pt := range existingPoints {
 			if pt.Metadata.ContentType == pdfmodel.ContentTypeDocumentProfile &&
-				pt.Metadata.ContentHash == contentHash && pt.ID == ptID {
+				pt.Metadata.IndexSignature == sig && pt.ID == ptID {
 				needsUpsert = false
 				break
 			}
@@ -189,7 +194,6 @@ func (w *IndexingWorker) ExecuteSync(ctx context.Context, documentID, documentTi
 				jobObj.SetError(err)
 				return jobObj, fmt.Errorf("profile embedding failed: %w", err)
 			}
-			sig := indexingmodel.CalculateIndexSignature(contentHash, jobObj.EmbeddingProvider, jobObj.EmbeddingModel, "1.0.0", "1.0")
 			newPoints = append(newPoints, store.VectorPoint{
 				ID:              ptID,
 				Vector:          embRes.Vectors[0],
@@ -278,8 +282,16 @@ func (w *IndexingWorker) ExecuteSync(ctx context.Context, documentID, documentTi
 			jobObj.SetError(err)
 			return jobObj, err
 		}
+		// Sparse encoding covers chunk points only: the Document Profile
+		// Point (ADR-0048) rides newPoints but must not shift BM25 IDF
+		// statistics — chunksToEmbed and newPoints diverge when the profile
+		// is present, so index chunk points explicitly.
+		chunkIdx := 0
 		for i := range newPoints {
-			vec, err := encoder.Encode(ctx, BuildEmbeddingInput(chunksToEmbed[i], documentTitle, w.representation))
+			if newPoints[i].Metadata.ContentType == pdfmodel.ContentTypeDocumentProfile {
+				continue
+			}
+			vec, err := encoder.Encode(ctx, BuildEmbeddingInput(chunksToEmbed[chunkIdx], documentTitle, w.representation))
 			if err != nil {
 				jobObj.SetError(err)
 				return jobObj, err
@@ -287,6 +299,7 @@ func (w *IndexingWorker) ExecuteSync(ctx context.Context, documentID, documentTi
 			if len(vec.Indices) > 0 {
 				newPoints[i].Sparse = &vec
 			}
+			chunkIdx++
 		}
 	}
 

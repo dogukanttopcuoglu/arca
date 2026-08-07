@@ -90,7 +90,7 @@ func (a *RuleBasedAnalyzer) Analyze(ctx context.Context, query string) (*Analyze
 		intent = "entity_lookup"
 	case !isSectionScopedSummary(trimmed) && matchesAny(documentOverviewPatterns, trimmed):
 		intent = "document_overview"
-	case strings.HasPrefix(strings.ToLower(trimmed), "who") || strings.Contains(strings.ToLower(trimmed), "author") || strings.Contains(strings.ToLower(trimmed), "yazar"):
+	case strings.HasPrefix(strings.ToLower(trimmed), "who") || strings.Contains(strings.ToLower(trimmed), "author"):
 		intent = "entity_lookup"
 	case strings.HasPrefix(strings.ToLower(trimmed), "how"):
 		intent = "procedural_lookup"

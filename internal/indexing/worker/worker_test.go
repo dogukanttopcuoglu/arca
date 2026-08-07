@@ -287,6 +287,69 @@ func TestIndexingWorker_DocumentProfilePoint(t *testing.T) {
 			}
 		}
 	})
+
+	t.Run("document deletion removes the profile with the document", func(t *testing.T) {
+		if err := storeImpl.Delete(ctx, indexingmodel.MetadataFilter{DocumentIDs: []string{docID}}); err != nil {
+			t.Fatalf("Delete: %v", err)
+		}
+		if profiles := profilePoints(); len(profiles) != 0 {
+			t.Fatalf("profile must be deleted with the document, got %d", len(profiles))
+		}
+	})
+}
+
+func TestIndexingWorker_ProfileWithSparseProvider(t *testing.T) {
+	ctx := context.Background()
+
+	mockProvider := provider.NewMockEmbeddingProvider("mock-provider", "mock-model-v1", 1536)
+	storeImpl := store.NewInMemoryVectorStore()
+	contentStore := store.NewInMemoryContentStore()
+	sparseProvider := &fakeSparseProvider{}
+	w := worker.NewIndexingWorker(mockProvider, storeImpl, contentStore, worker.WithSparseEncoderProvider(sparseProvider))
+
+	meta := &pdfmodel.DocumentMetadata{
+		Title:  "The Creative Act",
+		Author: "Rick Rubin",
+		Summary: &pdfmodel.Summary{
+			Text:   "A book about creativity and art.",
+			Source: pdfmodel.SummarySourceRuleBased,
+		},
+	}
+	chunks := []pdfmodel.KnowledgeChunk{
+		{ChunkID: "chk-1", ChunkOrder: 1, SectionPath: "Intro", ContentMarkdown: "body", ContentHash: "h1"},
+	}
+
+	jobObj, err := w.ExecuteSync(ctx, "doc-sparse-1", "The Creative Act", chunks, meta)
+	if err != nil {
+		t.Fatalf("ExecuteSync: %v", err)
+	}
+	if jobObj.Status != job.StatusCompleted {
+		t.Fatalf("expected Completed, got %s", jobObj.Status)
+	}
+
+	points, err := storeImpl.ListPoints(ctx, indexingmodel.MetadataFilter{DocumentIDs: []string{"doc-sparse-1"}})
+	if err != nil {
+		t.Fatalf("ListPoints: %v", err)
+	}
+	var profile, chunk *store.VectorPoint
+	for i := range points {
+		if points[i].Metadata.ContentType == pdfmodel.ContentTypeDocumentProfile {
+			profile = &points[i]
+		} else {
+			chunk = &points[i]
+		}
+	}
+	if profile == nil || chunk == nil {
+		t.Fatalf("expected one profile and one chunk point, got %d points", len(points))
+	}
+	// The chunk carries the sparse vector; the profile must NOT (ADR-0048:
+	// the profile never shifts BM25 IDF statistics).
+	if chunk.Sparse == nil {
+		t.Fatal("chunk point must carry the sparse vector")
+	}
+	if profile.Sparse != nil {
+		t.Fatal("profile point must never carry a sparse vector")
+	}
 }
 
 // recordingStore wraps InMemoryVectorStore and records which seam methods the worker invokes.

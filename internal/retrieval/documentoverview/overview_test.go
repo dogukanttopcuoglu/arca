@@ -131,6 +131,22 @@ func TestOverviewRetriever_FilteredSelection(t *testing.T) {
 			t.Fatalf("profile must always rank first, got %v", chunkIDs(results))
 		}
 	})
+
+	t.Run("context is capped at IntroChunks real chunks beyond TopK", func(t *testing.T) {
+		results := retrieve(t, r, seam.RetrievalQuery{
+			QueryText: "bu kitap ne anlatıyor?",
+			TopK:      10,
+			Filter:    indexingmodel.MetadataFilter{DocumentIDs: []string{"doc-a"}},
+		})
+		// doc-a has 6 real chunks (order 2-6); the context must cap at the
+		// profile + IntroChunks (4) = 5 results regardless of TopK.
+		if len(results) != 1+documentoverview.IntroChunks {
+			t.Fatalf("expected profile + %d chunks, got %d: %v", documentoverview.IntroChunks, len(results), chunkIDs(results))
+		}
+		if results[len(results)-1].ChunkID != "doc-a/body/002" {
+			t.Fatalf("expected the 4th real chunk last, got %v", chunkIDs(results))
+		}
+	})
 }
 
 func TestOverviewRetriever_UnfilteredSelection(t *testing.T) {
