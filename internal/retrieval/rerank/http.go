@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -58,22 +59,26 @@ func (r *HTTPReranker) Rerank(ctx context.Context, query string, candidates []re
 	r.requests.Add(1)
 	r.lastDegraded.Store(false)
 
-	defer func() {
-		latency := time.Since(start).Milliseconds()
-		r.latency.Add(latency)
-		if r.debug {
-			fmt.Fprintf(debugWriter, "reranker: candidate_count=%d reranked_count=%d latency_ms=%d degraded=%v\n",
-				len(candidates), len(candidates), latency, r.lastDegraded.Load())
-		}
-	}()
-
 	ordered, err := r.call(ctx, query, candidates)
+
+	latency := time.Since(start).Milliseconds()
+	r.latency.Add(latency)
 	if err != nil {
 		r.failures.Add(1)
 		r.lastDegraded.Store(true)
-		if r.debug {
-			fmt.Fprintf(debugWriter, "reranker: error=%v\n", err)
+	}
+	if r.debug {
+		reranked := 0
+		errField := ""
+		if err == nil {
+			reranked = len(ordered)
+		} else {
+			errField = " error=" + strconv.Quote(err.Error())
 		}
+		fmt.Fprintf(debugWriter, "reranker: candidate_count=%d reranked_count=%d latency_ms=%d degraded=%v%s\n",
+			len(candidates), reranked, latency, r.lastDegraded.Load(), errField)
+	}
+	if err != nil {
 		return nil, err
 	}
 	return ordered, nil

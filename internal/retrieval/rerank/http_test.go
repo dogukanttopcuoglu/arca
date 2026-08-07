@@ -3,6 +3,7 @@ package rerank
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -25,8 +26,11 @@ type rerankServer struct {
 func (s *rerankServer) handler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s.requests.Add(1)
-		var buf strings.Builder
-		buf.ReadFrom(r.Body)
+		buf := new(strings.Builder)
+		if _, err := io.Copy(buf, r.Body); err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
 		s.lastBody = buf.String()
 		if s.delay > 0 {
 			time.Sleep(s.delay)
@@ -178,5 +182,46 @@ func TestHTTPReranker_Observability(t *testing.T) {
 	}
 	if got := r.RequestsTotal(); got != 3 {
 		t.Fatalf("requests_total = %d, want 3", got)
+	}
+	if !r.LastDegraded() {
+		t.Fatal("last call must be marked degraded")
+	}
+}
+
+func TestHTTPReranker_DebugLine(t *testing.T) {
+	srv := &rerankServer{status: 200, body: `{"ranked_ids": ["b", "a"], "scores": [0.9, 0.4]}`}
+	ts := httptest.NewServer(srv.handler())
+	defer ts.Close()
+
+	var buf strings.Builder
+	old := debugWriter
+	debugWriter = &buf
+	defer func() { debugWriter = old }()
+
+	r := NewHTTPReranker(ts.URL, 5*time.Second)
+	if _, err := r.Rerank(context.Background(), "q", candidates("a", "b")); err != nil {
+		t.Fatalf("Rerank: %v", err)
+	}
+	line := buf.String()
+	for _, want := range []string{"candidate_count=2", "reranked_count=2", "latency_ms=", "degraded=false"} {
+		if !strings.Contains(line, want) {
+			t.Fatalf("debug line missing %q: %q", want, line)
+		}
+	}
+	if strings.Contains(line, "error=") {
+		t.Fatalf("happy path must not carry error=: %q", line)
+	}
+
+	buf.Reset()
+	srv.status = 500
+	srv.body = `{"detail": "boom"}`
+	if _, err := r.Rerank(context.Background(), "q", candidates("a")); err == nil {
+		t.Fatal("expected failure")
+	}
+	line = buf.String()
+	for _, want := range []string{"candidate_count=1", "reranked_count=0", "degraded=true", "error="} {
+		if !strings.Contains(line, want) {
+			t.Fatalf("failure debug line missing %q: %q", want, line)
+		}
 	}
 }
