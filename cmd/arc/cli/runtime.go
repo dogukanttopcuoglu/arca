@@ -28,6 +28,7 @@ import (
 	qaprompt "arca/internal/qa/prompt"
 	qaverification "arca/internal/qa/verification"
 	"arca/internal/retrieval/dense"
+	"arca/internal/retrieval/documentoverview"
 	"arca/internal/retrieval/graphfusion"
 	"arca/internal/retrieval/hybrid"
 	retrievalseam "arca/internal/retrieval/seam"
@@ -490,6 +491,15 @@ func buildAnswerEngine(rt *Runtime, retriever retrievalseam.Retriever) *qa.Answe
 		} else {
 			opts = append(opts, qa.WithGraphRetriever(fusionRet))
 		}
+	}
+	// M9 document-level path (ADR-0048): the overview retriever serves
+	// document_overview intents with the profile + first real content
+	// chunks; without a vector store the option is omitted and the overview
+	// path falls back to the base retriever.
+	if rt.vectorStore != nil {
+		opts = append(opts, qa.WithDocumentOverviewRetriever(
+			documentoverview.NewRetriever(rt.vectorStore),
+		))
 	}
 	return qa.NewAnswerEngine(
 		nil,
