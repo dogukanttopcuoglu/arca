@@ -37,6 +37,28 @@ services:
       - qdrant-storage:/qdrant/storage
     restart: unless-stopped
 
+  reranker-service:
+    build:
+      context: ./services/reranker-service
+      dockerfile: Dockerfile
+    container_name: arca-reranker
+    ports:
+      - "3003:3003"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:3003/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 120s
+    restart: unless-stopped
+
   arca-pdf-inspector:
     build:
       context: .
