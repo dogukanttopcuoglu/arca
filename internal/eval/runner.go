@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	indexingmodel "arca/internal/indexing/model"
 	"arca/internal/indexing/sparse"
 	"arca/internal/qa"
 	qacontext "arca/internal/qa/context"
@@ -172,6 +173,12 @@ func (r *Runner) Run(ctx context.Context, gs *GoldSet) (*Report, error) {
 			MinScore:  r.opts.MinScore,
 			Stats:     &retrievalseam.RetrievalStats{},
 		}
+		// Document-scoped queries (M9 document-overview slice, ADR-0048):
+		// the declared document becomes the retrieval filter, mirroring the
+		// production -Doc selection.
+		if q.DocumentID != "" {
+			query.Filter = indexingmodel.MetadataFilter{DocumentIDs: []string{q.DocumentID}}
+		}
 		// M6 evidence budget (ADR-0037): comparison-intent queries may
 		// retrieve deeper. The harness keys off the gold set's declared
 		// intent (the orchestrator keys off the analyzer's SubQueries signal);
@@ -223,7 +230,7 @@ func (r *Runner) Run(ctx context.Context, gs *GoldSet) (*Report, error) {
 
 		qres.RetrievedChunkIDs = retrieved
 		qres.RetrievedScores = scores
-		qres.ExpectedChunkIDs = q.ExpectedChunkIDs
+		qres.ExpectedChunkIDs = q.ExpectedIDs()
 		qres.ExpectedNoEvidence = q.ExpectedNoEvidence
 		qres.Stats = query.Stats
 
@@ -249,10 +256,10 @@ func (r *Runner) Run(ctx context.Context, gs *GoldSet) (*Report, error) {
 		if q.ExpectedNoEvidence {
 			abstentionCounts = append(abstentionCounts, len(retrieved))
 		} else {
-			qres.RecallAtK = RecallAtK(retrieved, q.ExpectedChunkIDs, r.opts.TopK)
-			qres.PrecisionAtK = PrecisionAtK(retrieved, q.ExpectedChunkIDs, r.opts.TopK)
-			qres.MRR = MRR(retrieved, q.ExpectedChunkIDs)
-			qres.NDCGAtK = NDCGAtK(retrieved, q.ExpectedChunkIDs, r.opts.TopK)
+			qres.RecallAtK = RecallAtK(retrieved, q.ExpectedIDs(), r.opts.TopK)
+			qres.PrecisionAtK = PrecisionAtK(retrieved, q.ExpectedIDs(), r.opts.TopK)
+			qres.MRR = MRR(retrieved, q.ExpectedIDs())
+			qres.NDCGAtK = NDCGAtK(retrieved, q.ExpectedIDs(), r.opts.TopK)
 			relRecallSum += qres.RecallAtK
 			relPrecisionSum += qres.PrecisionAtK
 			relMRRSum += qres.MRR

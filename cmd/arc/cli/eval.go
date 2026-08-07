@@ -12,6 +12,7 @@ import (
 	"arca/internal/indexing/store"
 	"arca/internal/qa"
 	"arca/internal/retrieval/dense"
+	"arca/internal/retrieval/documentoverview"
 	"arca/internal/retrieval/graphfusion"
 	"arca/internal/retrieval/hybrid"
 	retrievalseam "arca/internal/retrieval/seam"
@@ -45,6 +46,10 @@ type EvalOptions struct {
 	// GraphOnly measures the graph stream alone (kill-gate graphA
 	// counterpart); it wins over GraphWeight.
 	GraphOnly bool
+	// Overview measures the Document Overview Retriever directly (M9,
+	// ADR-0048): the document-overview slice benchmark runs this retriever,
+	// not the engine's intent routing.
+	Overview bool
 }
 
 // RunEval executes the retrieval benchmark against the real composition root:
@@ -88,6 +93,17 @@ func (a *App) RunEval(ctx context.Context, opts EvalOptions) (string, error) {
 			}
 			retriever = graphfusion.NewGraphFusionRetriever(denseRet, graphRet, *graphFusionConfig)
 		}
+	}
+
+	// M9 document-overview surface (ADR-0048): --overview measures the
+	// Document Overview Retriever directly (profile + first real content
+	// chunks) over the overview slice — retrieval behavior without the
+	// engine's intent routing, mirroring the M7 --graph-only surface.
+	if opts.Overview {
+		if a.runtime.vectorStore == nil {
+			return "", fmt.Errorf("overview retrieval requires a vector store")
+		}
+		retriever = documentoverview.NewRetriever(a.runtime.vectorStore)
 	}
 
 	// Apply the fusion policy for hybrid sweeps. A named policy sets the

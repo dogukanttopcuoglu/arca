@@ -99,6 +99,7 @@ func main() {
 		comparisonTopK := fs.Int("comparison-topk", 0, "M6 evidence budget: effective TopK for comparison-intent queries (0 = use --topk)")
 		graphWeight := fs.Float64("graph-weight", 0, "M7 graph fusion weight: >0 fuses dense + graph streams (0 = default retriever)")
 		graphOnly := fs.Bool("graph-only", false, "M7: measure the graph stream alone")
+		overview := fs.Bool("overview", false, "M9: measure the Document Overview Retriever directly (document-overview slice)")
 		gateRuns := fs.Int("gate-runs", 1, "repeat each gate evaluation and record the median decision (stabilizes gate metrics against LLM variance)")
 		if err := fs.Parse(os.Args[2:]); err != nil {
 			fmt.Printf("Error: %v\n", err)
@@ -123,6 +124,7 @@ func main() {
 			ComparisonTopK:   *comparisonTopK,
 			GraphWeight:      *graphWeight,
 			GraphOnly:        *graphOnly,
+			Overview:         *overview,
 			GateRuns:         *gateRuns,
 		})
 		if err != nil {

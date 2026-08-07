@@ -7,12 +7,13 @@ import (
 	"strings"
 )
 
-// allowedIntentCategories are the six gold set query intents (ADR-0027).
+// allowedIntentCategories are the gold set query intents (ADR-0027).
 // heading was added for the ADR-0047 heading-aware embedding benchmark:
 // section-title-driven queries that require heading context in the
-// embedding input.
+// embedding input. document_overview was added for the M9 document-level
+// retrieval benchmark (ADR-0048): document identity/overview questions.
 var allowedIntentCategories = [...]string{
-	"single_fact", "concept", "procedural", "comparison", "entity", "abstention", "heading",
+	"single_fact", "concept", "procedural", "comparison", "entity", "abstention", "heading", "document_overview",
 }
 
 // IntentComparison is the gold set intent key for comparison queries; the
@@ -47,13 +48,31 @@ type CorpusInfo struct {
 }
 
 // GoldQuery is a single benchmark query with its declared expectations.
+// At most one of ExpectedChunkIDs / ExpectedRetrievalPoints is declared
+// (ADR-0027/0048): ExpectedChunkIDs for chunk-level benchmarks,
+// ExpectedRetrievalPoints for benchmarks whose targets are retrieval
+// artifacts that are not chunks (e.g. document profile points).
 type GoldQuery struct {
-	ID                 string   `json:"id"`
-	Intent             string   `json:"intent"`
-	Query              string   `json:"query"`
-	ExpectedChunkIDs   []string `json:"expected_chunk_ids"`
-	ExpectedSections   []string `json:"expected_sections"`
-	ExpectedNoEvidence bool     `json:"expected_no_evidence"`
+	ID                    string   `json:"id"`
+	Intent                string   `json:"intent"`
+	Query                 string   `json:"query"`
+	// DocumentID scopes the query to one declared document (M9 document-
+	// overview slice: the retrieval filter mirrors the user's -Doc selection).
+	// Empty means whole-corpus retrieval.
+	DocumentID            string   `json:"document_id,omitempty"`
+	ExpectedChunkIDs      []string `json:"expected_chunk_ids"`
+	ExpectedRetrievalPoints []string `json:"expected_retrieval_points"`
+	ExpectedSections      []string `json:"expected_sections"`
+	ExpectedNoEvidence    bool     `json:"expected_no_evidence"`
+}
+
+// ExpectedIDs returns the query's declared expectation set — the retrieval
+// artifacts that must be surfaced: chunks, document profile points, or both.
+func (q GoldQuery) ExpectedIDs() []string {
+	if len(q.ExpectedRetrievalPoints) > 0 {
+		return q.ExpectedRetrievalPoints
+	}
+	return q.ExpectedChunkIDs
 }
 
 // LoadGoldSet parses and validates a gold set document. Validation enforces
@@ -68,6 +87,20 @@ func LoadGoldSet(r io.Reader) (*GoldSet, error) {
 		return nil, err
 	}
 	return &gs, nil
+}
+
+// declaresDocument reports whether the gold set declares the document ID
+// (single-document corpus or multi-document documents array).
+func (g *GoldSet) declaresDocument(docID string) bool {
+	if len(g.Documents) > 0 {
+		for _, d := range g.Documents {
+			if d.DocumentID == docID {
+				return true
+			}
+		}
+		return false
+	}
+	return g.Corpus.DocumentID == docID
 }
 
 // Validate checks the structural invariants of the gold set.
@@ -113,11 +146,17 @@ func (g *GoldSet) Validate() error {
 			return fmt.Errorf("duplicate query id %q", q.ID)
 		}
 		seen[q.ID] = true
-		if q.ExpectedNoEvidence && len(q.ExpectedChunkIDs) > 0 {
-			return fmt.Errorf("abstention query %q declares expected chunks", q.ID)
+		if q.DocumentID != "" && !g.declaresDocument(q.DocumentID) {
+			return fmt.Errorf("query %q scopes an undeclared document %q", q.ID, q.DocumentID)
 		}
-		if !q.ExpectedNoEvidence && len(q.ExpectedChunkIDs) == 0 {
-			return fmt.Errorf("query %q declares no expected chunks", q.ID)
+		if len(q.ExpectedChunkIDs) > 0 && len(q.ExpectedRetrievalPoints) > 0 {
+			return fmt.Errorf("query %q declares both expected_chunk_ids and expected_retrieval_points (at most one, ADR-0048)", q.ID)
+		}
+		if q.ExpectedNoEvidence && len(q.ExpectedIDs()) > 0 {
+			return fmt.Errorf("abstention query %q declares expected artifacts", q.ID)
+		}
+		if !q.ExpectedNoEvidence && len(q.ExpectedIDs()) == 0 {
+			return fmt.Errorf("query %q declares no expected artifacts", q.ID)
 		}
 		for _, s := range q.ExpectedSections {
 			if strings.TrimSpace(s) == "" {

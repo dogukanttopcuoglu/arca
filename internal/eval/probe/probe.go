@@ -188,16 +188,16 @@ func (r *Runner) Run(ctx context.Context, art *eval.CandidateArtifact, gs *eval.
 			continue
 		}
 		top := sliceString(aq.Candidates, topK)
-		ndcg := eval.NDCGAtK(top, q.ExpectedChunkIDs, topK)
+		ndcg := eval.NDCGAtK(top, q.ExpectedIDs(), topK)
 		baselineN += ndcg
 		baselineNDCG = append(baselineNDCG, ndcg)
-		baselineM += eval.MRR(top, q.ExpectedChunkIDs)
-		baselineR += eval.RecallAtK(top, q.ExpectedChunkIDs, topK)
+		baselineM += eval.MRR(top, q.ExpectedIDs())
+		baselineR += eval.RecallAtK(top, q.ExpectedIDs(), topK)
 		baseCount++
 		if slices[aq.Intent] == nil {
 			slices[aq.Intent] = &sliceAcc{}
 		}
-		slices[aq.Intent].add(top, q.ExpectedChunkIDs, topK)
+		slices[aq.Intent].add(top, q.ExpectedIDs(), topK)
 
 		if r.options.Gate != nil && r.options.Content != nil {
 			ok, err := r.evaluateGate(ctx, q.Query, aq, top)
@@ -330,15 +330,15 @@ func (r *Runner) evaluateCombination(
 		res.RerankerOrdering[q.ID] = rerankedIDs
 
 		top := sliceString(rerankedIDs, topK)
-		ndcg := eval.NDCGAtK(top, q.ExpectedChunkIDs, topK)
+		ndcg := eval.NDCGAtK(top, q.ExpectedIDs(), topK)
 		nSum += ndcg
-		mSum += eval.MRR(top, q.ExpectedChunkIDs)
-		rSum += eval.RecallAtK(top, q.ExpectedChunkIDs, topK)
+		mSum += eval.MRR(top, q.ExpectedIDs())
+		rSum += eval.RecallAtK(top, q.ExpectedIDs(), topK)
 		count++
 		if slices[aq.Intent] == nil {
 			slices[aq.Intent] = &sliceAcc{}
 		}
-		slices[aq.Intent].add(top, q.ExpectedChunkIDs, topK)
+		slices[aq.Intent].add(top, q.ExpectedIDs(), topK)
 		res.RerankedQueries++
 		// Pair the per-query delta against the same query's baseline nDCG:
 		// both loops iterate the same non-abstention queries in gold set
