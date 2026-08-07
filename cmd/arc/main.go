@@ -158,8 +158,10 @@ func runProbe(ctx context.Context, app *arccli.App, args []string) {	if len(args
 		maxRSS := fs.Int64("budget-rss-bytes", 0, "frozen model memory budget (bytes)")
 		report := fs.String("report", "", "path to write the JSON manifest")
 		m5gate := fs.Bool("m5-gate", true, "evaluate the M5 semantic evidence gate per combination (ADR-0045: answer quality is measured on every combination; disable only for ranking-only runs)")
+		gateRuns := fs.Int("gate-runs", 1, "repeat each gate evaluation N times and take the lower median decision (stabilizes verified rate against LLM variance; M7 BULGU-2)")
 		structure := fs.Bool("structure", false, "add the deterministic structure-bonus reranker (research E2, model-free heading overlap)")
 		structureIntents := fs.String("structure-intents", "", "gate the structure reranker to these intents (comma-separated; empty = all)")
+		bgeIntents := fs.String("bge-intents", "", "gate the BGE reranker to these intents (comma-separated; empty = all queries — research E1 selective reranking)")
 		if err := fs.Parse(args[1:]); err != nil {
 			fmt.Printf("Error: %v\n", err)
 			os.Exit(1)
@@ -182,8 +184,10 @@ func runProbe(ctx context.Context, app *arccli.App, args []string) {	if len(args
 			MaxRSSBytes:     *maxRSS,
 			ReportPath:      *report,
 			M5Gate:          *m5gate,
+			GateRuns:        *gateRuns,
 			Structure:       *structure,
 			StructureIntents: *structureIntents,
+			BGEIntents:      *bgeIntents,
 		})
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)

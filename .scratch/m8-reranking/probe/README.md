@@ -33,8 +33,8 @@ python -m venv .venv && .venv/bin/pip install -r requirements.txt
 
    ```bash
    arc eval probe run \
-     --artifact .scratch/m8-reranking/artifact_v3.json \
-     --goldset internal/eval/testdata/goldset_v3.json \
+     --artifact .scratch/m8-reranking/artifact_v3_1.json \
+     --goldset internal/eval/testdata/goldset_v3_1.json \
      --bge-command ".venv/bin/python .scratch/m8-reranking/probe/bge_rerank.py" \
      --n 20,50,100 \
      --budget-p95-ms 750 \
@@ -42,6 +42,15 @@ python -m venv .venv && .venv/bin/pip install -r requirements.txt
      --m5-gate \
      --report .scratch/m8-reranking/probe_manifest_v3.json
    ```
+
+   Selective reranking (research E1/E2):
+   - `--bge-intents entity` — gate the BGE reranker to entity queries only
+     (gated-out queries keep the baseline ordering, measured byte-identical)
+   - `--structure --structure-intents heading` — deterministic heading-overlap
+     bonus reranker (model-free, E2)
+   - `--gate-runs 3` — repeat each gate evaluation and take the lower median
+     decision, stabilizing the verified rate against LLM variance (single-shot
+     noise floor ±3.4..7pp exceeds the ±1pp MAR threshold; M7 BULGU-2 rule)
 
 ## Determinism
 

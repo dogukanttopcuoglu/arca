@@ -38,6 +38,10 @@ type Options struct {
 	Content func(ctx context.Context, ids []string) ([]string, error)
 	// Gate evaluates the M5 semantic evidence gate over reranked content.
 	Gate func(ctx context.Context, query, content string) (bool, error)
+	// GateRuns repeats each gate evaluation (default 1) and takes the lower
+	// median decision, stabilizing gate metrics against LLM variance
+	// (mirrors the eval runner's --gate-runs, M7 review BULGU-2).
+	GateRuns int
 	// GateMaxTokens caps the gate input, mirroring the AnswerEngine's
 	// context budget (LLM_CONTEXT_BUDGET). Without it, a long top-5 join
 	// can exceed the LLM's reasoning budget and produce empty completions
@@ -58,15 +62,53 @@ func NewRunner(rerankers map[string]rerank.Reranker, opts Options) *Runner {
 	return &Runner{rerankers: rerankers, options: opts}
 }
 
+// SliceMetrics is one intent slice of a measured configuration: ranking
+// metrics over that intent's queries only (abstention queries excluded —
+// their behavior is reported by AbstentionAligned). Research E1 evaluates
+// per-slice: the reranked intent must clear MPI while every other slice
+// stays within the 5% regression tolerance of its own baseline.
+type SliceMetrics struct {
+	Queries   int     `json:"queries"`
+	RecallAt5 float64 `json:"recall_at_5"`
+	NDCGAt5   float64 `json:"ndcg_at_5"`
+	MRR       float64 `json:"mrr"`
+}
+
+// sliceAcc accumulates one intent slice during the measurement loops.
+type sliceAcc struct {
+	count           int
+	recall, ndcg, mrr float64
+}
+
+func (s *sliceAcc) add(top, expected []string, k int) {
+	s.recall += eval.RecallAtK(top, expected, k)
+	s.ndcg += eval.NDCGAtK(top, expected, k)
+	s.mrr += eval.MRR(top, expected)
+	s.count++
+}
+
+func (s *sliceAcc) result() SliceMetrics {
+	if s.count == 0 {
+		return SliceMetrics{}
+	}
+	return SliceMetrics{
+		Queries:   s.count,
+		RecallAt5: s.recall / float64(s.count),
+		NDCGAt5:   s.ndcg / float64(s.count),
+		MRR:       s.mrr / float64(s.count),
+	}
+}
+
 // BaselineResult is the production baseline (candidate list top-K, no
 // rerank) — the delta reference for every combination (ADR-0045). The gate
 // fields measure the baseline's answer quality when a gate is wired.
 type BaselineResult struct {
-	RecallAt5       float64 `json:"recall_at_5"`
-	NDCGAt5         float64 `json:"ndcg_at_5"`
-	MRR             float64 `json:"mrr"`
-	GateEvaluations int     `json:"gate_evaluations,omitempty"`
-	VerifiedRate    float64 `json:"verified_rate,omitempty"`
+	RecallAt5       float64                `json:"recall_at_5"`
+	NDCGAt5         float64                `json:"ndcg_at_5"`
+	MRR             float64                `json:"mrr"`
+	GateEvaluations int                    `json:"gate_evaluations,omitempty"`
+	VerifiedRate    float64                `json:"verified_rate,omitempty"`
+	Slices          map[string]SliceMetrics `json:"slices,omitempty"`
 }
 
 // CIRange is a report-only bootstrap confidence interval over the per-query
@@ -95,6 +137,7 @@ type CombinationResult struct {
 	RerankerOrdering  map[string][]string `json:"reranker_ordering,omitempty"`
 	GateEvaluations   int                 `json:"gate_evaluations,omitempty"`
 	VerifiedRate      float64             `json:"verified_rate,omitempty"`
+	Slices            map[string]SliceMetrics `json:"slices,omitempty"`
 }
 
 // ProbeReport is the full probe outcome (ADR-0045): baseline plus every
@@ -137,6 +180,7 @@ func (r *Runner) Run(ctx context.Context, art *eval.CandidateArtifact, gs *eval.
 	// nDCG values feed the bootstrap delta of every combination.
 	var baselineNDCG []float64
 	var baselineN, baselineM, baselineR, verified float64
+	slices := make(map[string]*sliceAcc)
 	baseCount := 0
 	for _, q := range gs.Queries {
 		aq := byID[q.ID]
@@ -150,6 +194,10 @@ func (r *Runner) Run(ctx context.Context, art *eval.CandidateArtifact, gs *eval.
 		baselineM += eval.MRR(top, q.ExpectedChunkIDs)
 		baselineR += eval.RecallAtK(top, q.ExpectedChunkIDs, topK)
 		baseCount++
+		if slices[aq.Intent] == nil {
+			slices[aq.Intent] = &sliceAcc{}
+		}
+		slices[aq.Intent].add(top, q.ExpectedChunkIDs, topK)
 
 		if r.options.Gate != nil && r.options.Content != nil {
 			ok, err := r.evaluateGate(ctx, q.Query, aq, top)
@@ -167,6 +215,7 @@ func (r *Runner) Run(ctx context.Context, art *eval.CandidateArtifact, gs *eval.
 		rep.Baseline.NDCGAt5 = baselineN / float64(baseCount)
 		rep.Baseline.MRR = baselineM / float64(baseCount)
 	}
+	rep.Baseline.Slices = finalizeSlices(slices)
 	if rep.Baseline.GateEvaluations > 0 {
 		rep.Baseline.VerifiedRate = verified / float64(rep.Baseline.GateEvaluations)
 	}
@@ -208,6 +257,7 @@ func (r *Runner) evaluateCombination(
 	count := 0
 	var latencies []int64
 	var deltas []float64
+	slices := make(map[string]*sliceAcc)
 
 	for _, q := range gs.Queries {
 		aq := byID[q.ID]
@@ -285,6 +335,10 @@ func (r *Runner) evaluateCombination(
 		mSum += eval.MRR(top, q.ExpectedChunkIDs)
 		rSum += eval.RecallAtK(top, q.ExpectedChunkIDs, topK)
 		count++
+		if slices[aq.Intent] == nil {
+			slices[aq.Intent] = &sliceAcc{}
+		}
+		slices[aq.Intent].add(top, q.ExpectedChunkIDs, topK)
 		res.RerankedQueries++
 		// Pair the per-query delta against the same query's baseline nDCG:
 		// both loops iterate the same non-abstention queries in gold set
@@ -311,6 +365,7 @@ func (r *Runner) evaluateCombination(
 		res.NDCGAt5 = nSum / float64(count)
 		res.MRR = mSum / float64(count)
 	}
+	res.Slices = finalizeSlices(slices)
 	if res.GateEvaluations > 0 {
 		res.VerifiedRate = verified / float64(res.GateEvaluations)
 	}
@@ -339,7 +394,10 @@ type loadReporter interface {
 }
 
 // evaluateGate runs the gate over the given top-K chunk IDs' content,
-// resolving content through the candidate map of the artifact query.
+// resolving content through the candidate map of the artifact query. With
+// GateRuns > 1 the gate is evaluated repeatedly and the lower median
+// decision wins (supported < unsupported), stabilizing gate metrics against
+// LLM variance — mirroring the eval runner's median rule (M7 BULGU-2).
 func (r *Runner) evaluateGate(ctx context.Context, query string, aq *eval.ArtifactQuery, top []string) (bool, error) {
 	contents, err := r.options.Content(ctx, top)
 	if err != nil {
@@ -360,11 +418,30 @@ func (r *Runner) evaluateGate(ctx context.Context, query string, aq *eval.Artifa
 		// not exhaust their completion budget on long sources.
 		content = content[:max*4]
 	}
-	supported, err := r.options.Gate(ctx, query, content)
-	if err != nil {
-		return false, fmt.Errorf("gate evaluation failed: %w", err)
+
+	runs := r.options.GateRuns
+	if runs <= 0 {
+		runs = 1
 	}
-	return supported, nil
+	// Lower-median over booleans with order supported(true) < unsupported
+	// (false): even run counts take the lower middle, matching the runner's
+	// rule that a tie never tips toward the negative side.
+	decisions := make([]bool, 0, runs)
+	for i := 0; i < runs; i++ {
+		supported, err := r.options.Gate(ctx, query, content)
+		if err != nil {
+			return false, fmt.Errorf("gate evaluation failed: %w", err)
+		}
+		decisions = append(decisions, supported)
+	}
+	rank := func(b bool) int {
+		if b {
+			return 0 // supported
+		}
+		return 1 // unsupported
+	}
+	sort.Slice(decisions, func(i, j int) bool { return rank(decisions[i]) < rank(decisions[j]) })
+	return decisions[(len(decisions)-1)/2], nil
 }
 
 // effectiveGateMaxTokens returns the configured gate budget or the engine
@@ -437,6 +514,20 @@ func contains(s []string, v string) bool {
 		}
 	}
 	return false
+}
+
+// finalizeSlices converts per-intent accumulators into the report's slice
+// map (deterministic key order is not required — JSON consumers index by
+// intent).
+func finalizeSlices(accs map[string]*sliceAcc) map[string]SliceMetrics {
+	if len(accs) == 0 {
+		return nil
+	}
+	out := make(map[string]SliceMetrics, len(accs))
+	for intent, acc := range accs {
+		out[intent] = acc.result()
+	}
+	return out
 }
 
 // sliceString returns the first n elements of a string slice, or the whole

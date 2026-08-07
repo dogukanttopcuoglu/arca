@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 
 	"arca/internal/eval"
@@ -38,11 +39,19 @@ type ProbeRunOptions struct {
 	MaxRSSBytes     int64
 	ReportPath      string
 	M5Gate          bool
+	// GateRuns repeats each gate evaluation and takes the lower median
+	// decision (default 1), stabilizing verified-rate metrics against LLM
+	// variance — mirrors the eval runner's --gate-runs (M7 BULGU-2).
+	GateRuns int
 	// Structure enables the deterministic structure-bonus reranker
 	// (research E2): model-free heading-overlap reordering. StructureIntents
 	// gates it to the given intent set (comma-separated); empty = all.
 	Structure        bool
 	StructureIntents string
+	// BGEIntents gates the BGE cross-encoder to the given intent set
+	// (comma-separated; research E1 selective reranking); empty = all
+	// queries. Gated-out queries keep the baseline ordering.
+	BGEIntents string
 }
 
 // RunProbeCollect generates the candidate artifact from the production
@@ -142,16 +151,23 @@ func (a *App) RunProbe(ctx context.Context, opts ProbeRunOptions) (string, error
 			}
 		}
 	}
+	var bgeIntents []string
+	for _, part := range strings.Split(opts.BGEIntents, ",") {
+		if p := strings.TrimSpace(part); p != "" {
+			bgeIntents = append(bgeIntents, p)
+		}
+	}
 
 	runner := probe.NewRunner(rerankerMap, probe.Options{
 		Content:        a.probeContent(),
 		Gate:           buildProbeGate(opts.M5Gate, a.runtime.cfg),
 		GateMaxTokens:  a.runtime.cfg.LLMContextBudget,
+		GateRuns:       opts.GateRuns,
 	})
 
 	var combos []probe.Combination
 	for _, n := range opts.CandidateNs {
-		combos = append(combos, probe.Combination{Model: "bge", N: n})
+		combos = append(combos, probe.Combination{Model: "bge", N: n, Intents: bgeIntents})
 		if opts.Structure {
 			combos = append(combos, probe.Combination{Model: "structure", N: n, Intents: structureIntents})
 		}
@@ -304,6 +320,18 @@ func renderProbeManifest(m ProbeManifest) string {
 		}
 		fmt.Fprintf(&sb, "  %-8s %-5d %-9.3f %-9.3f %-8.3f %-9.1f %-8.1f %-6.3f %s\n",
 			c.Model, c.CandidateN, c.RecallAt5, c.NDCGAt5, c.MRR, c.P95LatencyMs, float64(c.MaxRSSBytes)/1024/1024, c.VerifiedRate, ci)
+		if len(c.Slices) > 0 {
+			intents := make([]string, 0, len(c.Slices))
+			for intent := range c.Slices {
+				intents = append(intents, intent)
+			}
+			sort.Strings(intents)
+			fmt.Fprintf(&sb, "  %-8s %-5s %-9s %-9s %-8s\n", "", "slice", "recall@5", "ndcg@5", "mrr")
+			for _, intent := range intents {
+				s := c.Slices[intent]
+				fmt.Fprintf(&sb, "  %-8s %-5s %-9d %-9.3f %-8.3f\n", "", intent, s.Queries, s.NDCGAt5, s.MRR)
+			}
+		}
 	}
 	sb.WriteString("\n")
 	if m.Outcome.Accepted {

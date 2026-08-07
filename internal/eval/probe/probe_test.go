@@ -222,6 +222,107 @@ func TestProbeGateEvaluation(t *testing.T) {
 	}
 }
 
+func TestProbeReportsPerIntentSlicesAndGating(t *testing.T) {
+	gs, err := eval.LoadGoldSet(strings.NewReader(`{
+		"schema_version": "1.2",
+		"documents": [
+			{"document_id": "book-a", "corpus_fingerprint": "fp-a", "chunk_count": 2}
+		],
+		"queries": [
+			{"id": "q1", "intent": "entity", "query": "who founded the company", "expected_chunk_ids": ["c1"]},
+			{"id": "q2", "intent": "concept", "query": "what is a system", "expected_chunk_ids": ["c2"]}
+		]
+	}`))
+	if err != nil {
+		t.Fatalf("LoadGoldSet: %v", err)
+	}
+	art := &eval.CandidateArtifact{
+		SchemaVersion:        eval.CandidateArtifactSchemaVersion,
+		BenchmarkFingerprint: "fp-a",
+		GoldSetVersion:       "1.2",
+		CandidateTopK:        5,
+		RetrievalConfig:      eval.RetrievalConfig{TopK: 5},
+		Queries: []eval.ArtifactQuery{
+			{QueryID: "q1", Query: "who founded the company", Intent: "entity",
+				Candidates: []string{"c1", "c2"}, CandidateScores: []float32{1, 0.8}},
+			{QueryID: "q2", Query: "what is a system", Intent: "concept",
+				Candidates: []string{"c2", "c1"}, CandidateScores: []float32{1, 0.8}},
+		},
+	}
+	fake := &recordingReranker{}
+	r := NewRunner(map[string]rerank.Reranker{"reverse": fake}, Options{})
+
+	rep, err := r.Run(context.Background(), art, gs, []Combination{{Model: "reverse", N: 5, Intents: []string{"entity"}}})
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	// Baseline slices: each intent's first candidate is its expected chunk.
+	if s := rep.Baseline.Slices["entity"]; s.Queries != 1 || math.Abs(s.NDCGAt5-1.0) > 1e-9 || math.Abs(s.MRR-1.0) > 1e-9 {
+		t.Fatalf("baseline entity slice = %+v, want 1 query / nDCG 1.0 / MRR 1.0", s)
+	}
+	if s := rep.Baseline.Slices["concept"]; s.Queries != 1 || math.Abs(s.NDCGAt5-1.0) > 1e-9 {
+		t.Fatalf("baseline concept slice = %+v, want 1 query / nDCG 1.0", s)
+	}
+
+	// Entity-gated combination: q1 reranked (reversed -> [c2 c1]: nDCG
+	// 1/log2(3), MRR 1/2); q2 gated out and measured at baseline (nDCG 1.0).
+	// The reranker must never see the gated-out query.
+	c := rep.Combinations[0]
+	if len(fake.calls) != 1 {
+		t.Fatalf("reranker called %d times, want 1 (only the entity query)", len(fake.calls))
+	}
+	wantNDCG := 1.0 / math.Log2(3)
+	if s := c.Slices["entity"]; s.Queries != 1 || math.Abs(s.NDCGAt5-wantNDCG) > 1e-3 || math.Abs(s.MRR-0.5) > 1e-3 {
+		t.Fatalf("entity slice = %+v, want 1 query / nDCG %.4f / MRR 0.5", s, wantNDCG)
+	}
+	if s := c.Slices["concept"]; s.Queries != 1 || math.Abs(s.NDCGAt5-1.0) > 1e-9 || math.Abs(s.MRR-1.0) > 1e-9 {
+		t.Fatalf("concept slice = %+v, want 1 query / nDCG 1.0 / MRR 1.0 (gated out keeps baseline)", s)
+	}
+	if orderings := c.RerankerOrdering["q2"]; len(orderings) != 2 || orderings[0] != "c2" {
+		t.Fatalf("gated-out ordering = %v, want baseline [c2 c1]", orderings)
+	}
+}
+
+func TestProbeGateRunsMedianStabilizesVerdicts(t *testing.T) {
+	art, gs := probeArtifact(t)
+	// A flaky gate: q1's content flips supported/unsupported across runs;
+	// with GateRuns=3 the lower median (2/3 supported) wins. q2 stays
+	// consistently unsupported.
+	calls := 0
+	r := NewRunner(map[string]rerank.Reranker{"reverse": &recordingReranker{}}, Options{
+		Content: func(ctx context.Context, ids []string) ([]string, error) {
+			out := make([]string, len(ids))
+			for i, id := range ids {
+				out[i] = id
+			}
+			return out, nil
+		},
+		Gate: func(ctx context.Context, query, content string) (bool, error) {
+			calls++
+			if strings.Contains(content, "c1") {
+				return calls%2 == 1, nil // supported, unsupported, supported
+			}
+			return false, nil
+		},
+		GateRuns: 3,
+	})
+
+	rep, err := r.Run(context.Background(), art, gs, []Combination{{Model: "reverse", N: 5}})
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	// 2 non-abstention queries x 3 gate runs, baseline + combination.
+	if calls != 12 {
+		t.Fatalf("gate evaluated %d times, want 12 (2 queries x 3 runs x 2 configurations)", calls)
+	}
+	// q1's median (supported, unsupported, supported) is supported; q2 is
+	// unsupported on both configurations -> verified rate 0.5.
+	if rep.Baseline.VerifiedRate != 0.5 || rep.Combinations[0].VerifiedRate != 0.5 {
+		t.Fatalf("verified rates = baseline %.2f / combination %.2f, want 0.5 / 0.5", rep.Baseline.VerifiedRate, rep.Combinations[0].VerifiedRate)
+	}
+}
+
 func TestProbeBootstrapCIDeterministic(t *testing.T) {
 	art, gs := probeArtifact(t)
 	build := func() *ProbeReport {
