@@ -249,6 +249,28 @@ Gated-out slices (comparison/concept/single_fact): **byte-identical** to baselin
 
 **E1 verdict:** PASS. The composition question (E3: entity BGE + heading structure bonus — disjoint intents) is now meaningful, satisfying the research doc's precondition. Production activation is not automatic: the probe surface is ADR-0045 benchmark tooling; activation would reuse the M8 `RerankedRetriever` seam behind the M7 entity gate with a deployable reranker provider (the exec adapter is probe-only) — that is its own milestone with its own ADR.
 
+## 8c. E3 executed — results (2026-08-07, GPU, fingerprint-gated)
+
+**Hypothesis tested:** entity BGE and the heading structure bonus are complementary and non-interfering (disjoint intent classes) — the combined system is the union of the two gates.
+
+**Setup:** both policies active over each artifact (`--bge-intents entity --structure --structure-intents heading`): v3.1 (E1 leg) and v4 (E2 leg), same frozen budgets, `--gate-runs 3`.
+
+| leg | configuration | nDCG@5 (Δ) | MRR | verdict |
+|---|---|---|---|---|
+| v3.1 | bge N=50 (entity) | 0.897 (+1.20pp) | 0.902 | **ACCEPT** (as E1) |
+| v3.1 | structure any N (heading) | 0.886 (+0.00) | 0.902 | byte-identical baseline |
+| v4 | structure N=20 | 0.267 (+3.85pp) | 0.246 | MPI pass (as E2) |
+| v4 | structure N=50 | 0.237 (+1.15pp) | 0.231 | **ACCEPT** (deterministic, 0ms/0MB) |
+| v4 | bge any N (entity) | 0.225 (+0.00) | 0.192 | byte-identical baseline |
+
+**Findings:**
+
+1. **Zero interference, verified byte-for-byte.** On v3.1 the structure policy contributes +0.00 on every slice (no heading queries) and the BGE combos reproduce the E1 manifest exactly (nDCG/MRR/slices/verified). On v4 the entity policy contributes +0.00 and the structure combos reproduce E2's numbers exactly (+3.85/+1.15/+1.15pp). The composition is the disjoint union of the gates — no interaction effects on any slice.
+2. **Both legs independently accept.** The structure bonus clears the frozen gate on its slice (nDCG +1.15pp, MRR +3.9pp, abstention aligned, no operational budget — deterministic in-process reranker). E1's entity leg accepts on the production distribution as recorded in 8b.
+3. **The heading gate has no production intent detector.** The structure bonus is gated on the gold set's `heading` intent; production intent signals (IntentHint) carry only `comparison` and `entity` (M6/M7). Wiring the heading path in production requires a heading-intent classifier with its own benchmark — deferred, as §6 flagged. The entity path needs no new classification: the M7 `UseGraph` gate already isolates entity queries.
+
+**E3 verdict:** PASS. The research program's composition question is answered: intent-routed selective reranking (entity → BGE cross-encoder at N=50, heading → deterministic structure bonus, everything else → GraphFusion unchanged) is benchmarked and accepted on both legs. Production activation remains a separate milestone: deployable reranker provider (exec adapter is probe-only, ADR-0045), M8 `RerankedRetriever` wiring behind the M7 entity gate, and — for the heading leg only — a heading-intent detector.
+
 ## 9. Explicit non-goals
 
 - **No global reranking** over all retrieved chunks (M8 rejected; E4 is a control, not a candidate).
@@ -262,4 +284,4 @@ Gated-out slices (comparison/concept/single_fact): **byte-identical** to baselin
 
 ## 10. Conclusion
 
-Structure-aware reranking has now produced its first acceptance: **entity-gated BGE reranking (N=50) passes the frozen kill gate on the production distribution** (E1, gold set v3.1). The heading path remains model-driven — E2 showed the deterministic structure bonus clears MPI on the heading slice (+3.85pp) but captures only ~30% of BGE's gain, and the gated bonus is production-safe. The remaining question is composition (E3: entity BGE + heading structure bonus, disjoint intent classes), which is meaningful only because E1 passed; if E3 confirms non-interference, the next step is a production-activation milestone behind the M7 entity gate with a deployable reranker provider. GraphFusion remains the primary retrieval signal; any production change must win its own benchmark first — E1's acceptance is measured on the same frozen thresholds.
+Structure-aware reranking is **benchmarked and accepted** as an intent-routed selective mechanism. E1 showed entity-gated BGE (N=50) passes the frozen kill gate on the production distribution (+4.25pp entity slice, byte-identical gated-out slices); E2 showed the deterministic heading structure bonus clears MPI on the heading slice (+3.85pp) with zero v3 cost when gated; E3 showed the composition is exactly the union of the gates — non-interfering, each leg reproducing its single-experiment numbers. The production candidate is: entity → BGE cross-encoder at N=50 behind the M7 `UseGraph` gate; heading → deterministic structure bonus behind a heading-intent detector that does not exist yet; everything else → GraphFusion unchanged. Activation remains a separate milestone: a deployable reranker provider (the probe's exec adapter is benchmark tooling only, ADR-0045), the M8 `RerankedRetriever` seam wired behind the M7 entity gate, and a benchmarked heading-intent classifier for the second leg. GraphFusion remains the primary retrieval signal; production wiring must win its own benchmark on the same frozen thresholds.
