@@ -2,6 +2,7 @@ package citation_test
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 
 	qacitation "arca/internal/qa/citation"
@@ -93,4 +94,17 @@ func TestExtractClaims(t *testing.T) {
 			t.Errorf("sentence = %q", claims[0].Sentence)
 		}
 	})
+}
+
+func TestExtractClaims_QuoteBoundaries(t *testing.T) {
+	got := qacitation.ExtractClaims(`The book calls it a misconception to say we listen with the ears or the mind: "We listen with the whole body, our whole self." Certain bass sounds can only be felt in the body [Ref 1]. "When listening, there is only now" [Ref 2].`)
+	if len(got) != 2 {
+		t.Fatalf("claims = %d, want 2 (ref-less sentence dropped): %+v", len(got), got)
+	}
+	if !strings.Contains(got[0].Sentence, "Certain bass sounds") || got[0].Refs[0] != 1 {
+		t.Errorf("first claim = %+v", got[0])
+	}
+	if !strings.Contains(got[1].Sentence, "When listening") || got[1].Refs[0] != 2 {
+		t.Errorf("second claim = %+v", got[1])
+	}
 }

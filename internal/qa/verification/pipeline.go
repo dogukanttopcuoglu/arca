@@ -144,10 +144,33 @@ func (p *DefaultVerificationPipeline) runPhase2(ctx context.Context, answer *Ver
 	if answer.Status == StatusNoEvidence {
 		return
 	}
-	for _, verdict := range verdicts {
-		if verdict.Relation != "entailed" {
+	// Claim-level support: a claim passes when at least one of its cited
+	// sources entails it and none contradict it. A pair-level strict rule
+	// false-flips multi-source claims whose secondary sources are merely
+	// neutral (calibrated on live answers, ADR-0050).
+	for _, pairRelations := range groupByClaim(verdicts) {
+		hasEntailed, hasContradicted := false, false
+		for _, rel := range pairRelations {
+			if rel == "entailed" {
+				hasEntailed = true
+			}
+			if rel == "contradicted" {
+				hasContradicted = true
+			}
+		}
+		if !hasEntailed || hasContradicted {
 			answer.Status = StatusUnverified
 			return
 		}
 	}
+}
+
+// groupByClaim buckets Phase 2 verdicts by claim sentence, preserving
+// encounter order.
+func groupByClaim(verdicts []SemanticVerdict) map[string][]string {
+	groups := make(map[string][]string, len(verdicts))
+	for _, v := range verdicts {
+		groups[v.Claim] = append(groups[v.Claim], v.Relation)
+	}
+	return groups
 }

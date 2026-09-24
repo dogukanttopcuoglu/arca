@@ -9,13 +9,14 @@ import (
 )
 
 // fakeChecker records every (claim, source) pair and returns scripted
-// verdicts keyed by claim sentence.
+// verdicts. sourceResults win over results when both key a pair.
 type fakeChecker struct {
-	results map[string]qaverification.EntailmentScore
-	err     error
-	calls   int
-	claims  []string
-	sources []string
+	results       map[string]qaverification.EntailmentScore
+	sourceResults map[string]qaverification.EntailmentScore
+	err           error
+	calls         int
+	claims        []string
+	sources       []string
 }
 
 func (f *fakeChecker) CheckEntailment(ctx context.Context, claim, sourceText string) (qaverification.EntailmentScore, error) {
@@ -24,6 +25,9 @@ func (f *fakeChecker) CheckEntailment(ctx context.Context, claim, sourceText str
 	f.sources = append(f.sources, sourceText)
 	if f.err != nil {
 		return qaverification.EntailmentScore{}, f.err
+	}
+	if score, ok := f.sourceResults[sourceText]; ok {
+		return score, nil
 	}
 	if score, ok := f.results[claim]; ok {
 		return score, nil
@@ -188,6 +192,66 @@ func TestPipelinePhase2(t *testing.T) {
 		}
 		if ans.Status != qaverification.StatusUnverified {
 			t.Errorf("status = %q, want unverified", ans.Status)
+		}
+	})
+}
+
+func TestPipelinePhase2_ClaimLevelSupport(t *testing.T) {
+	ctx := context.Background()
+	win := &qacontext.ContextWindow{
+		Sources: []qacontext.SourceReference{
+			{CitationKey: "[Ref 1]", DocumentID: "doc-1", Content: "source one"},
+			{CitationKey: "[Ref 2]", DocumentID: "doc-2", Content: "source two"},
+		},
+	}
+
+	t.Run("one entailed pair among neutral pairs keeps the claim verified", func(t *testing.T) {
+		checker := &fakeChecker{sourceResults: map[string]qaverification.EntailmentScore{
+			"source one": {Score: 0.95, Relation: "entailed"},
+			"source two": {Score: 0.3, Relation: "neutral"},
+		}}
+		pipeline := qaverification.NewDefaultVerificationPipeline()
+		pipeline.SetEntailmentChecker(checker)
+
+		ans, err := pipeline.Verify(ctx, "Claim [Ref 1] [Ref 2].", win)
+		if err != nil {
+			t.Fatalf("Verify: %v", err)
+		}
+		if ans.Status != qaverification.StatusVerified {
+			t.Errorf("status = %q, want verified (one entailed source suffices)", ans.Status)
+		}
+	})
+
+	t.Run("neutral-only claim is unverified", func(t *testing.T) {
+		checker := &fakeChecker{sourceResults: map[string]qaverification.EntailmentScore{
+			"source one": {Score: 0.2, Relation: "neutral"},
+		}}
+		pipeline := qaverification.NewDefaultVerificationPipeline()
+		pipeline.SetEntailmentChecker(checker)
+
+		ans, err := pipeline.Verify(ctx, "Claim [Ref 1].", win)
+		if err != nil {
+			t.Fatalf("Verify: %v", err)
+		}
+		if ans.Status != qaverification.StatusUnverified {
+			t.Errorf("status = %q, want unverified (no entailed source)", ans.Status)
+		}
+	})
+
+	t.Run("entailed plus contradicted pairs downgrade the claim", func(t *testing.T) {
+		checker := &fakeChecker{sourceResults: map[string]qaverification.EntailmentScore{
+			"source one": {Score: 0.9, Relation: "entailed"},
+			"source two": {Score: 0.9, Relation: "contradicted"},
+		}}
+		pipeline := qaverification.NewDefaultVerificationPipeline()
+		pipeline.SetEntailmentChecker(checker)
+
+		ans, err := pipeline.Verify(ctx, "Claim [Ref 1] [Ref 2].", win)
+		if err != nil {
+			t.Fatalf("Verify: %v", err)
+		}
+		if ans.Status != qaverification.StatusUnverified {
+			t.Errorf("status = %q, want unverified (contradicted source is strict)", ans.Status)
 		}
 	})
 }

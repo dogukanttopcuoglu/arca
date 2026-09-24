@@ -58,8 +58,11 @@ var combinedRefRegex = regexp.MustCompile(`\[(Ref\s+\d+(?:\s*,\s*(?:Ref\s+)?\d+)
 // ExtractClaims splits answerText into sentences and keeps only the ones
 // that carry at least one reference marker. Combined markers are expanded
 // through the same normalization Extract uses, so a claim's Refs cover
-// every reference in a "[Ref 1, 2]" bracket. Sentences without markers and
-// empty text produce nil.
+// every reference in a "[Ref 1, 2]" bracket. Newlines and terminator
+// characters (followed by a space, closing quote, or end of string) are
+// sentence boundaries; markdown cosmetics (bold markers, heading hashes,
+// list bullets) are stripped from the kept sentence. Sentences without
+// markers and empty text produce nil.
 func ExtractClaims(answerText string) []Claim {
 	if strings.TrimSpace(answerText) == "" {
 		return nil
@@ -79,29 +82,68 @@ func ExtractClaims(answerText string) []Claim {
 			n, _ := strconv.Atoi(m[1])
 			refs = append(refs, n)
 		}
-		claims = append(claims, Claim{Sentence: sentence, Refs: refs})
+		claims = append(claims, Claim{Sentence: cleanClaimText(sentence), Refs: refs})
 	}
 	return claims
 }
 
-// splitSentences cuts text on terminator characters followed by a space or
-// the end of the string. Terminators inside prose ("e.g.", decimals) do
-// not split because they lack the following space. Trailing whitespace is
-// trimmed and empty sentences dropped.
+// cleanClaimText strips markdown cosmetics that carry no meaning for an
+// entailment check: bold markers, heading hashes, and leading list bullets.
+func cleanClaimText(s string) string {
+	s = strings.ReplaceAll(s, "**", "")
+	s = strings.ReplaceAll(s, "__", "")
+	s = strings.TrimSpace(s)
+	s = strings.TrimLeft(s, "#")
+	s = strings.TrimSpace(s)
+	if strings.HasPrefix(s, "-") || strings.HasPrefix(s, "*") {
+		s = strings.TrimSpace(s[1:])
+	}
+	return s
+}
+
+// splitSentences cuts text on newlines and on terminator characters that
+// fall outside quoted spans, followed by a space, a closing quote, or the
+// end of the string. Terminators inside quotes ("...more energy. It's...")
+// and inside prose ("e.g.", decimals) do not split, so quoted spans stay
+// whole. Trailing whitespace is trimmed and empty sentences dropped.
 func splitSentences(text string) []string {
+	runes := []rune(text)
 	var sentences []string
 	start := 0
-	for i := 0; i < len(text); i++ {
-		isTerminator := text[i] == '.' || text[i] == '!' || text[i] == '?'
-		if !isTerminator || (i+1 < len(text) && text[i+1] != ' ') {
+	inQuote := false
+	for i := 0; i < len(runes); i++ {
+		r := runes[i]
+		switch r {
+		case '"', '“', '”':
+			inQuote = !inQuote
 			continue
+		case '\n':
+			if inQuote {
+				continue // quoted span continues across the line break
+			}
+			if s := strings.TrimSpace(string(runes[start:i])); s != "" {
+				sentences = append(sentences, s)
+			}
+			start = i + 1
+			continue
+		case '.', '!', '?':
+			if inQuote {
+				continue
+			}
+			after := i + 1
+			for after < len(runes) && (runes[after] == '”' || runes[after] == '"') {
+				after++
+			}
+			if after < len(runes) && runes[after] != ' ' {
+				continue
+			}
+			if s := strings.TrimSpace(string(runes[start:after])); s != "" {
+				sentences = append(sentences, s)
+			}
+			start = after
 		}
-		if s := strings.TrimSpace(text[start : i+1]); s != "" {
-			sentences = append(sentences, s)
-		}
-		start = i + 1
 	}
-	if s := strings.TrimSpace(text[start:]); s != "" {
+	if s := strings.TrimSpace(string(runes[start:])); s != "" {
 		sentences = append(sentences, s)
 	}
 	return sentences
