@@ -71,7 +71,12 @@ func (b *RAGPromptBuilder) Build(ctx context.Context, query string, win *qaconte
 		},
 		Options: GenerationOptions{
 			Temperature: 0.2,
-			MaxTokens:   1500,
+			// Reasoning-class models (deepseek-flash) spend budget inside
+			// reasoning_content before writing the answer; 1500 left broad
+			// questions finishing with empty content. The evidence gate
+			// learned the same lesson at 512->2048 (ADR-0034); the answer
+			// path, which does the longer job, now budgets twice the gate.
+			MaxTokens: 4096,
 		},
 	}, nil
 }
