@@ -287,6 +287,13 @@ type Runtime struct {
 	fusionOnce      sync.Once
 	fusionErr       error
 	fusionRetriever retrievalseam.Retriever
+
+	// Answer engine: one composition path (RetrieverForMode + buildAnswerEngine)
+	// shared by the CLI and arc-server, built lazily. A failed build is not
+	// cached so a retry after indexing (sparse/hybrid) rebuilds.
+	answerOnce   sync.Once
+	answerErr    error
+	answerEngine *qa.AnswerEngine
 }
 
 // GraphRetriever builds the entity-only graph retriever (ADR-0038/0039):
@@ -400,6 +407,31 @@ func (r *Runtime) RetrieverForMode(mode retrievalseam.RetrievalMode) (retrievals
 	default:
 		return nil, fmt.Errorf("unknown retrieval mode %v", mode)
 	}
+}
+
+// AnswerEngine builds the answer engine through the shared composition path
+// (RetrieverForMode for the configured mode plus buildAnswerEngine). arc-server
+// uses this accessor instead of duplicating composition.
+func (r *Runtime) AnswerEngine() (*qa.AnswerEngine, error) {
+	r.answerOnce.Do(func() {
+		retriever, err := r.RetrieverForMode(r.cfg.RetrievalMode)
+		if err != nil {
+			r.answerErr = err
+			return
+		}
+		r.answerEngine = buildAnswerEngine(r, retriever)
+	})
+	if r.answerErr != nil {
+		r.answerOnce = sync.Once{}
+	}
+	return r.answerEngine, r.answerErr
+}
+
+// VectorStore returns the shared store backing indexing, retrieval, and the
+// read-only HTTP surface (arc-server). Callers never hold a second store
+// instance, so the server lists exactly what indexing wrote.
+func (r *Runtime) VectorStore() store.VectorStore {
+	return r.vectorStore
 }
 
 // NewRuntime constructs the composition root from Config.
