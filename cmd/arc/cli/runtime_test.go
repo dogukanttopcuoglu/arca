@@ -9,10 +9,105 @@ import (
 	"arca/internal/indexing/provider"
 	"arca/internal/indexing/store"
 	llmprovider "arca/internal/llm/provider"
+	qacontext "arca/internal/qa/context"
 	"arca/internal/retrieval/dense"
 	"arca/internal/retrieval/rerank"
 	"arca/internal/retrieval/seam"
 )
+
+func TestBuildVerificationPipeline(t *testing.T) {
+	win := &qacontext.ContextWindow{
+		Sources: []qacontext.SourceReference{
+			{CitationKey: "[Ref 1]", DocumentID: "doc-1", Content: "source content"},
+		},
+	}
+
+	t.Run("empty URL and key keep the pipeline structural-only (default-off)", func(t *testing.T) {
+		rt := &Runtime{}
+		p := buildVerificationPipeline(rt, DefaultConfig())
+		if rt.verifier != nil {
+			t.Fatal("no checker may be recorded when verification is off")
+		}
+		// The pipeline must behave byte-identical: Phase 1 alone decides.
+		ans, err := p.Verify(context.Background(), "Grounded answer [Ref 1].", win)
+		if err != nil {
+			t.Fatalf("Verify: %v", err)
+		}
+		if ans.Status != "verified" {
+			t.Errorf("status = %q, want verified", ans.Status)
+		}
+		if ans.Degraded {
+			t.Error("must not degrade with no checker")
+		}
+		if ans.Semantic != nil {
+			t.Errorf("semantic = %+v, want nil", ans.Semantic)
+		}
+	})
+
+	t.Run("URL without a key stays default-off", func(t *testing.T) {
+		rt := &Runtime{}
+		cfg := DefaultConfig()
+		cfg.VerifyJevURL = "http://localhost:3005"
+		buildVerificationPipeline(rt, cfg)
+		if rt.verifier != nil {
+			t.Fatal("a checker must require both URL and API key")
+		}
+	})
+
+	t.Run("configured URL and key create the checker and record it", func(t *testing.T) {
+		rt := &Runtime{}
+		cfg := DefaultConfig()
+		cfg.VerifyJevURL = "http://localhost:3005"
+		cfg.VerifyJevAPIKey = "test-key"
+		buildVerificationPipeline(rt, cfg)
+		if rt.verifier == nil {
+			t.Fatal("checker must be recorded on the runtime when configured")
+		}
+	})
+}
+
+func TestDefaultConfig_VerifyJevOff(t *testing.T) {
+	cfg := DefaultConfig()
+	if cfg.VerifyJevURL != "" {
+		t.Fatalf("default Jev URL = %q, want empty (default-off)", cfg.VerifyJevURL)
+	}
+	if cfg.VerifyJevAPIKey != "" {
+		t.Fatalf("default Jev API key = %q, want empty (default-off)", cfg.VerifyJevAPIKey)
+	}
+	if cfg.VerifyJevThreshold != 0.7 {
+		t.Fatalf("default Jev threshold = %v, want 0.7", cfg.VerifyJevThreshold)
+	}
+	if cfg.VerifyJevTimeoutMS != 2000 {
+		t.Fatalf("default Jev timeout = %dms, want 2000", cfg.VerifyJevTimeoutMS)
+	}
+
+	fromEnv := LoadFromEnv()
+	if fromEnv.VerifyJevURL != "" || fromEnv.VerifyJevAPIKey != "" ||
+		fromEnv.VerifyJevThreshold != 0.7 || fromEnv.VerifyJevTimeoutMS != 2000 {
+		t.Fatalf("env defaults drifted: %+v", fromEnv)
+	}
+}
+
+func TestLoadFromEnv_VerifyJev(t *testing.T) {
+	t.Setenv("VERIFY_JEV_URL", "http://jev.internal:3005")
+	t.Setenv("VERIFY_JEV_API_KEY", "test-key")
+	t.Setenv("VERIFY_JEV_THRESHOLD", "0.8")
+	t.Setenv("VERIFY_JEV_TIMEOUT_MS", "5000")
+
+	cfg := LoadFromEnv()
+	if cfg.VerifyJevURL != "http://jev.internal:3005" {
+		t.Errorf("URL = %q", cfg.VerifyJevURL)
+	}
+	if cfg.VerifyJevAPIKey != "test-key" {
+		t.Errorf("API key = %q", cfg.VerifyJevAPIKey)
+	}
+	if cfg.VerifyJevThreshold != 0.8 {
+		t.Errorf("threshold = %v, want 0.8", cfg.VerifyJevThreshold)
+	}
+	if cfg.VerifyJevTimeoutMS != 5000 {
+		t.Errorf("timeout = %dms, want 5000", cfg.VerifyJevTimeoutMS)
+	}
+}
 
 func TestApplyEntityRerank(t *testing.T) {
 	inner := &dense.DenseRetriever{}

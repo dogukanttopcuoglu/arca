@@ -122,6 +122,19 @@ type Config struct {
 	RerankTimeoutMS int `mapstructure:"RETRIEVAL_RERANK_TIMEOUT_MS"`
 	// HTTPTimeout is the client timeout for external service calls.
 	HTTPTimeout time.Duration `mapstructure:"HTTP_TIMEOUT"`
+	// VerifyJevURL is the TypeSafe System One base URL for Phase 2 semantic
+	// entailment checks (Jev): empty keeps verification structural-only
+	// (default-off).
+	VerifyJevURL string `mapstructure:"VERIFY_JEV_URL"`
+	// VerifyJevAPIKey is the bearer credential for the Jev service; empty
+	// keeps verification structural-only alongside VerifyJevURL.
+	VerifyJevAPIKey string `mapstructure:"VERIFY_JEV_API_KEY"`
+	// VerifyJevThreshold is the support probability at or above which a
+	// claim is entailed.
+	VerifyJevThreshold float64 `mapstructure:"VERIFY_JEV_THRESHOLD"`
+	// VerifyJevTimeoutMS covers only the Jev HTTP call; a timeout degrades
+	// Phase 2 to the structural status (fail-open).
+	VerifyJevTimeoutMS int `mapstructure:"VERIFY_JEV_TIMEOUT_MS"`
 }
 
 // DefaultConfig returns the M1 defaults: real Firecrawl, mock embedding provider,
@@ -147,6 +160,8 @@ func DefaultConfig() Config {
 		RetrievalGraphWeight:  1.0, // M7 calibrated graph fusion weight (ADR-0041)
 		RerankCandidateN:      50,  // E1-frozen candidate budget (ADR-0049)
 		RerankTimeoutMS:       2000,
+		VerifyJevThreshold:    0.7,
+		VerifyJevTimeoutMS:    2000,
 		HTTPTimeout:           30 * time.Second,
 	}
 }
@@ -180,6 +195,10 @@ func LoadFromEnv() Config {
 	v.SetDefault("RETRIEVAL_RERANK_URL", base.RerankURL)
 	v.SetDefault("RETRIEVAL_RERANK_CANDIDATE_N", base.RerankCandidateN)
 	v.SetDefault("RETRIEVAL_RERANK_TIMEOUT_MS", base.RerankTimeoutMS)
+	v.SetDefault("VERIFY_JEV_URL", base.VerifyJevURL)
+	v.SetDefault("VERIFY_JEV_API_KEY", base.VerifyJevAPIKey)
+	v.SetDefault("VERIFY_JEV_THRESHOLD", base.VerifyJevThreshold)
+	v.SetDefault("VERIFY_JEV_TIMEOUT_MS", base.VerifyJevTimeoutMS)
 	v.SetDefault("HTTP_TIMEOUT", base.HTTPTimeout)
 
 	return Config{
@@ -204,6 +223,10 @@ func LoadFromEnv() Config {
 		RerankURL:             v.GetString("RETRIEVAL_RERANK_URL"),
 		RerankCandidateN:      v.GetInt("RETRIEVAL_RERANK_CANDIDATE_N"),
 		RerankTimeoutMS:       v.GetInt("RETRIEVAL_RERANK_TIMEOUT_MS"),
+		VerifyJevURL:          v.GetString("VERIFY_JEV_URL"),
+		VerifyJevAPIKey:       v.GetString("VERIFY_JEV_API_KEY"),
+		VerifyJevThreshold:    v.GetFloat64("VERIFY_JEV_THRESHOLD"),
+		VerifyJevTimeoutMS:    v.GetInt("VERIFY_JEV_TIMEOUT_MS"),
 		HTTPTimeout:           v.GetDuration("HTTP_TIMEOUT"),
 	}
 }
@@ -236,6 +259,10 @@ type Runtime struct {
 	// nil when reranking is not configured (default-off). The ask output
 	// renders its counters as the Reranker block.
 	reranker *rerank.HTTPReranker
+
+	// verifier is the production HTTP Jev entailment checker (Phase 2);
+	// nil when semantic verification is not configured (default-off).
+	verifier *qaverification.HTTPJevChecker
 
 	// Sparse retrieval components are built lazily: the query encoder needs
 	// the indexed corpus, which does not exist yet on a fresh collection.
@@ -513,6 +540,26 @@ func applyEntityRerank(rt *Runtime, fusionRet retrievalseam.Retriever, cfg Confi
 	})
 }
 
+// buildVerificationPipeline wires Phase 2 semantic entailment into the
+// default verification pipeline: with a configured Jev URL and API key, the
+// checker is attached and recorded on the runtime; otherwise the pipeline is
+// returned unchanged (default-off, byte-identical).
+func buildVerificationPipeline(rt *Runtime, cfg Config) *qaverification.DefaultVerificationPipeline {
+	pipeline := qaverification.NewDefaultVerificationPipeline()
+	if cfg.VerifyJevURL == "" || cfg.VerifyJevAPIKey == "" {
+		return pipeline
+	}
+	checker := qaverification.NewHTTPJevChecker(
+		cfg.VerifyJevURL,
+		cfg.VerifyJevAPIKey,
+		time.Duration(cfg.VerifyJevTimeoutMS)*time.Millisecond,
+		cfg.VerifyJevThreshold,
+	)
+	pipeline.SetEntailmentChecker(checker)
+	rt.verifier = checker
+	return pipeline
+}
+
 // buildAnswerEngine wires the real AnswerEngine seams: ContextBuilder with the
 // configured budget, the RAG PromptBuilder, the OpenAI-compatible LLM adapter,
 // the default verification pipeline, the real EvidenceGate (ADR-0030), the
@@ -554,7 +601,7 @@ func buildAnswerEngine(rt *Runtime, retriever retrievalseam.Retriever) *qa.Answe
 		qacontext.NewDefaultContextBuilder(nil, cfg.LLMContextBudget),
 		qaprompt.NewRAGPromptBuilder(),
 		buildLLMProvider(cfg),
-		qaverification.NewDefaultVerificationPipeline(),
+		buildVerificationPipeline(rt, cfg),
 		qa.NewLLMEvidenceGate(buildLLMProvider(cfg)),
 		opts...,
 	)
