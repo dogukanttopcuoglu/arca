@@ -150,7 +150,9 @@ func TestHTTPReranker_FailOpenMatrix(t *testing.T) {
 }
 
 func TestHTTPReranker_Observability(t *testing.T) {
-	srv := &rerankServer{status: 200, body: `{"ranked_ids": ["b", "a"], "scores": [0.9, 0.4]}`}
+	// The delay guarantees a non-zero millisecond latency so the atomic
+	// latency counter is asserted deterministically on fast machines.
+	srv := &rerankServer{status: 200, body: `{"ranked_ids": ["b", "a"], "scores": [0.9, 0.4]}`, delay: time.Millisecond}
 	ts := httptest.NewServer(srv.handler())
 	defer ts.Close()
 
