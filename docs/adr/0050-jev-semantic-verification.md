@@ -1,0 +1,24 @@
+# Phase 2 semantic verification with Jev (TypeSafe System One)
+
+The verification pipeline (`internal/qa/verification`) has run Phase 1 structural checks only since M5 (ADR-0027 era): an answer is `verified` when every inline `[Ref N]` marker resolves to a real context source. The Phase 2 `EntailmentChecker` seam (`CheckEntailment(claim, sourceText) → EntailmentScore{score, relation}`) has existed without an implementation. Two real failure classes slip through Phase 1: a claim that **contradicts** its cited source, and a claim that its cited source does not **support** (the marker is valid, the assertion is not in the passage). A prototype (`.scratch/prototype-typesafe-verify/`, throwaway) measured the Jev System One model on 17 hand-labeled (claim, source) pairs from the real Rick Rubin corpus: 17/17 agreement at both 0.5 and 0.7 thresholds, including a reality-true-but-unsupported claim (noul 0.01) that tests grounding against prior knowledge.
+
+We decided to implement Phase 2 as a **Jev-backed `HTTPJevChecker`** on the existing seam, mirroring the M10 `HTTPReranker` composition (ADR-0049): default-off, fail-open, minimal atomic-counter observability, one structured debug line per call. Each (claim sentence, source) pair is sent as one `POST /v1/systemone` request with two Noul questions (`support`, `contradict`) plus the claim and clipped source (2000 runes) as state. Relation mapping: `support >= threshold` → `entailed`; else `contradict >= threshold` → `contradicted`; else `neutral`. `Score` is the support probability in all cases. An answer is `verified` only when Phase 1 passes **and** every verdict is `entailed`; a `contradicted` or `neutral` verdict downgrades to `unverified`. Co-authored with the user; TypeSafe API key supplied for the live run.
+
+Status: proposed. Activation gates: (1) threshold calibration on real generated answers, not the clean prototype set — 0.7 is a placeholder default; (2) a verification benchmark surface that measures false-flip rate on real (claim, source) pairs; (3) the self-host vs hosted-service decision (see Consequences).
+
+## Considered options
+
+- **One Noul per pair**: rejected — a low `support` probability cannot separate `contradicted` from `neutral`, and the seam contract carries a three-value relation. Two Nouls in one request give the full vocabulary at the cost of one extra question per claim.
+- **Local NLI model (e.g. cross-encoder)**: rejected for now — the project's reranking model is local because it runs inside docker-compose with GPU; a verification model would add image weight and still needs the same calibration. The hosted Jev was already measured at 17/17 and the adapter is a swap point if a local model wins its benchmark later.
+- **Fail-closed on checker error**: rejected — an external-service outage must not brick the ask path or turn healthy answers `unverified`. Matches the ADR-0044/0049 grace pattern: Phase 1 status stands, `Degraded=true`, one stderr line.
+- **Batch all claims in one request**: deferred — per-claim requests match the seam contract exactly and measured 237–911 ms on the live run; batching is a follow-up if latency or cost becomes material.
+- **Verification stats block in ask output**: deferred — the adapter carries counters; rendering them is a UI follow-up like the M10 `Reranker:` block.
+
+## Consequences
+
+- New config keys, all default-off: `VERIFY_JEV_URL`, `VERIFY_JEV_API_KEY` (both required to activate), `VERIFY_JEV_THRESHOLD` (default 0.7), `VERIFY_JEV_TIMEOUT_MS` (default 2000). With either key empty, verification is byte-identical to M9/M10.
+- `VerifiedAnswer` gains `Degraded bool` and `Semantic []SemanticVerdict` (one verdict per checked pair), additive and JSON-visible.
+- `internal/qa/citation` gains `ExtractClaims`: a claim is a sentence carrying at least one `[Ref N]` marker; combined markers (`[Ref 1, 2]`) expand through the existing normalization. Duplicated refs used by multiple sentences are each checked.
+- Threshold 0.7 is a calibrated-looking but uncalibrated default. The prototype separated 0.01–0.07 vs 0.87–0.99, but real LLM answers paraphrase more loosely; the probe must decide the operating point.
+- No verification benchmark surface exists yet (the Gold Set measures retrieval). Until one ships, the live runner in `.scratch/pipeline-verify/` is the measurement instrument and is not part of the product.
+- TypeSafe is a hosted SaaS (`api.typesafe.ai`), the only non-self-hosted dependency besides the LLM gateway. The adapter depends only on the HTTP contract, so a local System One-compatible service can replace it without engine changes.
