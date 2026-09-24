@@ -19,6 +19,13 @@ type AnswerCitation struct {
 	Snippet     string `json:"snippet,omitempty"`
 }
 
+// Claim is a sentence extracted from an answer that carries at least one
+// inline reference marker.
+type Claim struct {
+	Sentence string
+	Refs     []int
+}
+
 // VerificationReport captures structural citation metrics and validity counts.
 type VerificationReport struct {
 	TotalClaims       int `json:"total_claims"`
@@ -47,6 +54,58 @@ var refRegex = regexp.MustCompile(`\[Ref\s+(\d+)\]`)
 // The first element must be Ref-prefixed so bare number lists in prose
 // (e.g. "[1, 2]") are never treated as citations.
 var combinedRefRegex = regexp.MustCompile(`\[(Ref\s+\d+(?:\s*,\s*(?:Ref\s+)?\d+)+)\]`)
+
+// ExtractClaims splits answerText into sentences and keeps only the ones
+// that carry at least one reference marker. Combined markers are expanded
+// through the same normalization Extract uses, so a claim's Refs cover
+// every reference in a "[Ref 1, 2]" bracket. Sentences without markers and
+// empty text produce nil.
+func ExtractClaims(answerText string) []Claim {
+	if strings.TrimSpace(answerText) == "" {
+		return nil
+	}
+	normalized := normalizeCombinedMarkers(answerText)
+	var claims []Claim
+	for _, sentence := range splitSentences(normalized) {
+		matches := refRegex.FindAllStringSubmatch(sentence, -1)
+		if len(matches) == 0 {
+			continue
+		}
+		refs := make([]int, 0, len(matches))
+		for _, m := range matches {
+			if len(m) < 2 {
+				continue
+			}
+			n, _ := strconv.Atoi(m[1])
+			refs = append(refs, n)
+		}
+		claims = append(claims, Claim{Sentence: sentence, Refs: refs})
+	}
+	return claims
+}
+
+// splitSentences cuts text on terminator characters followed by a space or
+// the end of the string. Terminators inside prose ("e.g.", decimals) do
+// not split because they lack the following space. Trailing whitespace is
+// trimmed and empty sentences dropped.
+func splitSentences(text string) []string {
+	var sentences []string
+	start := 0
+	for i := 0; i < len(text); i++ {
+		isTerminator := text[i] == '.' || text[i] == '!' || text[i] == '?'
+		if !isTerminator || (i+1 < len(text) && text[i+1] != ' ') {
+			continue
+		}
+		if s := strings.TrimSpace(text[start : i+1]); s != "" {
+			sentences = append(sentences, s)
+		}
+		start = i + 1
+	}
+	if s := strings.TrimSpace(text[start:]); s != "" {
+		sentences = append(sentences, s)
+	}
+	return sentences
+}
 
 // normalizeCombinedMarkers expands comma-separated reference lists into
 // individual markers ("[Ref 1, 2]" -> "[Ref 1] [Ref 2]") so the standard
