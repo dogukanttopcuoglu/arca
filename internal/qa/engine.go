@@ -151,6 +151,30 @@ func (e *AnswerEngine) evaluateGate(ctx context.Context, query string, win *qaco
 	return EvidenceGateFailed, &EvidenceGateError{Attempts: MaxGateAttempts, Cause: lastErr}
 }
 
+// preparedAnswer carries the shared pre-generation pipeline output: the
+// analyzed draft, the built context window, and abstain, set when retrieval
+// found no sources or the evidence gate decided the context unsupported.
+// Both answer paths branch on abstain and skip generation identically; the
+// window is nil when abstain is set.
+type preparedAnswer struct {
+	draft   *AnswerDraft
+	window  *qacontext.ContextWindow
+	abstain bool
+}
+
+// abstainText is the no_evidence response text; both answer paths emit it
+// verbatim so the abstention wording cannot drift between sync and stream.
+const abstainText = "The retrieved sources do not cover this query, so no grounded answer can be provided."
+
+// noEvidenceAnswer builds the abstention Answer used when generation is
+// skipped, keeping every abstaining caller on the same text and status.
+func noEvidenceAnswer() *Answer {
+	return &Answer{
+		Text:   abstainText,
+		Status: qaverification.StatusNoEvidence,
+	}
+}
+
 // Answer executes the full RAG pipeline and returns the final Answer.
 // When retrieval yields no sources, generation is skipped entirely and the
 // Answer carries the no_evidence status.
@@ -159,6 +183,51 @@ func (e *AnswerEngine) Answer(ctx context.Context, query seam.RetrievalQuery) (*
 		return nil, fmt.Errorf("query text cannot be empty")
 	}
 
+	prepared, err := e.prepare(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	if prepared.abstain {
+		return noEvidenceAnswer(), nil
+	}
+
+	promptMsg, err := e.promptBuilder.Build(ctx, query.QueryText, prepared.window)
+	if err != nil {
+		return nil, fmt.Errorf("prompt assembly failed: %w", err)
+	}
+
+	llmResp, err := e.llmProvider.Generate(ctx, promptMsg)
+	if err != nil {
+		return nil, fmt.Errorf("answer generation failed: %w", err)
+	}
+
+	verified, err := e.verifier.Verify(ctx, llmResp.Content, prepared.window)
+	if err != nil {
+		return nil, fmt.Errorf("verification failed: %w", err)
+	}
+
+	return &Answer{
+		Text:         verified.Text,
+		Citations:    verified.Citations,
+		Verification: verified.Verification,
+		Status:       verified.Status,
+		Metadata: AnswerMetadata{
+			Provider: llmResp.Provider,
+			Model:    llmResp.Model,
+			Usage:    &llmResp.TokenUsage,
+		},
+	}, nil
+}
+
+// prepare runs the pre-generation pipeline shared by the synchronous and
+// streaming paths: analyze, orchestrator retrieval, no-sources abstention,
+// context assembly, and the evidence gate with its bounded retry. The gate
+// evaluates the original query against the exact context that would reach
+// generation; unsupported context abstains, operational gate failures retry
+// once then fail closed with a typed error (ADR-0034). A nil gate preserves
+// legacy behavior for tests and offline composition, and a nil retriever
+// yields no sources.
+func (e *AnswerEngine) prepare(ctx context.Context, query seam.RetrievalQuery) (*preparedAnswer, error) {
 	draft := &AnswerDraft{QueryText: query.QueryText}
 
 	analyzed, err := e.analyzer.Analyze(ctx, query.QueryText)
@@ -219,10 +288,7 @@ func (e *AnswerEngine) Answer(ctx context.Context, query seam.RetrievalQuery) (*
 	}
 
 	if len(draft.SearchResults) == 0 {
-		return &Answer{
-			Text:   "The retrieved sources do not cover this query, so no grounded answer can be provided.",
-			Status: qaverification.StatusNoEvidence,
-		}, nil
+		return &preparedAnswer{draft: draft, abstain: true}, nil
 	}
 	win, err := e.contextBuilder.Build(ctx, draft.SearchResults)
 	if err != nil {
@@ -240,37 +306,9 @@ func (e *AnswerEngine) Answer(ctx context.Context, query seam.RetrievalQuery) (*
 			return nil, gateErr
 		}
 		if decision == EvidenceUnsupported {
-			return &Answer{
-				Text:   "The retrieved sources do not cover this query, so no grounded answer can be provided.",
-				Status: qaverification.StatusNoEvidence,
-			}, nil
+			return &preparedAnswer{draft: draft, window: win, abstain: true}, nil
 		}
 	}
 
-	promptMsg, err := e.promptBuilder.Build(ctx, query.QueryText, win)
-	if err != nil {
-		return nil, fmt.Errorf("prompt assembly failed: %w", err)
-	}
-
-	llmResp, err := e.llmProvider.Generate(ctx, promptMsg)
-	if err != nil {
-		return nil, fmt.Errorf("answer generation failed: %w", err)
-	}
-
-	verified, err := e.verifier.Verify(ctx, llmResp.Content, win)
-	if err != nil {
-		return nil, fmt.Errorf("verification failed: %w", err)
-	}
-
-	return &Answer{
-		Text:         verified.Text,
-		Citations:    verified.Citations,
-		Verification: verified.Verification,
-		Status:       verified.Status,
-		Metadata: AnswerMetadata{
-			Provider: llmResp.Provider,
-			Model:    llmResp.Model,
-			Usage:    &llmResp.TokenUsage,
-		},
-	}, nil
+	return &preparedAnswer{draft: draft, window: win}, nil
 }
