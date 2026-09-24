@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	graphstore "arca/internal/graph/store"
 	"arca/internal/indexing/provider"
 	"arca/internal/indexing/store"
 	llmprovider "arca/internal/llm/provider"
@@ -433,6 +434,30 @@ func TestBuildVectorStore(t *testing.T) {
 		}
 		if _, ok := s.(*store.QdrantVectorStore); !ok {
 			t.Fatalf("expected QdrantVectorStore, got %T", s)
+		}
+	})
+}
+
+func TestGraphStoreFor(t *testing.T) {
+	t.Run("qdrant config selects the Qdrant graph store on the REST port", func(t *testing.T) {
+		cfg := DefaultConfig()
+		cfg.VectorStoreType = VectorStoreQdrant
+		cfg.VectorStoreURL = "http://localhost:6334"
+		gs, err := graphStoreFor(cfg)
+		if err != nil {
+			t.Fatalf("graphStoreFor: %v", err)
+		}
+		if _, ok := gs.(*graphstore.QdrantGraphStore); !ok {
+			t.Fatalf("store type = %T, want *QdrantGraphStore", gs)
+		}
+	})
+	t.Run("non-qdrant config selects the in-memory store", func(t *testing.T) {
+		gs, err := graphStoreFor(DefaultConfig())
+		if err != nil {
+			t.Fatalf("graphStoreFor: %v", err)
+		}
+		if _, ok := gs.(*graphstore.InMemoryGraphStore); !ok {
+			t.Fatalf("store type = %T, want *InMemoryGraphStore", gs)
 		}
 	})
 }

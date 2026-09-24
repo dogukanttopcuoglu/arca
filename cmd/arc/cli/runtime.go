@@ -264,6 +264,10 @@ type Runtime struct {
 	// nil when semantic verification is not configured (default-off).
 	verifier *qaverification.HTTPJevChecker
 
+	// graphStore is the single entity graph store shared by indexing
+	// (worker writes) and GraphRetriever (ask-time reads), ADR-0038.
+	graphStore graphstore.GraphStore
+
 	// Sparse retrieval components are built lazily: the query encoder needs
 	// the indexed corpus, which does not exist yet on a fresh collection.
 	sparseOnce      sync.Once
@@ -292,10 +296,11 @@ type Runtime struct {
 // is empty). A failed build is not cached.
 func (r *Runtime) GraphRetriever() (retrievalseam.Retriever, error) {
 	r.graphOnce.Do(func() {
-		var gs graphstore.GraphStore
-		if r.cfg.VectorStoreType == VectorStoreQdrant {
-			gs, r.graphErr = graphstore.NewQdrantGraphStore(graphRestBaseURL(r.cfg), "")
-		} else {
+		gs := r.graphStore
+		if gs == nil {
+			// Construction warned (Qdrant build failure) or runtime built
+			// with a store-less worker; fall back to the read-only
+			// in-memory store as before the shared-store wiring.
 			gs = graphstore.NewInMemoryGraphStore()
 		}
 		if r.graphErr == nil {
@@ -417,6 +422,18 @@ func NewRuntime(cfg Config) (*Runtime, error) {
 		sparseProvider := sparse.NewBM25EncoderProvider(corpusSource{store: vecStore})
 		indexingOpts = append(indexingOpts, worker.WithSparseEncoderProvider(sparseProvider))
 	}
+	// M7 graph persistence (ADR-0038): the SAME graph store instance is
+	// attached to indexing (so entity nodes are written at index time) and
+	// reused by GraphRetriever at ask time. Before this wiring only the
+	// benchmark ingest scripts attached a store, so a fresh Qdrant volume
+	// never received entity nodes and entity-gated queries 404'd on the
+	// missing node collection.
+	graphIndexStore, gsErr := graphStoreFor(cfg)
+	if gsErr != nil {
+		fmt.Fprintf(os.Stderr, "warning: graph store unavailable (%v); indexing without entity graph\n", gsErr)
+	} else {
+		indexingOpts = append(indexingOpts, worker.WithGraphStore(graphIndexStore))
+	}
 	indexingWorker := worker.NewIndexingWorker(embProvider, vecStore, contentStore, indexingOpts...)
 	denseRetriever := dense.NewDenseRetriever(embProvider, vecStore, contentStore)
 
@@ -428,11 +445,25 @@ func NewRuntime(cfg Config) (*Runtime, error) {
 		contentStore:      contentStore,
 		indexingWorker:    indexingWorker,
 		denseRetriever:    denseRetriever,
+		graphStore:        graphIndexStore,
 	}
 	if mem, ok := vecStore.(*store.InMemoryVectorStore); ok {
 		rt.inMemoryStore = mem
 	}
 	return rt, nil
+}
+
+// graphStoreFor selects the entity graph store for the configured vector
+// store (ADR-0038): Qdrant mode uses the QdrantGraphStore on the REST port
+// (the QdrantVectorStore talks gRPC on 6334; the vectorless node collection
+// lives on the REST API), anything else uses the thread-safe in-memory
+// store. A failed Qdrant build (empty base URL) is surfaced for the caller
+// to warn on.
+func graphStoreFor(cfg Config) (graphstore.GraphStore, error) {
+	if cfg.VectorStoreType == VectorStoreQdrant {
+		return graphstore.NewQdrantGraphStore(graphRestBaseURL(cfg), "")
+	}
+	return graphstore.NewInMemoryGraphStore(), nil
 }
 
 // StoredPoints returns the number of vector points persisted for diagnostics.
