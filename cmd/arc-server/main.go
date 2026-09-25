@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"mime/multipart"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
@@ -298,10 +299,23 @@ func profileFields(content string) (title, author string) {
 	return title, author
 }
 
+// decodePathParam restores the raw path segment a Fiber named or wildcard
+// parameter failed to unescape. Document ids contain commas, parentheses,
+// and spaces; a client encodes them with encodeURIComponent, and without
+// unescaping the id arrives as "id%20with%20space" and matches nothing
+// (measured on DELETE with a comma-containing id).
+func decodePathParam(raw string) string {
+	decoded, err := url.PathUnescape(raw)
+	if err != nil {
+		return raw
+	}
+	return decoded
+}
+
 // handleGetChunk resolves one KnowledgeChunk from the vector store by chunk
 // id, 404ing when the id is unknown.
 func (s *server) handleGetChunk(c *fiber.Ctx) error {
-	chunkID := c.Params("*")
+	chunkID := decodePathParam(c.Params("*"))
 	points, err := s.runtime.VectorStore().ListPoints(c.Context(), indexingmodel.MetadataFilter{ChunkIDs: []string{chunkID}})
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
@@ -550,7 +564,7 @@ func writeUploadEvent(w *bufio.Writer, payload any) {
 // delete: a document with no matching points is a 404, so a client cannot
 // mistake a re-delete for a successful removal.
 func (s *server) handleDeleteDocument(c *fiber.Ctx) error {
-	docID := c.Params("documentId")
+	docID := decodePathParam(c.Params("documentId"))
 	points, err := s.runtime.VectorStore().ListPoints(c.Context(), indexingmodel.MetadataFilter{DocumentIDs: []string{docID}})
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
