@@ -4,8 +4,11 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
+	"mime/multipart"
 	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -59,6 +62,62 @@ type KnowledgeChunk struct {
 	ContentType     string `json:"content_type"`
 }
 
+// Upload stream event types (server-side v1 surface). The snake_case wire
+// contract is decoupled from the internal Go names.
+const (
+	uploadEventPhase = "phase"
+	uploadEventDone  = "done"
+	uploadEventError = "error"
+)
+
+// Upload phase names streamed by POST /api/v1/documents in pipeline order.
+const (
+	uploadPhaseParse   = "parse"
+	uploadPhaseChunk   = "chunk"
+	uploadPhaseEmbed   = "embed"
+	uploadPhaseIndexed = "indexed"
+)
+
+// UploadPhaseEvent marks one ingest phase boundary. chunk_count accompanies
+// the chunk phase, indexed/skipped the indexed phase; both stay omitted on
+// the other phases so the wire shape stays minimal. The contract is:
+// phase parse, phase chunk (chunk_count), phase embed, phase indexed
+// (indexed, skipped), done (document), error (error).
+type UploadPhaseEvent struct {
+	Type       string `json:"type"`
+	Phase      string `json:"phase"`
+	ChunkCount int    `json:"chunk_count,omitempty"`
+	Indexed    int    `json:"indexed,omitempty"`
+	Skipped    int    `json:"skipped,omitempty"`
+}
+
+// UploadDoneEvent terminates an upload stream with the ingested document
+// summary. Status mirrors the inspection diagnostics status: success or
+// partial_success; a failed pipeline never reaches done.
+type UploadDoneEvent struct {
+	Type     string                `json:"type"`
+	Document UploadDocumentSummary `json:"document"`
+}
+
+// UploadDocumentSummary is the v1 document shape carried by the done event.
+type UploadDocumentSummary struct {
+	DocumentID   string `json:"document_id"`
+	Title        string `json:"title"`
+	ChunkCount   int    `json:"chunk_count"`
+	Status       string `json:"status"`
+	Indexed      int    `json:"indexed"`
+	Skipped      int    `json:"skipped"`
+	Deleted      int    `json:"deleted"`
+	WarningCount int    `json:"warning_count"`
+}
+
+// UploadErrorEvent carries a failed upload's verbatim message inside the
+// stream; a missing or invalid form field is a 400 JSON before the stream.
+type UploadErrorEvent struct {
+	Type  string `json:"type"`
+	Error string `json:"error"`
+}
+
 // server holds the two seams the HTTP surface reads from: the runtime's
 // shared vector store for listing and the answer engine for streaming.
 type server struct {
@@ -72,8 +131,15 @@ type server struct {
 func newApp(runtime *cli.Runtime, engine *qa.AnswerEngine, allowedOrigin string) *fiber.App {
 	s := &server{runtime: runtime, engine: engine}
 
-	app := fiber.New()
-	app.Use(cors.New(cors.Config{AllowOrigins: allowedOrigin}))
+	// BodyLimit covers multi-megabyte uploads: FormFile buffers the full
+	// multipart body before the handler runs, and a 5MB book must pass
+	// without the 4MB default rejecting it.
+	app := fiber.New(fiber.Config{BodyLimit: 100 << 20})
+	app.Use(cors.New(cors.Config{
+		AllowOrigins: allowedOrigin,
+		AllowMethods: "GET,POST,DELETE,OPTIONS",
+		AllowHeaders: "Content-Type",
+	}))
 
 	app.Get("/healthz", handleHealthz)
 
@@ -84,6 +150,8 @@ func newApp(runtime *cli.Runtime, engine *qa.AnswerEngine, allowedOrigin string)
 	// captures the full id rather than the first path segment.
 	api.Get("/chunks/*", s.handleGetChunk)
 	api.Get("/qa/stream", s.handleQAStream)
+	api.Post("/documents", s.handleUploadDocument)
+	api.Delete("/documents/:documentId", s.handleDeleteDocument)
 
 	return app
 }
@@ -182,7 +250,11 @@ func groupDocuments(points []store.VectorPoint, spaceID string) []DocumentSummar
 			ds = &DocumentSummary{DocumentID: docID}
 			docs[docID] = ds
 		}
-		ds.ChunkCount++
+		// Chunk count excludes the document_profile point (ADR-0048): the
+		// upload done event and the listing must agree on what a chunk is.
+		if pt.Metadata.ContentType != pdfmodel.ContentTypeDocumentProfile {
+			ds.ChunkCount++
+		}
 		if pt.Metadata.ContentType == pdfmodel.ContentTypeDocumentProfile {
 			title, author := profileFields(pt.ContentMarkdown)
 			if title != "" {
@@ -287,10 +359,7 @@ func (s *server) handleQAStream(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	c.Set(fiber.HeaderContentType, "text/event-stream")
-	c.Set(fiber.HeaderCacheControl, "no-cache")
-	c.Set(fiber.HeaderConnection, "keep-alive")
-	c.Set("X-Accel-Buffering", "no")
+	setSSEHeaders(c)
 
 	// The stream writer flushes after each event so the canvas renders
 	// tokens as they arrive instead of at stream end.
@@ -311,6 +380,160 @@ func (s *server) handleQAStream(c *fiber.Ctx) error {
 	return nil
 }
 
+// setSSEHeaders marks a response as a no-cache event stream; both streaming
+// endpoints share the same header set so proxies treat them identically.
+func setSSEHeaders(c *fiber.Ctx) {
+	c.Set(fiber.HeaderContentType, "text/event-stream")
+	c.Set(fiber.HeaderCacheControl, "no-cache")
+	c.Set(fiber.HeaderConnection, "keep-alive")
+	c.Set("X-Accel-Buffering", "no")
+}
+
+// deriveDocumentID applies the CLI's document id rule to an uploaded
+// filename: the base name without its extension, so the browser upload and
+// `arc inspect` land on the same id for the same file.
+func deriveDocumentID(filename string) string {
+	return filepath.Base(strings.TrimSuffix(filename, filepath.Ext(filename)))
+}
+
+// handleUploadDocument ingests one uploaded PDF through the shared
+// inspect -> index pipeline, streaming each phase as an SSE event so a
+// 1-3 minute job is not a silent spinner. A missing file field or an
+// unsupported spaceId is a 400 JSON before the stream; any failure after
+// the stream starts is an error event. The document always lands in the
+// default space: v1 indexing persists no space, so spaceId is validated
+// but never stored.
+func (s *server) handleUploadDocument(c *fiber.Ctx) error {
+	fileHeader, err := c.FormFile("file")
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "multipart form field 'file' is required"})
+	}
+	if spaceID := c.FormValue("spaceId"); spaceID != "" && spaceID != defaultSpaceID {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": fmt.Sprintf("spaceId %q is not supported: v1 uploads land in the default space", spaceID),
+		})
+	}
+	docID := deriveDocumentID(fileHeader.Filename)
+	if docID == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cannot derive a document id from the uploaded filename"})
+	}
+
+	setSSEHeaders(c)
+
+	// The upload body is fully buffered by FormFile before the stream
+	// starts; from here on every failure becomes an error event so the
+	// browser never mistakes a broken ingest for a connection loss.
+	ctx := c.Context()
+	c.Context().SetBodyStreamWriter(func(w *bufio.Writer) {
+		if !strings.EqualFold(filepath.Ext(fileHeader.Filename), ".pdf") {
+			writeUploadEvent(w, UploadErrorEvent{Type: uploadEventError, Error: fmt.Sprintf(
+				"unsupported file type %q: only .pdf documents are accepted", filepath.Ext(fileHeader.Filename))})
+			return
+		}
+
+		data, err := readUploadFile(fileHeader)
+		if err != nil {
+			writeUploadEvent(w, UploadErrorEvent{Type: uploadEventError, Error: err.Error()})
+			return
+		}
+
+		writeUploadEvent(w, UploadPhaseEvent{Type: uploadEventPhase, Phase: uploadPhaseParse})
+
+		result, err := s.runtime.Inspect(ctx, docID, data)
+		if err != nil {
+			writeUploadEvent(w, inspectErrorEvent(err, result))
+			return
+		}
+		if result.Diagnostics.Status == pdfmodel.StatusFailed {
+			writeUploadEvent(w, UploadErrorEvent{Type: uploadEventError, Error: fmt.Sprintf(
+				"inspection failed: %v", result.Diagnostics.Errors)})
+			return
+		}
+
+		writeUploadEvent(w, UploadPhaseEvent{Type: uploadEventPhase, Phase: uploadPhaseChunk, ChunkCount: len(result.Chunks)})
+		writeUploadEvent(w, UploadPhaseEvent{Type: uploadEventPhase, Phase: uploadPhaseEmbed})
+
+		jobObj, err := s.runtime.Index(ctx, result.Document.DocumentID, result.Document.Title, result.Chunks, &result.Document)
+		if err != nil {
+			writeUploadEvent(w, UploadErrorEvent{Type: uploadEventError, Error: fmt.Sprintf("indexing failed: %v", err)})
+			return
+		}
+
+		writeUploadEvent(w, UploadPhaseEvent{Type: uploadEventPhase, Phase: uploadPhaseIndexed, Indexed: jobObj.IndexedChunks, Skipped: jobObj.SkippedChunks})
+		writeUploadEvent(w, UploadDoneEvent{Type: uploadEventDone, Document: UploadDocumentSummary{
+			DocumentID:   result.Document.DocumentID,
+			Title:        result.Document.Title,
+			ChunkCount:   len(result.Chunks),
+			Status:       result.Diagnostics.Status,
+			Indexed:      jobObj.IndexedChunks,
+			Skipped:      jobObj.SkippedChunks,
+			Deleted:      jobObj.DeletedChunks,
+			WarningCount: len(result.Diagnostics.Warnings),
+		}})
+	})
+	return nil
+}
+
+// inspectErrorEvent builds the error event for an inspection failure,
+// mirroring the CLI's error semantics: the aggregate diagnostics errors join
+// the message when the inspector returned a failed result alongside the
+// error.
+func inspectErrorEvent(err error, result *pdfmodel.PDFInspectionResult) UploadErrorEvent {
+	if result != nil && result.Diagnostics.Status == pdfmodel.StatusFailed {
+		return UploadErrorEvent{Type: uploadEventError, Error: fmt.Sprintf(
+			"inspection failed: %v (errors: %v)", err, result.Diagnostics.Errors)}
+	}
+	return UploadErrorEvent{Type: uploadEventError, Error: fmt.Sprintf("inspection failed: %v", err)}
+}
+
+// readUploadFile slurps a multipart file header into memory so the inspect
+// seam receives the same byte slice the CLI reads from disk.
+func readUploadFile(fileHeader *multipart.FileHeader) ([]byte, error) {
+	file, err := fileHeader.Open()
+	if err != nil {
+		return nil, fmt.Errorf("failed to open uploaded file: %w", err)
+	}
+	defer file.Close()
+	data, err := io.ReadAll(file)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read uploaded file: %w", err)
+	}
+	return data, nil
+}
+
+// writeUploadEvent marshals one upload stream event to the SSE data line
+// shape shared with qa/stream and flushes it. Marshal errors and broken
+// connections end the stream best-effort; the client sees the stream close.
+func writeUploadEvent(w *bufio.Writer, payload any) {
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return
+	}
+	if _, err := fmt.Fprintf(w, "data: %s\n\n", data); err != nil {
+		return
+	}
+	_ = w.Flush()
+}
+
+// handleDeleteDocument removes one document's points and graph nodes,
+// answering 200 with the deleted id. The existence check runs before the
+// delete: a document with no matching points is a 404, so a client cannot
+// mistake a re-delete for a successful removal.
+func (s *server) handleDeleteDocument(c *fiber.Ctx) error {
+	docID := c.Params("documentId")
+	points, err := s.runtime.VectorStore().ListPoints(c.Context(), indexingmodel.MetadataFilter{DocumentIDs: []string{docID}})
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+	if len(points) == 0 {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": fmt.Sprintf("document %q not found", docID)})
+	}
+	if err := s.runtime.DeleteDocument(c.Context(), docID); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"deleted": docID})
+}
+
 func main() {
 	cfg := cli.LoadFromEnv()
 	runtime, err := cli.NewRuntime(cfg)
@@ -324,6 +547,6 @@ func main() {
 
 	app := newApp(runtime, engine, allowedOrigin())
 	addr := httpAddr()
-	log.Printf("ARC server listening on %s (REST: /api/v1/spaces, /api/v1/spaces/:id/documents, /api/v1/chunks/:id, /api/v1/qa/stream)", addr)
+	log.Printf("ARC server listening on %s (REST: /api/v1/spaces, /api/v1/spaces/:id/documents, /api/v1/chunks/:id, /api/v1/qa/stream, /api/v1/documents)", addr)
 	log.Fatal(app.Listen(addr))
 }

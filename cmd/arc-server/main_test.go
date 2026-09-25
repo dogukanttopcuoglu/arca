@@ -1,9 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -155,7 +157,7 @@ func TestListDocuments(t *testing.T) {
 			t.Fatalf("decode documents: %v", err)
 		}
 		want := []DocumentSummary{
-			{DocumentID: "creative-act", ChunkCount: 3, Title: "The Creative Act", Author: "Rick Rubin"},
+			{DocumentID: "creative-act", ChunkCount: 2, Title: "The Creative Act", Author: "Rick Rubin"},
 			{DocumentID: "thinking-in-systems", ChunkCount: 1},
 		}
 		if !reflect.DeepEqual(docs, want) {
@@ -399,4 +401,418 @@ func readAll(t *testing.T, resp *http.Response) string {
 		t.Fatalf("read body: %v", err)
 	}
 	return string(data)
+}
+
+// uploadExtractionJSON is a minimal Firecrawl /v1/extract response whose
+// markdown drives the real semantic chunker offline: one title section and
+// two sub-sections yield a couple of deterministic chunks. The byte content
+// of the uploaded "PDF" is ignored by the stub; only the %PDF header must
+// pass the inspector's fail-fast validation.
+const uploadExtractionJSON = `{
+  "markdown": "# Sample Document\n\nA tiny offline fixture.\n\n## First Section\n\nSemantic chunking keeps boundaries clean.\n\n## Second Section\n\nSecond section content with a citation [1].\n\n[1] Fixture, A. (2025). Offline ingestion fixture.",
+  "json_layout": {
+    "pages": [
+      {"page_number": 1, "markdown": "# Sample Document\n\nA tiny offline fixture."},
+      {"page_number": 2, "markdown": "## First Section\n\nSemantic chunking keeps boundaries clean."},
+      {"page_number": 3, "markdown": "## Second Section\n\nSecond section content with a citation [1]."}
+    ]
+  },
+  "metadata": {"title": "Sample Document", "author": "Fixture Author", "page_count": 3, "searchable": true},
+  "ocr_applied": false
+}`
+
+// uploadStub serves the canned extraction JSON for the duration of one
+// upload test, keeping the whole ingest pipeline offline.
+func uploadStub(t *testing.T) *httptest.Server {
+	t.Helper()
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(uploadExtractionJSON))
+	}))
+	t.Cleanup(ts.Close)
+	return ts
+}
+
+// newUploadApp builds a fresh unseeded runtime over the in-memory store
+// with mock embeddings and the given Firecrawl URL, then wires the real app
+// over it.
+func newUploadApp(t *testing.T, firecrawlURL string) (*fiber.App, *store.InMemoryVectorStore) {
+	t.Helper()
+	cfg := cli.DefaultConfig()
+	cfg.FirecrawlBaseURL = firecrawlURL
+	runtime, err := cli.NewRuntime(cfg)
+	if err != nil {
+		t.Fatalf("failed to construct runtime: %v", err)
+	}
+	vecStore, ok := runtime.VectorStore().(*store.InMemoryVectorStore)
+	if !ok {
+		t.Fatalf("expected in-memory vector store, got %T", runtime.VectorStore())
+	}
+	return newApp(runtime, abstainEngine(t), "http://localhost:3000"), vecStore
+}
+
+// uploadRequest builds a multipart POST body for the documents endpoint
+// with one file field carrying the given filename and content.
+func uploadRequest(t *testing.T, filename, content string) *http.Request {
+	t.Helper()
+	var buf bytes.Buffer
+	mw := multipart.NewWriter(&buf)
+	fw, err := mw.CreateFormFile("file", filename)
+	if err != nil {
+		t.Fatalf("create form file: %v", err)
+	}
+	if _, err := fw.Write([]byte(content)); err != nil {
+		t.Fatalf("write form file: %v", err)
+	}
+	if err := mw.Close(); err != nil {
+		t.Fatalf("close multipart writer: %v", err)
+	}
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/documents", &buf)
+	req.Header.Set("Content-Type", mw.FormDataContentType())
+	return req
+}
+
+// uploadDone performs one upload and returns the done event payload.
+func uploadDone(t *testing.T, app *fiber.App, req *http.Request) UploadDoneEvent {
+	t.Helper()
+	resp, err := app.Test(req, 30000)
+	if err != nil {
+		t.Fatalf("upload request failed: %v", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, want 200", resp.StatusCode)
+	}
+	events := sseEvents(t, readAll(t, resp))
+	if len(events) == 0 {
+		t.Fatal("got no events from upload stream")
+	}
+	var doneEv UploadDoneEvent
+	if err := json.Unmarshal([]byte(events[len(events)-1]), &doneEv); err != nil {
+		t.Fatalf("decode done event %q: %v", events[len(events)-1], err)
+	}
+	if doneEv.Type != "done" {
+		t.Fatalf("last event type = %q, want done (events: %s)", doneEv.Type, events)
+	}
+	return doneEv
+}
+
+// listUploadedDocuments fetches the default-space document listing.
+func listUploadedDocuments(t *testing.T, app *fiber.App) []DocumentSummary {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/spaces/default/documents", nil)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("documents request failed: %v", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, want 200", resp.StatusCode)
+	}
+	var docs []DocumentSummary
+	if err := json.NewDecoder(resp.Body).Decode(&docs); err != nil {
+		t.Fatalf("decode documents: %v", err)
+	}
+	return docs
+}
+
+func TestUploadDocument(t *testing.T) {
+	stub := uploadStub(t)
+	app, vecStore := newUploadApp(t, stub.URL)
+
+	// The PDF header satisfies the inspector's fail-fast validation; the
+	// stub never inspects the uploaded bytes.
+	req := uploadRequest(t, "sample.pdf", "%PDF-1.4 fixture\n")
+	resp, err := app.Test(req, 30000)
+	if err != nil {
+		t.Fatalf("upload request failed: %v", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, want 200", resp.StatusCode)
+	}
+	if ct := resp.Header.Get("Content-Type"); ct != "text/event-stream" {
+		t.Errorf("content-type = %q, want text/event-stream", ct)
+	}
+	events := sseEvents(t, readAll(t, resp))
+	if len(events) != 5 {
+		t.Fatalf("got %d events, want 5 (parse, chunk, embed, indexed, done): %s", len(events), events)
+	}
+
+	var parseEv, chunkEv, embedEv, indexedEv UploadPhaseEvent
+	if err := json.Unmarshal([]byte(events[0]), &parseEv); err != nil {
+		t.Fatalf("decode parse event: %v", err)
+	}
+	if parseEv.Type != "phase" || parseEv.Phase != "parse" {
+		t.Errorf("event[0] = %+v, want phase/parse", parseEv)
+	}
+	if err := json.Unmarshal([]byte(events[1]), &chunkEv); err != nil {
+		t.Fatalf("decode chunk event: %v", err)
+	}
+	if chunkEv.Type != "phase" || chunkEv.Phase != "chunk" || chunkEv.ChunkCount < 1 {
+		t.Errorf("event[1] = %+v, want phase/chunk with chunk_count >= 1", chunkEv)
+	}
+	if err := json.Unmarshal([]byte(events[2]), &embedEv); err != nil {
+		t.Fatalf("decode embed event: %v", err)
+	}
+	if embedEv.Type != "phase" || embedEv.Phase != "embed" {
+		t.Errorf("event[2] = %+v, want phase/embed", embedEv)
+	}
+	if err := json.Unmarshal([]byte(events[3]), &indexedEv); err != nil {
+		t.Fatalf("decode indexed event: %v", err)
+	}
+	if indexedEv.Type != "phase" || indexedEv.Phase != "indexed" {
+		t.Errorf("event[3] = %+v, want phase/indexed", indexedEv)
+	}
+
+	var doneEv UploadDoneEvent
+	if err := json.Unmarshal([]byte(events[4]), &doneEv); err != nil {
+		t.Fatalf("decode done event: %v", err)
+	}
+	if doneEv.Type != "done" {
+		t.Errorf("event[4] type = %q, want done", doneEv.Type)
+	}
+	doc := doneEv.Document
+	if doc.DocumentID != "sample" {
+		t.Errorf("document_id = %q, want sample (derived from the filename)", doc.DocumentID)
+	}
+	if doc.Title != "Sample Document" {
+		t.Errorf("title = %q, want Sample Document", doc.Title)
+	}
+	if doc.ChunkCount != chunkEv.ChunkCount {
+		t.Errorf("chunk_count = %d, want %d (from the inspection result)", doc.ChunkCount, chunkEv.ChunkCount)
+	}
+	// The aggregator degrades success to partial_success on warnings or
+	// skipped pages; either is a completed ingest, never failed.
+	if doc.Status != pdfmodel.StatusSuccess && doc.Status != pdfmodel.StatusPartialSuccess {
+		t.Errorf("status = %q, want success or partial_success", doc.Status)
+	}
+	if doc.Indexed != chunkEv.ChunkCount {
+		t.Errorf("indexed = %d, want %d on a fresh upload", doc.Indexed, chunkEv.ChunkCount)
+	}
+	if doc.Skipped != 0 {
+		t.Errorf("skipped = %d, want 0 on a fresh upload", doc.Skipped)
+	}
+	if doc.Deleted != 0 {
+		t.Errorf("deleted = %d, want 0 on a fresh upload", doc.Deleted)
+	}
+
+	// Every point in the store belongs to the uploaded document.
+	points, err := vecStore.ListPoints(context.Background(), indexingmodel.MetadataFilter{})
+	if err != nil {
+		t.Fatalf("list points: %v", err)
+	}
+	if len(points) == 0 {
+		t.Fatal("expected points in the store after a successful upload")
+	}
+	for _, pt := range points {
+		if pt.Metadata.DocumentID != "sample" {
+			t.Errorf("point %q document_id = %q, want sample", pt.ID, pt.Metadata.DocumentID)
+		}
+	}
+
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/spaces", nil)
+	resp, err = app.Test(req)
+	if err != nil {
+		t.Fatalf("spaces request failed: %v", err)
+	}
+	var spaces []SpaceSummary
+	if err := json.NewDecoder(resp.Body).Decode(&spaces); err != nil {
+		t.Fatalf("decode spaces: %v", err)
+	}
+	if !reflect.DeepEqual(spaces, []SpaceSummary{{ID: "default", Name: "Default Space", DocumentCount: 1}}) {
+		t.Errorf("spaces = %+v, want the default space with one document", spaces)
+	}
+
+	docs := listUploadedDocuments(t, app)
+	if len(docs) != 1 {
+		t.Fatalf("documents = %+v, want exactly one entry", docs)
+	}
+	// The listing counts chunk points only (the document profile point is
+	// excluded, ADR-0052), so chunk_count there equals the done count.
+	if docs[0].DocumentID != "sample" || docs[0].ChunkCount != doc.ChunkCount {
+		t.Errorf("documents[0] = %+v, want sample with %d chunks", docs[0], doc.ChunkCount)
+	}
+	if docs[0].Title != "Sample Document" {
+		t.Errorf("title = %q, want Sample Document", docs[0].Title)
+	}
+}
+
+func TestUploadDocumentReupload(t *testing.T) {
+	stub := uploadStub(t)
+	app, _ := newUploadApp(t, stub.URL)
+
+	done1 := uploadDone(t, app, uploadRequest(t, "sample.pdf", "%PDF-1.4 fixture\n"))
+	done2 := uploadDone(t, app, uploadRequest(t, "sample.pdf", "%PDF-1.4 fixture\n"))
+
+	// The diff worker sees identical content hashes and index signatures:
+	// nothing re-embeds, everything is skipped, and no point is duplicated.
+	if done2.Document.Indexed != 0 {
+		t.Errorf("re-upload indexed = %d, want 0 (everything unchanged)", done2.Document.Indexed)
+	}
+	if done2.Document.Skipped < done1.Document.ChunkCount {
+		t.Errorf("re-upload skipped = %d, want >= %d", done2.Document.Skipped, done1.Document.ChunkCount)
+	}
+	docs := listUploadedDocuments(t, app)
+	if len(docs) != 1 {
+		t.Fatalf("documents = %+v, want exactly one entry after a re-upload", docs)
+	}
+	if docs[0].DocumentID != "sample" {
+		t.Errorf("document id = %q, want sample", docs[0].DocumentID)
+	}
+}
+
+func TestUploadDocumentUnsupportedExtension(t *testing.T) {
+	stub := uploadStub(t)
+	app, vecStore := newUploadApp(t, stub.URL)
+
+	resp, err := app.Test(uploadRequest(t, "notes.txt", "plain notes"), 5000)
+	if err != nil {
+		t.Fatalf("upload request failed: %v", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, want 200 with an in-stream error event", resp.StatusCode)
+	}
+	events := sseEvents(t, readAll(t, resp))
+	if len(events) != 1 {
+		t.Fatalf("got %d events, want 1 error event: %s", len(events), events)
+	}
+	var errEv UploadErrorEvent
+	if err := json.Unmarshal([]byte(events[0]), &errEv); err != nil {
+		t.Fatalf("decode error event: %v", err)
+	}
+	if errEv.Type != "error" || !strings.Contains(errEv.Error, "only .pdf") {
+		t.Errorf("error event = %+v, want a message about the .pdf restriction", errEv)
+	}
+	if got := vecStore.Points(); got != 0 {
+		t.Errorf("store points = %d, want 0 (unsupported upload writes nothing)", got)
+	}
+}
+
+func TestUploadDocumentMissingFile(t *testing.T) {
+	stub := uploadStub(t)
+	app, _ := newUploadApp(t, stub.URL)
+
+	var buf bytes.Buffer
+	mw := multipart.NewWriter(&buf)
+	if err := mw.WriteField("spaceId", "default"); err != nil {
+		t.Fatalf("write form field: %v", err)
+	}
+	if err := mw.Close(); err != nil {
+		t.Fatalf("close multipart writer: %v", err)
+	}
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/documents", &buf)
+	req.Header.Set("Content-Type", mw.FormDataContentType())
+
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("upload request failed: %v", err)
+	}
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("status = %d, want 400", resp.StatusCode)
+	}
+	if ct := resp.Header.Get("Content-Type"); !strings.HasPrefix(ct, "application/json") {
+		t.Errorf("content-type = %q, want application/json", ct)
+	}
+	var body map[string]string
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+		t.Fatalf("decode error body: %v", err)
+	}
+	if body["error"] == "" {
+		t.Error("expected a non-empty error message")
+	}
+}
+
+func TestUploadDocumentFirecrawlDown(t *testing.T) {
+	dead := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	deadURL := dead.URL
+	dead.Close()
+
+	app, vecStore := newUploadApp(t, deadURL)
+	resp, err := app.Test(uploadRequest(t, "sample.pdf", "%PDF-1.4 fixture\n"), 30000)
+	if err != nil {
+		t.Fatalf("upload request failed: %v", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, want 200 with an in-stream error event", resp.StatusCode)
+	}
+	events := sseEvents(t, readAll(t, resp))
+	if len(events) < 2 {
+		t.Fatalf("got %d events, want parse then error: %s", len(events), events)
+	}
+	var last UploadErrorEvent
+	if err := json.Unmarshal([]byte(events[len(events)-1]), &last); err != nil {
+		t.Fatalf("decode last event: %v", err)
+	}
+	if last.Type != "error" || last.Error == "" {
+		t.Errorf("last event = %+v, want an error event with a message", last)
+	}
+	if got := vecStore.Points(); got != 0 {
+		t.Errorf("store points = %d, want 0 (failed inspection writes nothing)", got)
+	}
+}
+
+func TestDeleteDocument(t *testing.T) {
+	stub := uploadStub(t)
+	app, vecStore := newUploadApp(t, stub.URL)
+	uploadDone(t, app, uploadRequest(t, "sample.pdf", "%PDF-1.4 fixture\n"))
+
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/documents/sample", nil)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("delete request failed: %v", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, want 200", resp.StatusCode)
+	}
+	var body map[string]string
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+		t.Fatalf("decode delete body: %v", err)
+	}
+	if body["deleted"] != "sample" {
+		t.Errorf("deleted = %q, want sample", body["deleted"])
+	}
+	if got := vecStore.Points(); got != 0 {
+		t.Errorf("store points = %d, want 0 after deletion", got)
+	}
+	if docs := listUploadedDocuments(t, app); len(docs) != 0 {
+		t.Errorf("documents = %+v, want the empty list after deletion", docs)
+	}
+
+	req = httptest.NewRequest(http.MethodDelete, "/api/v1/documents/nope", nil)
+	resp, err = app.Test(req)
+	if err != nil {
+		t.Fatalf("delete request failed: %v", err)
+	}
+	if resp.StatusCode != http.StatusNotFound {
+		t.Fatalf("status = %d, want 404 for an unknown document", resp.StatusCode)
+	}
+	var errBody map[string]string
+	if err := json.NewDecoder(resp.Body).Decode(&errBody); err != nil {
+		t.Fatalf("decode error body: %v", err)
+	}
+	if errBody["error"] == "" {
+		t.Error("expected a non-empty error message")
+	}
+}
+
+func TestUploadCORS(t *testing.T) {
+	app := newTestApp(t, abstainEngine(t))
+
+	for _, method := range []string{"POST", "DELETE"} {
+		req := httptest.NewRequest(http.MethodOptions, "/api/v1/documents", nil)
+		req.Header.Set("Origin", "http://localhost:3000")
+		req.Header.Set("Access-Control-Request-Method", method)
+		req.Header.Set("Access-Control-Request-Headers", "content-type")
+		resp, err := app.Test(req)
+		if err != nil {
+			t.Fatalf("preflight for %s failed: %v", method, err)
+		}
+		if got := resp.Header.Get("Access-Control-Allow-Origin"); got != "http://localhost:3000" {
+			t.Errorf("%s preflight allow-origin = %q, want http://localhost:3000", method, got)
+		}
+		if allow := resp.Header.Get("Access-Control-Allow-Methods"); !strings.Contains(allow, method) {
+			t.Errorf("%s preflight allow-methods = %q, want it to contain %s", method, allow, method)
+		}
+		if allow := strings.ToLower(resp.Header.Get("Access-Control-Allow-Headers")); !strings.Contains(allow, "content-type") {
+			t.Errorf("%s preflight allow-headers = %q, want it to contain content-type", method, allow)
+		}
+	}
 }
