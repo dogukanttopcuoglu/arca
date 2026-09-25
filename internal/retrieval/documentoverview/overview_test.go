@@ -4,11 +4,11 @@ import (
 	"context"
 	"testing"
 
-	"arca/internal/indexing/store"
 	indexingmodel "arca/internal/indexing/model"
+	"arca/internal/indexing/store"
+	pdfmodel "arca/internal/pdfinspector/model"
 	documentoverview "arca/internal/retrieval/documentoverview"
 	"arca/internal/retrieval/seam"
-	pdfmodel "arca/internal/pdfinspector/model"
 )
 
 // point builds one store point; contentType "" means a regular chunk.
@@ -145,6 +145,60 @@ func TestOverviewRetriever_FilteredSelection(t *testing.T) {
 		}
 		if results[len(results)-1].ChunkID != "doc-a/body/002" {
 			t.Fatalf("expected the 4th real chunk last, got %v", chunkIDs(results))
+		}
+	})
+
+	t.Run("KnowledgeSpaceID scopes alongside DocumentIDs", func(t *testing.T) {
+		ctx := context.Background()
+		vs := store.NewInMemoryVectorStore()
+		pts := []store.VectorPoint{
+			point("doc-a", "document-profile/001", "Document Profile", 0, pdfmodel.ContentTypeDocumentProfile),
+			point("doc-a", "intro/001", "Intro", 2, ""),
+			point("doc-b", "document-profile/001", "Document Profile", 0, pdfmodel.ContentTypeDocumentProfile),
+		}
+		for i := range pts {
+			if pts[i].Metadata.DocumentID == "doc-b" {
+				pts[i].Metadata.KnowledgeSpaceID = "space-b"
+			} else {
+				pts[i].Metadata.KnowledgeSpaceID = "space-a"
+			}
+		}
+		if err := vs.UpsertPoints(ctx, pts); err != nil {
+			t.Fatalf("seed: %v", err)
+		}
+		r := documentoverview.NewRetriever(vs)
+
+		// doc-b exists but in another space: a document-only filter would
+		// return it, so an empty result proves both fields are honored.
+		results := retrieve(t, r, seam.RetrievalQuery{
+			QueryText: "özetle",
+			TopK:      5,
+			Filter: indexingmodel.MetadataFilter{
+				KnowledgeSpaceID: "space-a",
+				DocumentIDs:      []string{"doc-b"},
+			},
+		})
+		if len(results) != 0 {
+			t.Fatalf("cross-space results = %v, want empty", chunkIDs(results))
+		}
+
+		results = retrieve(t, r, seam.RetrievalQuery{
+			QueryText: "özetle",
+			TopK:      5,
+			Filter: indexingmodel.MetadataFilter{
+				KnowledgeSpaceID: "space-a",
+				DocumentIDs:      []string{"doc-a"},
+			},
+		})
+		want := []string{"doc-a/document-profile/001", "doc-a/intro/001"}
+		got := chunkIDs(results)
+		if len(got) != len(want) {
+			t.Fatalf("results = %v, want %v", got, want)
+		}
+		for i := range want {
+			if got[i] != want[i] {
+				t.Fatalf("results = %v, want %v", got, want)
+			}
 		}
 	})
 }

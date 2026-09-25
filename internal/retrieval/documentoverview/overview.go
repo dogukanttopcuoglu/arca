@@ -42,7 +42,10 @@ func (r *Retriever) Retrieve(ctx context.Context, query retrievalseam.RetrievalQ
 	}
 	query.Normalize()
 
-	points, err := r.store.ListPoints(ctx, indexingmodel.MetadataFilter{DocumentIDs: query.Filter.DocumentIDs})
+	points, err := r.store.ListPoints(ctx, indexingmodel.MetadataFilter{
+		DocumentIDs:      query.Filter.DocumentIDs,
+		KnowledgeSpaceID: query.Filter.KnowledgeSpaceID,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("overview retrieval failed: %w", err)
 	}

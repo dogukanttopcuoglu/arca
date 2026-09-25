@@ -148,8 +148,7 @@ func (g *GraphRetriever) Retrieve(ctx context.Context, query retrievalseam.Retri
 		if score < float64(query.MinScore) {
 			continue
 		}
-		if len(query.Filter.DocumentIDs) > 0 && len(chunkMeta) > 0 &&
-			!containsString(query.Filter.DocumentIDs, chunkMeta[cid].DocumentID) {
+		if len(chunkMeta) > 0 && !chunkPassesScope(query.Filter, chunkMeta[cid]) {
 			continue
 		}
 		meta := indexingmodel.VectorMetadata{ChunkID: cid}
@@ -218,6 +217,20 @@ func (g *GraphRetriever) resolveContent(ctx context.Context, chunkIDs []string) 
 	}
 
 	return contents, nil
+}
+
+// chunkPassesScope applies the query's document and space scope to one
+// chunk's payload metadata. Both fields AND like the store filter: a chunk
+// matching one but not the other is excluded, so spaceId and documentIds on
+// the same request never leak evidence from outside the intersection.
+func chunkPassesScope(filter indexingmodel.MetadataFilter, meta indexingmodel.VectorMetadata) bool {
+	if len(filter.DocumentIDs) > 0 && !containsString(filter.DocumentIDs, meta.DocumentID) {
+		return false
+	}
+	if filter.KnowledgeSpaceID != "" && meta.KnowledgeSpaceID != filter.KnowledgeSpaceID {
+		return false
+	}
+	return true
 }
 
 // unique returns the input tokens without duplicates, preserving order.

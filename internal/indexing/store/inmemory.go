@@ -141,6 +141,13 @@ func matchesFilter(id string, meta model.VectorMetadata, filter model.MetadataFi
 		}
 	}
 
+	if filter.WorkspaceID != "" && meta.WorkspaceID != filter.WorkspaceID {
+		return false
+	}
+	if filter.KnowledgeSpaceID != "" && meta.KnowledgeSpaceID != filter.KnowledgeSpaceID {
+		return false
+	}
+
 	if len(filter.DocumentIDs) > 0 {
 		found := false
 		for _, docID := range filter.DocumentIDs {

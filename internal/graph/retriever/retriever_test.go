@@ -250,6 +250,69 @@ func TestGraphRetriever_DocumentFilter(t *testing.T) {
 	}
 }
 
+func TestGraphRetriever_SpaceFilter(t *testing.T) {
+	ctx := context.Background()
+	gs := graphstore.NewInMemoryGraphStore()
+	cs := store.NewInMemoryContentStore()
+	vs := store.NewInMemoryVectorStore()
+
+	if err := gs.AddNode(ctx, entityNode("organization:world bank", "world bank", 1.0, "doc-a/notes/001", "doc-a/notes/005")); err != nil {
+		t.Fatalf("seed node: %v", err)
+	}
+	// The two evidenced chunks carry equal entity scores but live in
+	// different spaces, so each space scope keeps exactly one of them.
+	pts := []store.VectorPoint{
+		{ID: "11111111-1111-5111-8111-111111111111", Vector: make([]float32, 4), ContentMarkdown: "World Bank lending payload.", Metadata: indexingmodel.VectorMetadata{DocumentID: "doc-a", ChunkID: "doc-a/notes/001", KnowledgeSpaceID: "space-a"}},
+		{ID: "22222222-2222-5222-8222-222222222222", Vector: make([]float32, 4), ContentMarkdown: "World Bank report payload.", Metadata: indexingmodel.VectorMetadata{DocumentID: "doc-a", ChunkID: "doc-a/notes/005", KnowledgeSpaceID: "space-b"}},
+	}
+	if err := vs.UpsertPoints(ctx, pts); err != nil {
+		t.Fatalf("seed vector store: %v", err)
+	}
+	r := graphretriever.NewGraphRetriever(gs, cs, graphretriever.WithVectorStore(vs))
+
+	results := retrieve(t, r, "What does the book say about World Bank?", 5, 0)
+	if len(results) != 2 {
+		t.Fatalf("unfiltered: expected 2 chunks, got %v", ids(results))
+	}
+
+	// A space scope drops the other-space chunk the same way DocumentIDs
+	// drops other-document chunks.
+	scoped, err := r.Retrieve(ctx, seam.RetrievalQuery{
+		QueryText: "What does the book say about World Bank?", TopK: 5,
+		Filter: indexingmodel.MetadataFilter{KnowledgeSpaceID: "space-a"},
+	})
+	if err != nil {
+		t.Fatalf("space-a retrieve: %v", err)
+	}
+	if len(scoped) != 1 || scoped[0].ChunkID != "doc-a/notes/001" {
+		t.Fatalf("space-a scoped: expected only doc-a/notes/001, got %v", ids(scoped))
+	}
+
+	// Space and document scope AND like the store filter: doc-a belongs to
+	// both spaces, so only the space-b chunk survives the intersection.
+	combined, err := r.Retrieve(ctx, seam.RetrievalQuery{
+		QueryText: "What does the book say about World Bank?", TopK: 5,
+		Filter: indexingmodel.MetadataFilter{KnowledgeSpaceID: "space-b", DocumentIDs: []string{"doc-a"}},
+	})
+	if err != nil {
+		t.Fatalf("combined retrieve: %v", err)
+	}
+	if len(combined) != 1 || combined[0].ChunkID != "doc-a/notes/005" {
+		t.Fatalf("combined scoped: expected only doc-a/notes/005, got %v", ids(combined))
+	}
+
+	none, err := r.Retrieve(ctx, seam.RetrievalQuery{
+		QueryText: "What does the book say about World Bank?", TopK: 5,
+		Filter: indexingmodel.MetadataFilter{KnowledgeSpaceID: "space-z"},
+	})
+	if err != nil {
+		t.Fatalf("unknown-space retrieve: %v", err)
+	}
+	if len(none) != 0 {
+		t.Fatalf("space-z scoped: expected 0 chunks, got %v", ids(none))
+	}
+}
+
 // vectorSeededGraph builds the graph with a vector store carrying chunk
 // content in the point payload — the production arrangement where indexing
 // and querying run in different processes and the ContentStore is empty.

@@ -270,6 +270,29 @@ func sseEvents(t *testing.T, body string) []string {
 	return events
 }
 
+func TestParseDocumentIDs(t *testing.T) {
+	cases := []struct {
+		name string
+		raw  string
+		want []string
+	}{
+		{"single id", "doc-1", []string{"doc-1"}},
+		{"multiple ids", "doc-1,doc-2,doc-3", []string{"doc-1", "doc-2", "doc-3"}},
+		{"stray commas are dropped", "doc-1,,doc-2,", []string{"doc-1", "doc-2"}},
+		{"spaces around ids are trimmed", " doc-1 , doc-2 ", []string{"doc-1", "doc-2"}},
+		{"empty input", "", nil},
+		{"whitespace-only input", " , , ", nil},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := parseDocumentIDs(tc.raw)
+			if !reflect.DeepEqual(got, tc.want) {
+				t.Errorf("parseDocumentIDs(%q) = %v, want %v", tc.raw, got, tc.want)
+			}
+		})
+	}
+}
+
 func TestQAStream(t *testing.T) {
 	t.Run("missing q is a 400 JSON error", func(t *testing.T) {
 		app := newTestApp(t, abstainEngine(t))
@@ -376,6 +399,146 @@ func TestQAStream(t *testing.T) {
 			t.Errorf("last event type = %q, want done", last.Type)
 		}
 	})
+
+	t.Run("documentIds scopes retrieval to the selected document", func(t *testing.T) {
+		rt, vecStore := newTestRuntime(t)
+		app := newApp(rt, fakeLLMEngine(t, vecStore), "http://localhost:3000")
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/qa/stream?q=What+is+creativity%3F&documentIds=thinking-in-systems", nil)
+		resp, err := app.Test(req, 5000)
+		if err != nil {
+			t.Fatalf("stream request failed: %v", err)
+		}
+		events := sseEvents(t, readAll(t, resp))
+		verified, last := streamVerification(t, events)
+		if verified == nil || verified.Status != qaverification.StatusVerified {
+			t.Fatalf("verification = %+v, want verified from the scoped document", verified)
+		}
+		if len(verified.Citations) == 0 {
+			t.Fatal("expected a citation resolving to the scoped document")
+		}
+		for _, cite := range verified.Citations {
+			if cite.DocumentID != "thinking-in-systems" {
+				t.Errorf("citation %s document_id = %q, want thinking-in-systems", cite.CitationKey, cite.DocumentID)
+			}
+		}
+		if last.Type != qa.StreamChunkDone {
+			t.Errorf("last event type = %q, want done", last.Type)
+		}
+	})
+
+	t.Run("documentIds matching nothing streams no_evidence, not an error", func(t *testing.T) {
+		rt, vecStore := newTestRuntime(t)
+		app := newApp(rt, fakeLLMEngine(t, vecStore), "http://localhost:3000")
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/qa/stream?q=What+is+creativity%3F&documentIds=no-such-doc", nil)
+		resp, err := app.Test(req, 5000)
+		if err != nil {
+			t.Fatalf("stream request failed: %v", err)
+		}
+		events := sseEvents(t, readAll(t, resp))
+		verified, last := streamVerification(t, events)
+		if verified == nil || verified.Status != qaverification.StatusNoEvidence {
+			t.Fatalf("verification = %+v, want no_evidence for an empty scope", verified)
+		}
+		if last.Type != qa.StreamChunkDone {
+			t.Errorf("last event type = %q, want done", last.Type)
+		}
+	})
+
+	t.Run("empty documentIds keeps the unfiltered behavior", func(t *testing.T) {
+		rt, vecStore := newTestRuntime(t)
+		app := newApp(rt, fakeLLMEngine(t, vecStore), "http://localhost:3000")
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/qa/stream?q=What+is+creativity%3F&documentIds=", nil)
+		resp, err := app.Test(req, 5000)
+		if err != nil {
+			t.Fatalf("stream request failed: %v", err)
+		}
+		events := sseEvents(t, readAll(t, resp))
+		verified, last := streamVerification(t, events)
+		if verified == nil || verified.Status != qaverification.StatusVerified {
+			t.Fatalf("verification = %+v, want the unfiltered verified stream", verified)
+		}
+		if last.Type != qa.StreamChunkDone {
+			t.Errorf("last event type = %q, want done", last.Type)
+		}
+	})
+
+	t.Run("spaceId and documentIds compose on the same filter", func(t *testing.T) {
+		rt, vecStore := newTestRuntime(t)
+		ctx := context.Background()
+		emb := provider.NewMockEmbeddingProvider("mock-provider", "mock-model-v1", 1536)
+		v, err := emb.EmbedQuery(ctx, "System dynamics notes in a private space.")
+		if err != nil || len(v) == 0 {
+			t.Fatalf("embed space point: %v", err)
+		}
+		// The extra point lives outside the default space, so spaceId and
+		// documentIds each exclude it and the two together exclude it twice.
+		if err := vecStore.UpsertPoints(ctx, []store.VectorPoint{{
+			ID:              "pt-space-001",
+			Vector:          v,
+			ContentMarkdown: "System dynamics private notes.",
+			Metadata: indexingmodel.VectorMetadata{
+				DocumentID:       "space-extra",
+				ChunkID:          "space-extra/notes/001",
+				KnowledgeSpaceID: "space-x",
+				ChunkOrder:       1,
+				SectionPath:      "Notes",
+				PageNumbers:      []int{1},
+				ContentType:      pdfmodel.ContentTypeParagraph,
+			},
+		}}); err != nil {
+			t.Fatalf("seed space point: %v", err)
+		}
+		app := newApp(rt, fakeLLMEngine(t, vecStore), "http://localhost:3000")
+
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/qa/stream?q=What+is+creativity%3F&spaceId=space-x", nil)
+		resp, err := app.Test(req, 5000)
+		if err != nil {
+			t.Fatalf("space-only stream request failed: %v", err)
+		}
+		verified, _ := streamVerification(t, sseEvents(t, readAll(t, resp)))
+		if verified == nil || verified.Status != qaverification.StatusVerified {
+			t.Fatalf("space-only verification = %+v, want verified from space-x", verified)
+		}
+		if len(verified.Citations) == 0 || verified.Citations[0].DocumentID != "space-extra" {
+			t.Errorf("space-only citations = %+v, want space-extra", verified.Citations)
+		}
+
+		req = httptest.NewRequest(http.MethodGet, "/api/v1/qa/stream?q=What+is+creativity%3F&spaceId=space-x&documentIds=creative-act", nil)
+		resp, err = app.Test(req, 5000)
+		if err != nil {
+			t.Fatalf("combined stream request failed: %v", err)
+		}
+		combined, last := streamVerification(t, sseEvents(t, readAll(t, resp)))
+		if combined == nil || combined.Status != qaverification.StatusNoEvidence {
+			t.Fatalf("combined verification = %+v, want no_evidence: creative-act lives outside space-x", combined)
+		}
+		if last.Type != qa.StreamChunkDone {
+			t.Errorf("last event type = %q, want done", last.Type)
+		}
+	})
+}
+
+// streamVerification decodes the verification and done events from a qa/stream
+// body, failing on any error event so an unexpected pipeline failure surfaces
+// as a test error instead of a nil deref downstream.
+func streamVerification(t *testing.T, events []string) (*qaverification.VerifiedAnswer, qa.AnswerStreamChunk) {
+	t.Helper()
+	var verified *qaverification.VerifiedAnswer
+	var last qa.AnswerStreamChunk
+	for _, raw := range events {
+		var chunk qa.AnswerStreamChunk
+		if err := json.Unmarshal([]byte(raw), &chunk); err != nil {
+			t.Fatalf("decode event %q: %v", raw, err)
+		}
+		switch chunk.Type {
+		case qa.StreamChunkVerification:
+			verified = chunk.Verified
+		case qa.StreamChunkError:
+			t.Errorf("unexpected error event: %s", chunk.Error)
+		}
+		last = chunk
+	}
+	return verified, last
 }
 
 func TestCORS(t *testing.T) {

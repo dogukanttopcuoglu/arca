@@ -320,6 +320,22 @@ func (s *server) handleGetChunk(c *fiber.Ctx) error {
 	})
 }
 
+// parseDocumentIDs splits a comma-separated documentIds query parameter
+// into trimmed, non-empty ids. Empty input returns nil so the filter field
+// stays absent and retrieval keeps its unfiltered behavior.
+func parseDocumentIDs(raw string) []string {
+	var ids []string
+	for _, part := range strings.Split(raw, ",") {
+		if id := strings.TrimSpace(part); id != "" {
+			ids = append(ids, id)
+		}
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	return ids
+}
+
 // clampTopK parses the topK query parameter with a default of 5, bound to
 // 1..20. Unparseable values fall back to the default.
 func clampTopK(raw string) int {
@@ -340,18 +356,24 @@ func clampTopK(raw string) int {
 
 // handleQAStream streams every AnswerStreamChunk as one SSE data event. An
 // empty q is a client error (400 JSON); pipeline failures arrive as an error
-// chunk inside the stream, never as a curl-visible status code.
+// chunk inside the stream, never as a curl-visible status code. A comma-
+// separated documentIds scopes retrieval to those documents and ANDs with
+// spaceId, so a canvas question against one dropped document never sees
+// other documents' evidence.
 func (s *server) handleQAStream(c *fiber.Ctx) error {
 	q := strings.TrimSpace(c.Query("q"))
 	if q == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "query parameter q is required"})
 	}
+	filter := indexingmodel.MetadataFilter{}
+	if spaceID := c.Query("spaceId"); spaceID != "" && spaceID != defaultSpaceID {
+		filter.KnowledgeSpaceID = spaceID
+	}
+	filter.DocumentIDs = parseDocumentIDs(c.Query("documentIds"))
 	query := retrievalseam.RetrievalQuery{
 		QueryText: q,
 		TopK:      clampTopK(c.Query("topK")),
-	}
-	if spaceID := c.Query("spaceId"); spaceID != "" && spaceID != defaultSpaceID {
-		query.Filter = indexingmodel.MetadataFilter{KnowledgeSpaceID: spaceID}
+		Filter:    filter,
 	}
 
 	chunks, err := s.engine.AnswerStream(c.Context(), query)

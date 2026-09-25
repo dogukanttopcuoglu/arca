@@ -23,3 +23,10 @@ Status: shipped and live-verified against the real corpus (The Creative Act, 197
 - Chunk payloads carry no parent/child hierarchy links, so the chunk shape omits them at this seam.
 - `github.com/gofiber/fiber/v2` joins the module (the stub never imported it; CONTEXT.md's Fiber claim becomes true).
 - Live evidence: with qdrant reachable, `ListPoints` propagates failures; a closed qdrant is a 500, not a silent empty list.
+## Amendment: document-scoped stream queries
+
+The tldraw canvas drops research documents onto a source node and asks a question against exactly those documents. `GET /api/v1/qa/stream` now accepts `documentIds`, a comma-separated list of document ids (empty/absent keeps the unfiltered stream), and sets `MetadataFilter.DocumentIDs` on the retrieval query. Given together with `spaceId`, both fields land on the same `MetadataFilter` and AND on every retrieval leg. A list matching nothing is not an error: retrieval returns no sources and the engine streams its normal `no_evidence` verdict. Ids are parsed with a pure helper (`parseDocumentIDs`) at the HTTP boundary, so the filter never sees untrimmed or empty entries.
+
+GET query parameters stay the v1 transport even though the list can reach tens of ids, which is comfortably inside URL length limits. If a canvas ever needs hundreds of ids or repeated filters, a POST JSON body can join additively: SSE over POST is already exercised by the upload endpoint (ADR-0052), so the event contract does not change.
+
+Two retrieval legs previously dropped part of the filter. The document-overview retriever listed profile points with `DocumentIDs` only, so a space-scoped overview leaked every space's points; it now forwards both fields. The graph retriever applied its document-scope skip in the results loop but ignored `KnowledgeSpaceID`; the skip now mirrors the `DocumentIDs` check against chunk payload metadata, matching the Qdrant adapter's AND semantics. The offline in-memory store double gained the same `KnowledgeSpaceID`/`WorkspaceID` match checks so the space leg is actually exercised in tests.
