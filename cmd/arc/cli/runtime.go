@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -10,6 +11,7 @@ import (
 
 	graphretriever "arca/internal/graph/retriever"
 	graphstore "arca/internal/graph/store"
+	indexingjob "arca/internal/indexing/job"
 	indexingmodel "arca/internal/indexing/model"
 	"arca/internal/indexing/provider"
 	"arca/internal/indexing/sparse"
@@ -22,6 +24,7 @@ import (
 	"arca/internal/pdfinspector/diagnostics"
 	"arca/internal/pdfinspector/firecrawl"
 	"arca/internal/pdfinspector/inspector"
+	pdfmodel "arca/internal/pdfinspector/model"
 	"arca/internal/pdfinspector/semantic"
 	"arca/internal/qa"
 	qacontext "arca/internal/qa/context"
@@ -432,6 +435,34 @@ func (r *Runtime) AnswerEngine() (*qa.AnswerEngine, error) {
 // instance, so the server lists exactly what indexing wrote.
 func (r *Runtime) VectorStore() store.VectorStore {
 	return r.vectorStore
+}
+
+// Inspect runs the real inspection pipeline over an in-memory buffer. Both
+// the CLI and arc-server resolve to this one seam, so a document inspected
+// twice (CLI then browser) produces byte-identical chunks.
+func (r *Runtime) Inspect(ctx context.Context, docID string, data []byte) (*pdfmodel.PDFInspectionResult, error) {
+	return r.inspector.InspectPDF(ctx, docID, bytes.NewReader(data))
+}
+
+// Index runs the real indexing worker over an inspection result and returns
+// the completed job with its indexed/skipped/deleted counters. The CLI and
+// arc-server share this seam, keeping diff semantics identical.
+func (r *Runtime) Index(ctx context.Context, docID, title string, chunks []pdfmodel.KnowledgeChunk, meta *pdfmodel.DocumentMetadata) (*indexingjob.IndexingJob, error) {
+	return r.indexingWorker.ExecuteSync(ctx, docID, title, chunks, meta)
+}
+
+// DeleteDocument removes every vector point of a document and, when the
+// entity graph store is attached, its node evidence (ADR-0038). Deleting a
+// document that has no points is not an error at this seam; callers decide
+// how to surface it.
+func (r *Runtime) DeleteDocument(ctx context.Context, docID string) error {
+	if err := r.vectorStore.Delete(ctx, indexingmodel.MetadataFilter{DocumentIDs: []string{docID}}); err != nil {
+		return err
+	}
+	if r.graphStore != nil {
+		return r.graphStore.DeleteByDocument(ctx, docID)
+	}
+	return nil
 }
 
 // NewRuntime constructs the composition root from Config.

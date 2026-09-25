@@ -70,7 +70,7 @@ func (a *App) RunInspect(ctx context.Context, filePath string) (string, error) {
 
 	docID := filepath.Base(strings.TrimSuffix(filePath, filepath.Ext(filePath)))
 
-	result, err := a.runtime.inspector.InspectPDF(ctx, docID, strings.NewReader(string(data)))
+	result, err := a.runtime.Inspect(ctx, docID, data)
 	if err != nil {
 		if result != nil && result.Diagnostics.Status == model.StatusFailed {
 			return "", fmt.Errorf("inspection failed: %v (errors: %v)", err, result.Diagnostics.Errors)
@@ -78,7 +78,7 @@ func (a *App) RunInspect(ctx context.Context, filePath string) (string, error) {
 		return "", fmt.Errorf("inspection failed: %w", err)
 	}
 
-	jobObj, err := a.runtime.indexingWorker.ExecuteSync(ctx, result.Document.DocumentID, result.Document.Title, result.Chunks, &result.Document)
+	jobObj, err := a.runtime.Index(ctx, result.Document.DocumentID, result.Document.Title, result.Chunks, &result.Document)
 	if err != nil {
 		return "", fmt.Errorf("indexing failed: %w", err)
 	}
