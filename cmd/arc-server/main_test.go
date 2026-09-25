@@ -8,6 +8,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"reflect"
 	"strings"
 	"testing"
@@ -270,24 +271,42 @@ func sseEvents(t *testing.T, body string) []string {
 	return events
 }
 
-func TestParseDocumentIDs(t *testing.T) {
+func TestDocumentIDsFromMulti(t *testing.T) {
+	app := fiber.New()
+	app.Get("/echo", func(c *fiber.Ctx) error {
+		return c.JSON(fiber.Map{"ids": documentIDsFromMulti(c)})
+	})
+
 	cases := []struct {
 		name string
-		raw  string
+		url  string
 		want []string
 	}{
-		{"single id", "doc-1", []string{"doc-1"}},
-		{"multiple ids", "doc-1,doc-2,doc-3", []string{"doc-1", "doc-2", "doc-3"}},
-		{"stray commas are dropped", "doc-1,,doc-2,", []string{"doc-1", "doc-2"}},
-		{"spaces around ids are trimmed", " doc-1 , doc-2 ", []string{"doc-1", "doc-2"}},
-		{"empty input", "", nil},
-		{"whitespace-only input", " , , ", nil},
+		{"single id", "/echo?documentIds=doc-1", []string{"doc-1"}},
+		{"repeated ids are one complete value each", "/echo?documentIds=doc-1&documentIds=doc-2", []string{"doc-1", "doc-2"}},
+		{"comma inside an id survives", "/echo?documentIds=" + url.QueryEscape("Dave Gray - Liminal Thinking (2016, Rosenfeld Media) - libgen.li"), []string{"Dave Gray - Liminal Thinking (2016, Rosenfeld Media) - libgen.li"}},
+		{"braces and ampersand inside an id survive", "/echo?documentIds=" + url.QueryEscape("Kasif Kozinoglu&_039_nun {Kasif Kozinoglu, Ergun Gedek}"), []string{"Kasif Kozinoglu&_039_nun {Kasif Kozinoglu, Ergun Gedek}"}},
+		{"no parameter", "/echo", nil},
+		{"empty value is dropped", "/echo?documentIds=", nil},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := parseDocumentIDs(tc.raw)
-			if !reflect.DeepEqual(got, tc.want) {
-				t.Errorf("parseDocumentIDs(%q) = %v, want %v", tc.raw, got, tc.want)
+			req := httptest.NewRequest(http.MethodGet, tc.url, nil)
+			resp, err := app.Test(req)
+			if err != nil {
+				t.Fatalf("echo request failed: %v", err)
+			}
+			var body struct {
+				IDs []string `json:"ids"`
+			}
+			if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+				t.Fatalf("decode echo: %v", err)
+			}
+			if len(body.IDs) == 0 && len(tc.want) == 0 {
+				return
+			}
+			if !reflect.DeepEqual(body.IDs, tc.want) {
+				t.Errorf("ids = %v, want %v", body.IDs, tc.want)
 			}
 		})
 	}

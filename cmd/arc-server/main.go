@@ -320,14 +320,22 @@ func (s *server) handleGetChunk(c *fiber.Ctx) error {
 	})
 }
 
-// parseDocumentIDs splits a comma-separated documentIds query parameter
-// into trimmed, non-empty ids. Empty input returns nil so the filter field
-// stays absent and retrieval keeps its unfiltered behavior.
-func parseDocumentIDs(raw string) []string {
-	var ids []string
-	for _, part := range strings.Split(raw, ",") {
-		if id := strings.TrimSpace(part); id != "" {
-			ids = append(ids, id)
+// documentIDsFromMulti reads every repeated documentIds query value as one
+// complete id. No splitting or trimming: ids are derived from filenames and
+// legitimately contain commas, parentheses, braces, and spaces, so splitting
+// on commas corrupts them (measured: a comma-containing id always ended as
+// no_evidence because no split part matched). The client sends each id as
+// its own parameter (URLSearchParams.append), which URL-encodes the value
+// and lets the server decode it back whole.
+func documentIDsFromMulti(c *fiber.Ctx) []string {
+	raw := c.Context().QueryArgs().PeekMulti("documentIds")
+	if len(raw) == 0 {
+		return nil
+	}
+	ids := make([]string, 0, len(raw))
+	for _, v := range raw {
+		if s := string(v); s != "" {
+			ids = append(ids, s)
 		}
 	}
 	if len(ids) == 0 {
@@ -369,7 +377,7 @@ func (s *server) handleQAStream(c *fiber.Ctx) error {
 	if spaceID := c.Query("spaceId"); spaceID != "" && spaceID != defaultSpaceID {
 		filter.KnowledgeSpaceID = spaceID
 	}
-	filter.DocumentIDs = parseDocumentIDs(c.Query("documentIds"))
+	filter.DocumentIDs = documentIDsFromMulti(c)
 	query := retrievalseam.RetrievalQuery{
 		QueryText: q,
 		TopK:      clampTopK(c.Query("topK")),
